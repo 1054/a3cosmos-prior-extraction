@@ -1,0 +1,3 @@
+#      source_area_in_pix     source_area_in_arcsec       source_area_in_beam        convol_area_in_pix     convol_area_in_arcsec       convol_area_in_beam       cat_index           cat_id
+#
+                 0.703649                 0.0226086                 0.0180331                   39.0262                   1.27697                   1.01853               0               1

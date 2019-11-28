@@ -1,0 +1,21 @@
+CrabFitsImageArithmetic: fit_0.fits extension=3
+CrabFitsImageArithmetic: copy wcs from fits extension 0
+CrabFitsImageArithmetic: copy wcs from fits extension 1
+CrabFitsImageArithmetic: copy wcs CTYPE1 = 'RA---SIN'
+CrabFitsImageArithmetic: copy wcs CTYPE2 = 'DEC--SIN'
+CrabFitsImageArithmetic: copy wcs CRPIX1 = 1.210000000000E+02
+CrabFitsImageArithmetic: copy wcs CRPIX2 = 1.210000000000E+02
+CrabFitsImageArithmetic: copy wcs CRVAL1 = 1.472388335880E+02
+CrabFitsImageArithmetic: copy wcs CRVAL2 = 3.737664138890E-01
+CrabFitsImageArithmetic: copy wcs CDELT1 = -5.000000000000E-05
+CrabFitsImageArithmetic: copy wcs CDELT2 = 5.000000000000E-05
+CrabFitsImageArithmetic: copy wcs CUNIT1 = 'deg     '
+CrabFitsImageArithmetic: copy wcs CUNIT2 = 'deg     '
+CrabFitsImageArithmetic: copy wcs from fits extension 2
+CrabFitsImageArithmetic: copy wcs from fits extension 3
+CrabFitsImageArithmetic: copy wcs from fits extension 4
+readFitsHeader: Error! No header found with extension 4!
+CrabFitsImageArithmetic: readFitsHeader fit_0.fits extension=3 headersize=2880
+CrabFitsImageArithmetic: readFitsImage fit_0.fits extension=3 imagesize=240x240 bitpix=-64
+CrabFitsImageArithmetic: computing fit_0.fits extension=3 rectangle=[[0,0],[239,239]] multiplies 1 
+CrabFitsImageArithmetic: File has been saved to fit_0.residual.fits

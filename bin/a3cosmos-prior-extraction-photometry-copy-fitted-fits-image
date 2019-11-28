@@ -1,0 +1,55 @@
+#!/bin/bash
+# 
+
+
+# 
+# Check input argument
+# 
+if [[ $# -lt 2 ]]; then
+    echo "Usage: "
+    echo "    a3cosmos-prior-extraction-photometry-copy-fitted-fits-image <input_directory> <output_directory>"
+    echo "Input: "
+    echo "    A directory containing \"fit_2.fits\" images."
+    echo "Output: "
+    echo "    Output png images to \"output_directory\"."
+    echo ""
+    exit
+fi
+
+
+input_dir="$1"
+
+if [[ ! -d "$input_dir" ]]; then
+    echo "Error! Directory \"$input_dir\" does not exist!"
+    exit 255
+fi
+
+
+output_dir="$2"
+#output_dir=$(basename "$1")"_fit_2_fits"
+
+if [[ ! -d "$output_dir" ]]; then
+    mkdir -p "$output_dir"
+fi
+
+
+find "$input_dir" -name "fit_2.fits" -print0 | while read -d '' -r file; do
+    data_dir=$(dirname "$file")
+    data_name=$(basename "$data_dir")
+    echo cp "$data_dir/fit_2.fits" "$output_dir/$data_name.-.fit_2.fits"
+         cp "$data_dir/fit_2.fits" "$output_dir/$data_name.-.fit_2.fits"
+    echo cp "$data_dir/fit_2.cat_index.txt" "$output_dir/$data_name.-.fit_2.cat_index.txt"
+         cp "$data_dir/fit_2.cat_index.txt" "$output_dir/$data_name.-.fit_2.cat_index.txt"
+    echo cp "$data_dir/image_sci_pixnoise.txt" "$output_dir/$data_name.-.fit_2.pixnoise.txt"
+         cp "$data_dir/image_sci_pixnoise.txt" "$output_dir/$data_name.-.fit_2.pixnoise.txt"
+done
+
+
+#find "$input_dir" -name "fit_2.cat_index.txt" -print0 | while read -d '' -r file; do
+#    echo cp "$file" "$output_dir/"$(basename $(dirname "$file"))".-."$(basename "$file")
+#    cp "$file" "$output_dir/"$(basename $(dirname "$file"))".-."$(basename "$file")
+#done
+
+
+
+

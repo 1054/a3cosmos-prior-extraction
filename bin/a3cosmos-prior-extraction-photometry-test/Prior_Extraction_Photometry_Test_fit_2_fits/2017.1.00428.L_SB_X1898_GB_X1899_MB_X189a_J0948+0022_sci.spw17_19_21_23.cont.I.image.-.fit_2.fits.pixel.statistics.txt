@@ -1,0 +1,8 @@
+Min    = 0
+Max    = 0
+Mean   = 0
+Median = 0
+Mode   = 0
+Sigma  = 0
+Inner_mu    = 0   # FitInnerSigma = 5.0
+Inner_sigma = 0   # FitInnerSigma = 5.0

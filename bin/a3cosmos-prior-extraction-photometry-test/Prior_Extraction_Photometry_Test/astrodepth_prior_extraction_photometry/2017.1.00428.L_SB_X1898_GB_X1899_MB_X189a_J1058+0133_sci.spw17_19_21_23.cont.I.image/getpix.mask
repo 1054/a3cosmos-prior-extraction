@@ -1,0 +1,3 @@
+#          mask              id       cat_index                cat_id
+#
+              1               1               1                    2

@@ -1,0 +1,44 @@
+XTENSION= 'IMAGE   '           / IMAGE extension                                
+BITPIX  =                  -32 / Bits per pixel                                 
+NAXIS   =                    2 / Number of axes                                 
+NAXIS1  =                  240 / Length of data axis 1                          
+NAXIS2  =                  240 / Length of data axis 2                          
+OBJECT  = 'model   '           / Component type                                 
+COMMENT ========== GALFIT Input Parameters ==========                           
+INITFILE= 'fit_2.input'        / GALFIT input file                              
+DATAIN  = 'image_sci.fits'     / Input data image                               
+SIGMA   = 'image_rms.fits'     / Input sigma image                              
+PSF     = 'image_psf.fits '    / Convolution PSF and kernel                     
+CONSTRNT= 'fit_2.limit'        / Parameter constraint file                      
+MASK    = 'image_nan_mask.fits' / Input mask image                              
+FITSECT = '[1:240,1:240]'      / Image section fitted                           
+CONVBOX = '28, 28  '           / Convolution box size                           
+MAGZPT  =                   0. / Magnitude zeropoint                            
+COMMENT ========== GALFIT Final Parameters ==========                           
+COMP_1  = 'gaussian '          / Component type                                 
+1_XC    = '120.9998 +/- 0.0004' / X center [pixel]                              
+1_YC    = '121.0000 +/- 0.0005' / Y center [pixel]                              
+1_MAG   = '-3.0422 +/- 0.0001' / Integrated magnitude                           
+1_FWHM  = '1.0000 +/- 0.0067'  / FWHM [pixels]                                  
+1_AR    = '0.6210 +/- 0.0112'  / Axis ratio (b/a)                               
+1_PA    = '-55.8624 +/- 0.6454' / Position Angle (PA) [degrees: Up=0, Left=90]  
+COMMENT ------------------------------------------------------------------------
+COMP_2  = 'sky     '           / Component type                                 
+2_XC    = '[120.5000]'         / X center [pixel]                               
+2_YC    = '[120.5000]'         / Y center [pixel]                               
+2_SKY   = '[0.000e+00]'        / Sky background [ADUs]                          
+2_DSDX  = '[0.000e+00]'        / x sky gradient [ADUs]                          
+2_DSDY  = '[0.000e+00]'        / y sky gradient [ADUs]                          
+COMMENT ------------------------------------------------------------------------
+FLAGS   = 'H-3 H-4 H-1 A-3 I-1 2 ' / See `galfit -help' for details.            
+COMMENT ------------------------------------------------------------------------
+CHISQ   =     10946.1881612056 / Chi^2 of fit                                   
+NDOF    =                34067 / Degrees of freedom                             
+NFREE   =                    6 / Number of free parameters                      
+NFIX    =                    3 / Number of fixed parameters                     
+CHI2NU  =            0.3213135 / Reduced Chi^2                                  
+LOGFILE = 'galfit.01'          / Output logfile                                 
+COMMENT =============================================                           
+COMMENT                                                                         
+END                                                                             
+

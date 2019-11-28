@@ -1,0 +1,12 @@
+go
+    data "astrodepth_catalog_0.txt"
+    read id 1.s
+    read ra 2.f
+    read dec 3.f
+    set mask = int(ra) * 0
+    define print_noheader 1
+    echo Writing $(dimen(id)) rows to \"astrodepth_prior_extraction_photometry/astrodepth_catalog_0_ra_dec.txt\"
+    print "astrodepth_catalog_0_ra_dec.txt" '%18.7f %18.7f\n' {ra dec}
+    echo Writing $(dimen(id)) rows to \"astrodepth_prior_extraction_photometry/astrodepth_catalog_0_id_mask.txt\"
+    set mask = int(mask)
+    print "astrodepth_catalog_0_id_mask.txt" '%30s %18d\n' {id mask}

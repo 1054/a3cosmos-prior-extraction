@@ -1,0 +1,1 @@
+Warning! The PBA image "image_pba.fits" is invalid with pixel value 1.0 everywhere!

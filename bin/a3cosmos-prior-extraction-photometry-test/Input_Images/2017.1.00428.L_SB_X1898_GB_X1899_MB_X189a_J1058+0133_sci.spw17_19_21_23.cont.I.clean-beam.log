@@ -1,0 +1,9 @@
+# 20191128 13h20m26s CET
+almacosmos_generate_PSF_Gaussian_2D.py "/Users/dzliu/Cloud/Github/a3cosmos/a3cosmos-prior-extraction/bin/a3cosmos-prior-extraction-photometry-test/Input_Images/2017.1.00428.L_SB_X1898_GB_X1899_MB_X189a_J1058+0133_sci.spw17_19_21_23.cont.I.image.fits" "/Users/dzliu/Cloud/Github/a3cosmos/a3cosmos-prior-extraction/bin/a3cosmos-prior-extraction-photometry-test/Input_Images/2017.1.00428.L_SB_X1898_GB_X1899_MB_X189a_J1058+0133_sci.spw17_19_21_23.cont.I.clean-beam.fits"
+WARNING: FITSFixedWarning: 'obsfix' made the change 'Set OBSGEO-L to   -67.754929 from OBSGEO-[XYZ].
+Set OBSGEO-B to   -23.022886 from OBSGEO-[XYZ].
+Set OBSGEO-H to     5053.796 from OBSGEO-[XYZ]'. [astropy.wcs.wcs]
+psf pixscale in arcsec 0.1820 0.1820
+psf major minor theta 0.4809 0.4154 85.98
+psf model model naxis 39 39
+Output to "/Users/dzliu/Cloud/Github/a3cosmos/a3cosmos-prior-extraction/bin/a3cosmos-prior-extraction-photometry-test/Input_Images/2017.1.00428.L_SB_X1898_GB_X1899_MB_X189a_J1058+0133_sci.spw17_19_21_23.cont.I.clean-beam.fits"!

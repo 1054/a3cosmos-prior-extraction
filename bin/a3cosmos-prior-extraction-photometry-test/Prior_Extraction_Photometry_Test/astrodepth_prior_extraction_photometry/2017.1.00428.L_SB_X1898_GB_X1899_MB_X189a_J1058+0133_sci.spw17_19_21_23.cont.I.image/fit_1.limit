@@ -1,0 +1,5 @@
+# Galfit Constraint File
+# 
+         1  mag    -30.000 to 30.000
+         1    x    -3.862    3.862
+         1    y    -3.862    3.862

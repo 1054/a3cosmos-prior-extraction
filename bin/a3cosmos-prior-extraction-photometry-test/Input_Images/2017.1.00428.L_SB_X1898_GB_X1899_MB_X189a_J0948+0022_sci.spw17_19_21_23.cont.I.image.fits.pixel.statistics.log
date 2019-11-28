@@ -1,0 +1,26 @@
+# 20191128 13h20m23s CET
+almacosmos_get_fits_image_pixel_histogram.py "/Users/dzliu/Cloud/Github/a3cosmos/a3cosmos-prior-extraction/bin/a3cosmos-prior-extraction-photometry-test/Input_Images/2017.1.00428.L_SB_X1898_GB_X1899_MB_X189a_J0948+0022_sci.spw17_19_21_23.cont.I.image.fits"
+Input fits file: /Users/dzliu/Cloud/Github/a3cosmos/a3cosmos-prior-extraction/bin/a3cosmos-prior-extraction-photometry-test/Input_Images/2017.1.00428.L_SB_X1898_GB_X1899_MB_X189a_J0948+0022_sci.spw17_19_21_23.cont.I.image.fits
+
+Min    = -0.0006517132279
+Max    = 0.4214580655
+Mean   = 0.0004812390544
+Median = -3.375669621e-05
+Mode   = -0.0002919608087
+Sigma  = 0.0100738164
+Inner_mu    = 5.605873594e-05   # FitInnerSigma = 5.0
+Inner_sigma = 0.00123102183   # FitInnerSigma = 5.0
+Fitting_range = 0.003051003907 0.04748361558 (nbins = 57, ndata = 34073)
+Fitting_range = 0.001199645456 0.0493349731 (nbins = 114, ndata = 34073)
+Fitting_range = 0.0005825259141 0.04995208979 (nbins = 171, ndata = 34073)
+Fitting_range = 0.000273966114 0.05026064813 (nbins = 228, ndata = 34073)
+Fitting_range = 8.883024566e-05 0.05044578761 (nbins = 285, ndata = 34073)
+Fitting_range = -3.459365689e-05 0.0505692102 (nbins = 342, ndata = 34073)
+Fitting_range = -0.0001227536122 0.0506573692 (nbins = 399, ndata = 34073)
+Fitting_range = -0.0001888735569 0.0507234931 (nbins = 456, ndata = 34073)
+Fitting_range = -0.0002403001854 0.05077491701 (nbins = 513, ndata = 34073)
+Gaussian_A     = 27652.37047
+Gaussian_mu    = -0.0001592736868
+Gaussian_sigma = 0.0004388332204
+Saving to /Users/dzliu/Cloud/Github/a3cosmos/a3cosmos-prior-extraction/bin/a3cosmos-prior-extraction-photometry-test/Input_Images/2017.1.00428.L_SB_X1898_GB_X1899_MB_X189a_J0948+0022_sci.spw17_19_21_23.cont.I.image.fits.pixel.histogram.eps
+Done!
