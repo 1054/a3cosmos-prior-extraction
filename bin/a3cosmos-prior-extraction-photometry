@@ -21,6 +21,11 @@ if [[ $# -eq 0 ]]; then
     echo "    a3cosmos-prior-extraction-photometry -catalog Catalog.fits"
     echo "    a3cosmos-prior-extraction-photometry -catalog Catalog.fits -sci XXX.fits -rms XXX.fits -psf XXX.fits -pba XXX.fits"
     echo "    a3cosmos-prior-extraction-photometry -catalog Catalog.fits -sci XXX.fits -rms XXX.fits -psf XXX.fits -pba XXX.fits -fit-sky -galfit-prior-peak-snr 0.5 -galfit-prior-total-snr 1.5"
+    echo "Options:"
+    echo "    -output-dir # output folder name, default is \"Prior_Extraction_Photometry_v<DATE>\""
+    echo "    -output-name # output subfolder name, default is the input image name without suffix"
+    echo "Notes:"
+    echo "    Please run \"a3cosmos-prior-extraction-photometry-read-results\" after running this. You will find some ASCII-format output catalogs under the output directory!"
     exit
 fi
 

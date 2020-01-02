@@ -1,7 +1,0 @@
-# CrabPhotAperPhot: version 2018-02-22
-# CrabPhotAperPhot: readFitsHeader image_sci_input.fits extension=0 headersize=8640
-# 
-#          x           y      radius         npix          sum          min          max         mean       median       stddev          rms     npix_int      sum_int      min_int      max_int     mean_int   median_int   stddev_int      rms_int   sumabs_int     npix_nan
-# 
-   120.85000   120.95200     4.13800       54.251       71.782      0.39898       2.5182       1.3231       1.7168      0.45851       1.4268           54       71.684      0.49916       2.5182       1.3275       1.2131      0.56287       1.4419       71.684            0
-

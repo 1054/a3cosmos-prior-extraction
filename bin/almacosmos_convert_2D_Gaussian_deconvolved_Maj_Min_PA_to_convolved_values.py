@@ -1,13 +1,13 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 # 
 
-try:
-    import pkg_resources
-except ImportError:
-    raise SystemExit("Error! Failed to import pkg_resources!")
+#try:
+#    import pkg_resources
+#except ImportError:
+#    raise SystemExit("Error! Failed to import pkg_resources!")
 
-pkg_resources.require("numpy")
-pkg_resources.require("astropy")
+#pkg_resources.require("numpy")
+#pkg_resources.require("astropy")
 #pkg_resources.require("scipy")
 
 import os, sys, json, numpy

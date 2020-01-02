@@ -1,3 +1,0 @@
-#              f_reschisq      f_redchisq       n_aperpix       n_freepar       cat_index           cat_id
-#
-                  13834.2         145.533          96.059               1               1               2

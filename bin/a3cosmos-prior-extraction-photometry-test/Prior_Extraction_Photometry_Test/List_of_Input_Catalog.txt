@@ -1,1 +1,0 @@
-/Users/dzliu/Cloud/Github/a3cosmos/a3cosmos-prior-extraction/bin/a3cosmos-prior-extraction-photometry-test/Input_Catalog.txt

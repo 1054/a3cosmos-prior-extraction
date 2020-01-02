@@ -1,3 +1,0 @@
-#fluxconv      fluxunit
-#
-0.0256279761192601   Jy/beam

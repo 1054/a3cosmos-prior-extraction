@@ -1,3 +1,0 @@
-#   mask_buffer       cat_index           cat_id
-#
-              0               1               2

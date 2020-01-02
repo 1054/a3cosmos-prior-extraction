@@ -1,3 +1,0 @@
-#  primary_beam_correction   primary_beam_attenuation    primary_beam_dist     primary_beam_fwhm
-#
-                   1.00001                   0.999994            0.0285443              19.6226

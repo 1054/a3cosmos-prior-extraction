@@ -1,3 +1,0 @@
-#     cat_index                cat_id
-#
-              1                    2

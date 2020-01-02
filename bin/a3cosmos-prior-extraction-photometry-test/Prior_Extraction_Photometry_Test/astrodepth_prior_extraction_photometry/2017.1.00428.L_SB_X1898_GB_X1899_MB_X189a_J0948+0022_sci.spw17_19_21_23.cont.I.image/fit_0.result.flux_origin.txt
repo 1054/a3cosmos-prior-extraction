@@ -1,3 +1,0 @@
-#                f_origin       cat_index           cat_id
-#
-         4.2145806551e-01               0               1

@@ -1,3 +1,0 @@
-#      sersic_n    sersic_n_err       cat_index           cat_id
-#
-              0               0               0               1

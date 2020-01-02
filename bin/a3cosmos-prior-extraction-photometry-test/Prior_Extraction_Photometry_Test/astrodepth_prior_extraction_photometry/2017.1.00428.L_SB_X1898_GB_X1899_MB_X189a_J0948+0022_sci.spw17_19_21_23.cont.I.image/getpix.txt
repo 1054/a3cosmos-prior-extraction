@@ -1,3 +1,0 @@
-#       pix_000         pix_max         pix_sum         pix_num              px              py         pix_rad         pix_scl         pix_nan       cat_index           cat_id
-#
-         1.3369         0.42146          16.506          391.64         120.802         120.934          11.158         0.17925               0               0               1

@@ -1,3 +1,0 @@
-#            source_total          source_total_err               source_peak           source_peak_err       source_gaussian_snr                       maj          source_major_err      source_major_err_rel                       min          source_minor_err      source_minor_err_rel       cat_index           cat_id
-#
-                 0.422274                0.00077295                   0.41459               0.000440824                   1330.05                   0.17925               0.000190957                0.00106531                  0.111314               0.000118132                0.00106125               0               1

@@ -5,12 +5,16 @@
 # 
 # Check input argument
 # 
-if [[ $# -eq 0 ]]; then
+if [[ $# -lt 2 ]]; then
     echo "Usage: "
     echo "    a3cosmos-prior-extraction-photometry-read-results \"Prior_Extraction_with_Master_Catalog_v20171208\""
     echo "Output: "
     echo "    \"Read_Results_of_Prior_Extraction_with_Master_Catalog_v20171208\""
-    echo ""
+    echo "Notes: "
+    echo "    The directory \"Prior_Extraction_with_Master_Catalog_v20171208\" is an example, it should be the output directory of \"a3cosmos-prior-extraction-photometry\"."
+    echo "    You can ignore warning if there is any. "
+    echo "Options: "
+    echo "    If you input a second argument, we will use it as the output directory."
     exit
 fi
 
@@ -36,22 +40,25 @@ InputDir="$1"
 
 
 # 
-# Set Output dir
+# Check input dir
 # 
-if [[ $# -ge 2 ]]; then
-    OutputDir="$2"
+if [[ ! -d "$InputDir" ]]; then
+    echo "Error! The input directory \"$InputDir\" does not exist! Abort!"; exit 1
 else
-    OutputDir="Read_Results_of_"$(basename "$InputDir")
+    InputDir=$(perl -MCwd -e 'print Cwd::abs_path shift' "$InputDir") # get full path
+    echo "Input directory \"$InputDir\""
 fi
 
 
 # 
-# Check input dir
+# Set Output dir
 # 
-if [[ ! -d "$InputDir" ]]; then
-    echo "Error! The output directory \"$InputDir\" does not exist! Abort!"; exit 1
+if [[ $# -ge 2 ]]; then
+    OutputDir="$2"
+    echo "Setting output directory as \"$OutputDir\""
 else
-    InputDir=$(perl -MCwd -e 'print Cwd::abs_path shift' "$InputDir") # get full path
+    OutputDir="Read_Results_of_"$(basename "$InputDir")
+    echo "Using default output directory \"$OutputDir\""
 fi
 
 

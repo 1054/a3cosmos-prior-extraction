@@ -45,13 +45,16 @@ AstroDepth_ScriptDir=$(dirname ${BASH_SOURCE[0]})
 if [[ "$AstroDepth_ScriptDir" == "../"* ]]; then
     AstroDepth_ScriptDir=$(cd "$AstroDepth_ScriptDir"; pwd)
 fi
+if [[ $(type astrodepth_abs_path 2>/dev/null | wc -l) -eq 0 ]]; then
+    export PATH="${AstroDepth_ScriptDir}:$PATH"
+fi
 
 
 # Check current directory
 if [[ $(uname) == "Darwin" ]]; then
-AstroDepth_CurrrentDir=$(pwd)
+AstroDepth_CurrentDir=$(pwd)
 else
-AstroDepth_CurrrentDir=$(pwd -P)
+AstroDepth_CurrentDir=$(pwd -P)
 fi
 
 # Check necessary commands
@@ -215,7 +218,7 @@ for (( i=0; i<${#AstroDepth_INP_CATALOG[@]}; i++ )); do
             #cat "$AstroDepth_OutputDir/astrodepth_catalog_${i}_id_ra_dec_extraction.sm"
             cd "$AstroDepth_OutputDir"
             echo "macro read astrodepth_catalog_${i}_id_ra_dec_extraction.sm go" | sm
-            cd "$AstroDepth_CurrrentDir"
+            cd "$AstroDepth_CurrentDir"
             
         fi
         if [[ ! -f "$AstroDepth_OutputDir/astrodepth_catalog_${i}_ra_dec.txt" || \
@@ -1052,7 +1055,7 @@ for (( j=0; j<${#AstroDepth_INP_IMAGE_SCI[@]}; j++ )); do
     # 
     # 
     # 
-    cd "$AstroDepth_CurrrentDir"
+    cd "$AstroDepth_CurrentDir"
     
 done
 

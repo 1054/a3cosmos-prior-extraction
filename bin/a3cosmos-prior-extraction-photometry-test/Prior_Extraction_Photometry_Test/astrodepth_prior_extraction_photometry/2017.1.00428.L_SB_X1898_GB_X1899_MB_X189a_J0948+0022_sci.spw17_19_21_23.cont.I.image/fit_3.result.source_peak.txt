@@ -1,3 +1,0 @@
-#             source_peak                    f_peak                         f                       maj                       min                 _beam_maj                 _beam_min                convol_maj                convol_min       cat_index           cat_id
-#
-                 0.415325                  0.380179                  0.435025                    0.3585                    0.0717                   1.19194                  0.928288                   1.24458                  0.931201               0               1
