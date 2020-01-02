@@ -20,26 +20,43 @@ You will need
 
 ## Example
 Obtain our code and put it under some path, for example, `~/Cloud/Github/a3cosmos/a3cosmos-prior-extraction`.  
-Then, run the following code for an example. 
+
+Then, cd into the example directory, `cd ~/Cloud/Github/a3cosmos/a3cosmos-prior-extraction/example/`. This will be where you want to run your code. 
+
+Then, `source` our `SETUP.bash` in BASH shell, so that our command can be run in the shell:  
 ```
 source ~/Cloud/Github/a3cosmos/a3cosmos-prior-extraction/SETUP.bash # this will add our command into the system's PATH
-cd ~/Cloud/Github/a3cosmos/a3cosmos-prior-extraction/example/ # cd into where you want to run the fitting, here we use our example directory
+```
+
+Then we have three steps. First, run the photometry! 
+```
 a3cosmos-prior-extraction-photometry \
         -cat Input_catalog/Catalog_Laigle_2016_ID_RA_Dec_Photo-z_Example.txt \
         -sci Input_image/sci.spw0_1_2_3.cont.I.image.fits \
         -psf Input_image/sci.spw0_1_2_3.cont.I.image.psf.fits
-        # You can also specify -rms <YOUR_RMS_IMAGE.FITS>. If no rms image is given, we will compute an rms by fitting a 1D Gaussian to the pixel distribution histogram of the input image (the histogram will be output to the Input_image directory with names *.pixel.histogram.eps and *.pixel.statistics.txt). 
-        # If you have a cleaned ALMA image and have not generated a clean-beam PSF image, just do not set -psf so that our code will generate a clean-beam PSF image itself. It will be output to the input image directory.
-        # If you have a primary beam attenuation (*.pb.fits) image, please input it by setting -pba <YOUR_PBA_IMAGE.FITS>. Otherwise pba will be always 1.
-        # The default output directory is named like "Read_Results_of_Prior_Extraction_Photometry_v20200102", depending on your running date.
-a3cosmos-prior-extraction-photometry-read-results \
+```
+You can also specify `-rms <YOUR_RMS_IMAGE.FITS>`. If no rms image is given, we will compute an rms by fitting a 1D Gaussian to the pixel distribution histogram of the input image (the histogram will be output to the Input_image directory with names `*.pixel.histogram.eps` and `*.pixel.statistics.txt`).
+
+If you have a cleaned ALMA image and have not generated a clean-beam PSF image, just do not set `-psf` so that our code will generate a clean-beam PSF image itself. It will be output to the input image directory.
+
+If you have a primary beam attenuation (`*.pb.fits`) image, please input it by setting `-pba <YOUR_PBA_IMAGE.FITS>`. Otherwise pba will be always 1.
+
+The default output directory is named like `"Read_Results_of_Prior_Extraction_Photometry_v<DATE>"`, depending on your running date. Below we take `20200102` as an example.
+
+Then, read the results and combine them into ASCII-format tables:
+```a3cosmos-prior-extraction-photometry-read-results \
         Read_Results_of_Prior_Extraction_Photometry_v20200102 
-        # The output will be several ASCII-format catalogs under the result folder        
+        # Combine photometry results and write ASCII-format tables 
+```
+The output will be several ASCII-format catalogs under the result folder. 
+
+Finally, output the final FITS-format catalogs!
+```
 a3cosmos-prior-extraction-photometry-output-final-catalog \
         Read_Results_of_Prior_Extraction_Photometry_v20200102 
         # Output final FITS-format catalogs
-        # They are named like "A-COSMOS_prior_2020-01-02_Gaussian.fits"
-        # This one "A-COSMOS_prior_2020-01-02_Gaussian.fits" will probably be the most important output catalog.
 ```
+They are named like "A-COSMOS_prior_2020-01-02_*.fits"
+The one name like "A-COSMOS_prior_2020-01-02_Gaussian.fits" will probably be the most important output catalog.
 
 
