@@ -24,12 +24,13 @@ Obtain our code and put it under some path, for example, `~/Cloud/Github/a3cosmo
 Then, cd into the example directory, `cd ~/Cloud/Github/a3cosmos/a3cosmos-prior-extraction/example/`. This will be where you want to run your code. 
 
 Then, `source` our `SETUP.bash` in BASH shell, so that our command can be run in the shell:  
-```
-source ~/Cloud/Github/a3cosmos/a3cosmos-prior-extraction/SETUP.bash # this will add our command into the system's PATH
+```bash
+source ~/Cloud/Github/a3cosmos/a3cosmos-prior-extraction/SETUP.bash 
+# this will add our command into the system's PATH
 ```
 
 Then we have three steps. First, run the photometry! 
-```
+```bash
 a3cosmos-prior-extraction-photometry \
         -cat Input_catalog/Catalog_Laigle_2016_ID_RA_Dec_Photo-z_Example.txt \
         -sci Input_image/sci.spw0_1_2_3.cont.I.image.fits \
@@ -44,14 +45,15 @@ If you have a primary beam attenuation (`*.pb.fits`) image, please input it by s
 The default output directory is named like `"Read_Results_of_Prior_Extraction_Photometry_v<DATE>"`, depending on your running date. Below we take `20200102` as an example.
 
 Then, read the results and combine them into ASCII-format tables:
-```a3cosmos-prior-extraction-photometry-read-results \
+```bash
+a3cosmos-prior-extraction-photometry-read-results \
         Read_Results_of_Prior_Extraction_Photometry_v20200102 
         # Combine photometry results and write ASCII-format tables 
 ```
 The output will be several ASCII-format catalogs under the result folder. 
 
 Finally, output the final FITS-format catalogs!
-```
+```bash
 a3cosmos-prior-extraction-photometry-output-final-catalog \
         Read_Results_of_Prior_Extraction_Photometry_v20200102 
         # Output final FITS-format catalogs
