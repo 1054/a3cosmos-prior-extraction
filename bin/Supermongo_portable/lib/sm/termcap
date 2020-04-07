@@ -50,7 +50,7 @@ sr|selanar|hirez100|selanar hirez100 in ansi mode:\
         :im=\E[4h:ei=\E[4l:mi:dc=\E[1P:so=\E[7m:se=\E[0m:us=\E[4m:ue=\E[0m:\
         :ul:kl=\E[D:kr=\E[C:ku=\E[A:kd=\E[B:sr=\EM:\
 	:k1=\EOP:k2=\EOQ:k3=\EOR:k4=\EOS:
-vs|xterm|xterm-color|xterm-256color|vs100|xterm terminal emulator (X window system):\
+vs|xterm|xterm-color|xterm-256color|vs100|xterm terminal emulator (X window system)|screen:\
 	:do=^J:le=^H:ho=\E[H:\
 	:co#80:li#65:cl=\E[H\E[2J:bs:.am:cm=\E[%i%d;%dH:nd=\E[C:up=\E[A:\
 	:ce=\E[K:cd=\E[J:so=\E[7m:se=2\E[m:us=\E[4m:ue=\E[m:\

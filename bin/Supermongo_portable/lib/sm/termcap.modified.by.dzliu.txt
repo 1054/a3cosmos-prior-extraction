@@ -1,2 +1,5 @@
 modified termcap otherwise error: Can't find entry for screen in /usr/local2/misc/sm/sm2_4_36/termcap
 
+
+vs|xterm|xterm-color|xterm-256color|vs100|xterm terminal emulator (X window system)|screen
+
