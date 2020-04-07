@@ -1,0 +1,2 @@
+modified termcap otherwise error: Can't find entry for screen in /usr/local2/misc/sm/sm2_4_36/termcap
+

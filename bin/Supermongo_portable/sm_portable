@@ -33,11 +33,12 @@ echo "temp_dir       $SMTEMP/"                      >> "$SMTEMP/sm.$SMDATE/.sm"
 echo "graphcap       $SMPATH/graphcap"              >> "$SMTEMP/sm.$SMDATE/.sm"
 echo "+graphcap      $SMPATH/graphcap.local"        >> "$SMTEMP/sm.$SMDATE/.sm"
 echo "filecap        $SMPATH/filecap"               >> "$SMTEMP/sm.$SMDATE/.sm"
-echo "termcap        $SMPATH/termcap"               >> "$SMTEMP/sm.$SMDATE/.sm"
+echo "termcap        $SMTEMP/sm.$SMDATE/termcap"    >> "$SMTEMP/sm.$SMDATE/.sm"
 echo "help           $SMPATH/help/"                 >> "$SMTEMP/sm.$SMDATE/.sm"
 echo "macro          $SMTEMP/sm.$SMDATE/macro/"     >> "$SMTEMP/sm.$SMDATE/.sm"
 chmod 777                                         "$SMTEMP/sm.$SMDATE/.sm"
 
+cp -rL "$CURRENTPATH/lib/sm/termcap" "$SMTEMP/sm.$SMDATE/" 2>/dev/null
 cp -rL "$SMPATH/lib/sm/macro" "$SMTEMP/sm.$SMDATE/" 2>/dev/null
 cp "$Supermongo_macro_dir"/*.sm "$SMTEMP/sm.$SMDATE/macro/" 2>/dev/null
 
