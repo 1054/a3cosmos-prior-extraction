@@ -14,7 +14,9 @@ if [[ $(type sm 2>/dev/null | wc -l) -eq 0 ]]; then
 fi
 
 CURRENTPATH=$(dirname "${BASH_SOURCE[0]}")
-Supermongo_macro_dir=$(dirname "${CURRENTPATH}")
+SMMACROPATH=$(dirname "$CURRENTPATH")
+echo "CURRENTPATH = $CURRENTPATH"
+echo "SMMACROPATH = $SMMACROPATH"
 
 SMPATH=$(dirname $(dirname $(readlink -f $(which sm))))
 SMDATE=$(date +%s.$(date +%N|cut -b 1,2,3,4)) # SMDATE=$(date +%Y%m%d.%H%M%S.%N.%Z)
@@ -40,7 +42,7 @@ chmod 777                                         "$SMTEMP/sm.$SMDATE/.sm"
 
 cp -rL "$CURRENTPATH/lib/sm/termcap" "$SMTEMP/sm.$SMDATE/" 2>/dev/null
 cp -rL "$SMPATH/lib/sm/macro" "$SMTEMP/sm.$SMDATE/" 2>/dev/null
-cp "$Supermongo_macro_dir"/*.sm "$SMTEMP/sm.$SMDATE/macro/" 2>/dev/null
+cp "$SMMACROPATH"/*.sm "$SMTEMP/sm.$SMDATE/macro/" 2>/dev/null
 
 sm -f "$SMTEMP/sm.$SMDATE/.sm" $*
 
