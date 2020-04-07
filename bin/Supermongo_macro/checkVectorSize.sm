@@ -1,0 +1,73 @@
+checkVectorSize 09
+    # 
+    # load checkVectorSize.sm checkVectorSize aaa bbb ccc
+    # 
+    set _checkVectorSize_ok = 1
+    if($?1) {
+        echo "checkVectorSize: "
+        set _checkVectorSize_vec = ($1)
+        echo dimen($1) = $(dimen(_checkVectorSize_vec))
+        set _checkVectorSize_size = dimen(_checkVectorSize_vec)
+        set _checkVectorSize_ok = 1
+        if($?2) {
+            set _checkVectorSize_vec = ($2)
+            echo dimen($2) = $(dimen(_checkVectorSize_vec))
+            if(_checkVectorSize_size!=dimen(_checkVectorSize_vec)) {
+                set _checkVectorSize_ok = 0
+            }
+            if($?3) {
+                set _checkVectorSize_vec = ($3)
+                echo dimen($3) = $(dimen(_checkVectorSize_vec))
+                if(_checkVectorSize_size!=dimen(_checkVectorSize_vec)) {
+                    set _checkVectorSize_ok = 0
+                }
+                if($?4) {
+                    set _checkVectorSize_vec = ($4)
+                    echo dimen($4) = $(dimen(_checkVectorSize_vec))
+                    if(_checkVectorSize_size!=dimen(_checkVectorSize_vec)) {
+                        set _checkVectorSize_ok = 0
+                    }
+                    if($?5) {
+                        set _checkVectorSize_vec = ($5)
+                        echo dimen($5) = $(dimen(_checkVectorSize_vec))
+                        if(_checkVectorSize_size!=dimen(_checkVectorSize_vec)) {
+                            set _checkVectorSize_ok = 0
+                        }
+                        if($?6) {
+                            set _checkVectorSize_vec = ($6)
+                            echo dimen($6) = $(dimen(_checkVectorSize_vec))
+                            if(_checkVectorSize_size!=dimen(_checkVectorSize_vec)) {
+                                set _checkVectorSize_ok = 0
+                            }
+                            if($?7) {
+                                set _checkVectorSize_vec = ($7)
+                                echo dimen($7) = $(dimen(_checkVectorSize_vec))
+                                if(_checkVectorSize_size!=dimen(_checkVectorSize_vec)) {
+                                    set _checkVectorSize_ok = 0
+                                }
+                                if($?8) {
+                                    set _checkVectorSize_vec = ($8)
+                                    echo dimen($8) = $(dimen(_checkVectorSize_vec))
+                                    if(_checkVectorSize_size!=dimen(_checkVectorSize_vec)) {
+                                        set _checkVectorSize_ok = 0
+                                    }
+                                    if($?9) {
+                                        set _checkVectorSize_vec = ($9)
+                                        echo dimen($9) = $(dimen(_checkVectorSize_vec))
+                                        if(_checkVectorSize_size!=dimen(_checkVectorSize_vec)) {
+                                            set _checkVectorSize_ok = 0
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if(0==_checkVectorSize_ok) {
+        echo "checkVectorSize: Failed!"
+    }
+    set $0 = _checkVectorSize_ok
+    return

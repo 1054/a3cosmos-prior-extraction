@@ -1,0 +1,233 @@
+crabTablePrintf 02
+    # 
+    #  print a multi column text file with given vector
+    # 
+    #  Usage: load crabTablePrintf.sm crabTablePrintf rfile_headers bbb
+    # 
+    if(!$?1) {print 'Usage: crabTablePrintf header_list_vector output_file\n' {} return}
+    if(!$?2) {print 'Usage: crabTablePrintf header_list_vector output_file\n' {} return}
+    if(!is_vector($1)) {print 'Error! Input $1 is not a vector!\n' {} return}
+    if(!dimen($1)>0) {print 'Error! Input $1 dimension is 0!\n' {} return}
+    #set crabtbp_vec = '$($1[0])'
+    #do crabi=1,dimen($1)-1 {
+    #    set crabtbp_vec = crabtbp_vs+' $($1[$crabi])'
+    #}
+    #echo $(crabtbp_col)
+    declare crabtbp_col 0.s
+    declare crabtbp_fmt 0.s
+    do crabtbp_i=0,dimen($1)-1 {
+        set crabtbp_str = <"%15g">
+        set crabtbp_vec = $1[$crabtbp_i]
+        if(crabtbp_vec=='id'||crabtbp_vec=='_id'||index(crabtbp_vec,'id_')>=0) {set crabtbp_str = <"%15d"> set $(crabtbp_vec) = int($(crabtbp_vec))}
+        if(crabtbp_vec=='ra'||crabtbp_vec=='_ra'||index(crabtbp_vec,'ra_')>=0) {set crabtbp_str = <"%15.7f">}
+        if(crabtbp_vec=='de'||crabtbp_vec=='_de'||index(crabtbp_vec,'de_')>=0) {set crabtbp_str = <"%15.7f">}
+        if(crabtbp_vec=='SB') {set crabtbp_str = <"%15s">}
+        if(crabtbp_vec=='alias'||crabtbp_vec=='Alias') {set crabtbp_str = <"%20s">}
+        if(index(crabtbp_vec,'source')>=0) {set crabtbp_str = <"%15s">}
+        if(index(crabtbp_vec,'souradio')>=0) {set crabtbp_str = <"%15s">}
+        if(!is_vector($1[$crabtbp_i])) {print 'Error! $1[$crabtbp_i] does not exist!\n' {} return}
+        set crabtbp_fmt = crabtbp_fmt concat crabtbp_str
+        set crabtbp_col = crabtbp_col concat crabtbp_vec
+    }
+    if(is_file($2)) {
+        echo Backup $2 as backup.$2
+        !mv $2 backup.$2
+    }
+    if(dimen($1)==1) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(crabtbp_fmt[0])\n' \
+                 <$(crabtbp_col[0])>
+    }
+    if(dimen($1)==2) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(crabtbp_fmt[0]) $(crabtbp_fmt[1])\n' \
+                 <$(crabtbp_col[0]) $(crabtbp_col[1])>
+    }
+    if(dimen($1)==3) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(crabtbp_fmt[0]) $(crabtbp_fmt[1]) $(crabtbp_fmt[2])\n' \
+                 <$(crabtbp_col[0]) $(crabtbp_col[1]) $(crabtbp_col[2])>
+    }
+    if(dimen($1)==4) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(crabtbp_fmt[0]) $(crabtbp_fmt[1]) $(crabtbp_fmt[2]) $(crabtbp_fmt[3])\n' \
+                 <$(crabtbp_col[0]) $(crabtbp_col[1]) $(crabtbp_col[2]) $(crabtbp_col[3])>
+    }
+    if(dimen($1)==5) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(crabtbp_fmt[0]) $(crabtbp_fmt[1]) $(crabtbp_fmt[2]) $(crabtbp_fmt[3]) $(crabtbp_fmt[4])\n' \
+                 <$(crabtbp_col[0]) $(crabtbp_col[1]) $(crabtbp_col[2]) $(crabtbp_col[3]) $(crabtbp_col[4])>
+    }
+    if(dimen($1)==6) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(crabtbp_fmt[0]) $(crabtbp_fmt[1]) $(crabtbp_fmt[2]) $(crabtbp_fmt[3]) $(crabtbp_fmt[4]) $(crabtbp_fmt[5])\n' \
+                 <$(crabtbp_col[0]) $(crabtbp_col[1]) $(crabtbp_col[2]) $(crabtbp_col[3]) $(crabtbp_col[4]) $(crabtbp_col[5])>
+    }
+    if(dimen($1)==7) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(crabtbp_fmt[0]) $(crabtbp_fmt[1]) $(crabtbp_fmt[2]) $(crabtbp_fmt[3]) $(crabtbp_fmt[4]) $(crabtbp_fmt[5]) $(crabtbp_fmt[6])\n' \
+                 <$(crabtbp_col[0]) $(crabtbp_col[1]) $(crabtbp_col[2]) $(crabtbp_col[3]) $(crabtbp_col[4]) $(crabtbp_col[5]) $(crabtbp_col[6])>
+    }
+    if(dimen($1)==8) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(crabtbp_fmt[0]) $(crabtbp_fmt[1]) $(crabtbp_fmt[2]) $(crabtbp_fmt[3]) $(crabtbp_fmt[4]) $(crabtbp_fmt[5]) $(crabtbp_fmt[6]) $(crabtbp_fmt[7])\n' \
+                 <$(crabtbp_col[0]) $(crabtbp_col[1]) $(crabtbp_col[2]) $(crabtbp_col[3]) $(crabtbp_col[4]) $(crabtbp_col[5]) $(crabtbp_col[6]) $(crabtbp_col[7])>
+    }
+    if(dimen($1)>8) {
+        if(is_vector(f)) {set crabtbp_fmt_backup = f} else {if(is_vector(crabtbp_fmt_backup)) {unset crabtbp_fmt_backup}}
+        set f = crabtbp_fmt
+        if(is_vector(c)) {set crabtbp_col_backup = c} else {if(is_vector(crabtbp_col_backup)) {unset crabtbp_col_backup}}
+        set c = crabtbp_col
+    }
+    if(dimen($1)==9) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(f[0]) $(f[1]) $(f[2]) $(f[3]) $(f[4]) $(f[5]) $(f[6]) $(f[7]) $(f[8])\n' \
+                 <$(c[0]) $(c[1]) $(c[2]) $(c[3]) $(c[4]) $(c[5]) $(c[6]) $(c[7]) $(c[8])>
+    }
+    if(dimen($1)==10) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(f[0]) $(f[1]) $(f[2]) $(f[3]) $(f[4]) $(f[5]) $(f[6]) $(f[7]) $(f[8]) $(f[9])\n' \
+                 <$(c[0]) $(c[1]) $(c[2]) $(c[3]) $(c[4]) $(c[5]) $(c[6]) $(c[7]) $(c[8]) $(c[9])>
+    }
+    if(dimen($1)==11) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(f[0]) $(f[1]) $(f[2]) $(f[3]) $(f[4]) $(f[5]) $(f[6]) $(f[7]) $(f[8]) $(f[9]) $(f[10])\n' \
+                 <$(c[0]) $(c[1]) $(c[2]) $(c[3]) $(c[4]) $(c[5]) $(c[6]) $(c[7]) $(c[8]) $(c[9]) $(c[10])>
+    }
+    if(dimen($1)==12) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(f[0]) $(f[1]) $(f[2]) $(f[3]) $(f[4]) $(f[5]) $(f[6]) $(f[7]) $(f[8]) $(f[9]) $(f[10]) $(f[11])\n' \
+                 <$(c[0]) $(c[1]) $(c[2]) $(c[3]) $(c[4]) $(c[5]) $(c[6]) $(c[7]) $(c[8]) $(c[9]) $(c[10]) $(c[11])>
+    }
+    if(dimen($1)==13) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(f[0]) $(f[1]) $(f[2]) $(f[3]) $(f[4]) $(f[5]) $(f[6]) $(f[7]) $(f[8]) $(f[9]) $(f[10]) $(f[11]) $(f[12])\n' \
+                 <$(c[0]) $(c[1]) $(c[2]) $(c[3]) $(c[4]) $(c[5]) $(c[6]) $(c[7]) $(c[8]) $(c[9]) $(c[10]) $(c[11]) $(c[12])>
+    }
+    if(dimen($1)==14) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(f[0]) $(f[1]) $(f[2]) $(f[3]) $(f[4]) $(f[5]) $(f[6]) $(f[7]) $(f[8]) $(f[9]) $(f[10]) $(f[11]) $(f[12]) $(f[13])\n' \
+                 <$(c[0]) $(c[1]) $(c[2]) $(c[3]) $(c[4]) $(c[5]) $(c[6]) $(c[7]) $(c[8]) $(c[9]) $(c[10]) $(c[11]) $(c[12]) $(c[13])>
+    }
+    if(dimen($1)==15) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(f[0]) $(f[1]) $(f[2]) $(f[3]) $(f[4]) $(f[5]) $(f[6]) $(f[7]) $(f[8]) $(f[9]) $(f[10]) $(f[11]) $(f[12]) $(f[13]) $(f[14])\n' \
+                 <$(c[0]) $(c[1]) $(c[2]) $(c[3]) $(c[4]) $(c[5]) $(c[6]) $(c[7]) $(c[8]) $(c[9]) $(c[10]) $(c[11]) $(c[12]) $(c[13]) $(c[14])>
+    }
+    if(dimen($1)==16) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(f[0]) $(f[1]) $(f[2]) $(f[3]) $(f[4]) $(f[5]) $(f[6]) $(f[7]) $(f[8]) $(f[9]) $(f[10]) $(f[11]) $(f[12]) $(f[13]) $(f[14]) $(f[15])\n' \
+                 <$(c[0]) $(c[1]) $(c[2]) $(c[3]) $(c[4]) $(c[5]) $(c[6]) $(c[7]) $(c[8]) $(c[9]) $(c[10]) $(c[11]) $(c[12]) $(c[13]) $(c[14]) $(c[15])>
+    }
+    if(dimen($1)==17) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(f[0]) $(f[1]) $(f[2]) $(f[3]) $(f[4]) $(f[5]) $(f[6]) $(f[7]) $(f[8]) $(f[9]) $(f[10]) $(f[11]) $(f[12]) $(f[13]) $(f[14]) $(f[15]) $(f[16])\n' \
+                 <$(c[0]) $(c[1]) $(c[2]) $(c[3]) $(c[4]) $(c[5]) $(c[6]) $(c[7]) $(c[8]) $(c[9]) $(c[10]) $(c[11]) $(c[12]) $(c[13]) $(c[14]) $(c[15]) $(c[16])>
+    }
+    if(dimen($1)==18) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(f[0]) $(f[1]) $(f[2]) $(f[3]) $(f[4]) $(f[5]) $(f[6]) $(f[7]) $(f[8]) $(f[9]) $(f[10]) $(f[11]) $(f[12]) $(f[13]) $(f[14]) $(f[15]) $(f[16]) $(f[17])\n' \
+                 <$(c[0]) $(c[1]) $(c[2]) $(c[3]) $(c[4]) $(c[5]) $(c[6]) $(c[7]) $(c[8]) $(c[9]) $(c[10]) $(c[11]) $(c[12]) $(c[13]) $(c[14]) $(c[15]) $(c[16]) $(c[17])>
+    }
+    if(dimen($1)==19) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(f[0]) $(f[1]) $(f[2]) $(f[3]) $(f[4]) $(f[5]) $(f[6]) $(f[7]) $(f[8]) $(f[9]) $(f[10]) $(f[11]) $(f[12]) $(f[13]) $(f[14]) $(f[15]) $(f[16]) $(f[17]) $(f[18])\n' \
+                 <$(c[0]) $(c[1]) $(c[2]) $(c[3]) $(c[4]) $(c[5]) $(c[6]) $(c[7]) $(c[8]) $(c[9]) $(c[10]) $(c[11]) $(c[12]) $(c[13]) $(c[14]) $(c[15]) $(c[16]) $(c[17]) $(c[18])>
+    }
+    if(dimen($1)==20) {
+        echo Output $(dimen($1)) vectors to $2
+        print $2 '$(f[0]) $(f[1]) $(f[2]) $(f[3]) $(f[4]) $(f[5]) $(f[6]) $(f[7]) $(f[8]) $(f[9]) $(f[10]) $(f[11]) $(f[12]) $(f[13]) $(f[14]) $(f[15]) $(f[16]) $(f[17]) $(f[18]) $(f[19])\n' \
+                 <$(c[0]) $(c[1]) $(c[2]) $(c[3]) $(c[4]) $(c[5]) $(c[6]) $(c[7]) $(c[8]) $(c[9]) $(c[10]) $(c[11]) $(c[12]) $(c[13]) $(c[14]) $(c[15]) $(c[16]) $(c[17]) $(c[18]) $(c[19])>
+    }
+    if(dimen($1)>20) {
+        echo Output $(dimen($1)) vectors to $2
+        do crabtbp_i=0, dimen($1)-1, 10 {
+            #echo $2.$crabtbp_i.tmp
+            if((dimen($1)-1 - $crabtbp_i) == 0) {
+                print $2.$crabtbp_i.tmp \
+                  '$(f[0+$crabtbp_i])\n' \
+                  <$(c[0+$crabtbp_i])>
+            }
+            if((dimen($1)-1 - $crabtbp_i) == 1) {
+                print $2.$crabtbp_i.tmp \
+                  '$(f[0+$crabtbp_i]) $(f[1+$crabtbp_i])\n' \
+                  <$(c[0+$crabtbp_i]) $(c[1+$crabtbp_i])>
+            }
+            if((dimen($1)-1 - $crabtbp_i) == 2) {
+                print $2.$crabtbp_i.tmp \
+                  '$(f[0+$crabtbp_i]) $(f[1+$crabtbp_i]) $(f[2+$crabtbp_i])\n' \
+                  <$(c[0+$crabtbp_i]) $(c[1+$crabtbp_i]) $(c[2+$crabtbp_i])>
+            }
+            if((dimen($1)-1 - $crabtbp_i) == 3) {
+                print $2.$crabtbp_i.tmp \
+                  '$(f[0+$crabtbp_i]) $(f[1+$crabtbp_i]) $(f[2+$crabtbp_i]) $(f[3+$crabtbp_i])\n' \
+                  <$(c[0+$crabtbp_i]) $(c[1+$crabtbp_i]) $(c[2+$crabtbp_i]) $(c[3+$crabtbp_i])>
+            }
+            if((dimen($1)-1 - $crabtbp_i) == 4) {
+                print $2.$crabtbp_i.tmp \
+                  '$(f[0+$crabtbp_i]) $(f[1+$crabtbp_i]) $(f[2+$crabtbp_i]) $(f[3+$crabtbp_i]) $(f[4+$crabtbp_i])\n' \
+                  <$(c[0+$crabtbp_i]) $(c[1+$crabtbp_i]) $(c[2+$crabtbp_i]) $(c[3+$crabtbp_i]) $(c[4+$crabtbp_i])>
+            }
+            if((dimen($1)-1 - $crabtbp_i) == 5) {
+                print $2.$crabtbp_i.tmp \
+                  '$(f[0+$crabtbp_i]) $(f[1+$crabtbp_i]) $(f[2+$crabtbp_i]) $(f[3+$crabtbp_i]) $(f[4+$crabtbp_i]) $(f[5+$crabtbp_i])\n' \
+                  <$(c[0+$crabtbp_i]) $(c[1+$crabtbp_i]) $(c[2+$crabtbp_i]) $(c[3+$crabtbp_i]) $(c[4+$crabtbp_i]) $(c[5+$crabtbp_i])>
+            }
+            if((dimen($1)-1 - $crabtbp_i) == 6) {
+                print $2.$crabtbp_i.tmp \
+                  '$(f[0+$crabtbp_i]) $(f[1+$crabtbp_i]) $(f[2+$crabtbp_i]) $(f[3+$crabtbp_i]) $(f[4+$crabtbp_i]) $(f[5+$crabtbp_i]) $(f[6+$crabtbp_i])\n' \
+                  <$(c[0+$crabtbp_i]) $(c[1+$crabtbp_i]) $(c[2+$crabtbp_i]) $(c[3+$crabtbp_i]) $(c[4+$crabtbp_i]) $(c[5+$crabtbp_i]) $(c[6+$crabtbp_i])>
+            }
+            if((dimen($1)-1 - $crabtbp_i) == 7) {
+                print $2.$crabtbp_i.tmp \
+                  '$(f[0+$crabtbp_i]) $(f[1+$crabtbp_i]) $(f[2+$crabtbp_i]) $(f[3+$crabtbp_i]) $(f[4+$crabtbp_i]) $(f[5+$crabtbp_i]) $(f[6+$crabtbp_i]) $(f[7+$crabtbp_i])\n' \
+                  <$(c[0+$crabtbp_i]) $(c[1+$crabtbp_i]) $(c[2+$crabtbp_i]) $(c[3+$crabtbp_i]) $(c[4+$crabtbp_i]) $(c[5+$crabtbp_i]) $(c[6+$crabtbp_i]) $(c[7+$crabtbp_i])>
+            }
+            if((dimen($1)-1 - $crabtbp_i) == 8) {
+                print $2.$crabtbp_i.tmp \
+                  '$(f[0+$crabtbp_i]) $(f[1+$crabtbp_i]) $(f[2+$crabtbp_i]) $(f[3+$crabtbp_i]) $(f[4+$crabtbp_i]) $(f[5+$crabtbp_i]) $(f[6+$crabtbp_i]) $(f[7+$crabtbp_i]) $(f[8+$crabtbp_i])\n' \
+                  <$(c[0+$crabtbp_i]) $(c[1+$crabtbp_i]) $(c[2+$crabtbp_i]) $(c[3+$crabtbp_i]) $(c[4+$crabtbp_i]) $(c[5+$crabtbp_i]) $(c[6+$crabtbp_i]) $(c[7+$crabtbp_i]) $(c[8+$crabtbp_i])>
+            }
+            if((dimen($1)-1 - $crabtbp_i) >= 9) {
+                print $2.$crabtbp_i.tmp \
+                  '$(f[0+$crabtbp_i]) $(f[1+$crabtbp_i]) $(f[2+$crabtbp_i]) $(f[3+$crabtbp_i]) $(f[4+$crabtbp_i]) $(f[5+$crabtbp_i]) $(f[6+$crabtbp_i]) $(f[7+$crabtbp_i]) $(f[8+$crabtbp_i]) $(f[9+$crabtbp_i])\n' \
+                  <$(c[0+$crabtbp_i]) $(c[1+$crabtbp_i]) $(c[2+$crabtbp_i]) $(c[3+$crabtbp_i]) $(c[4+$crabtbp_i]) $(c[5+$crabtbp_i]) $(c[6+$crabtbp_i]) $(c[7+$crabtbp_i]) $(c[8+$crabtbp_i]) $(c[9+$crabtbp_i])>
+            }
+            if($crabtbp_i==0) {
+                !cat $2.$crabtbp_i.tmp > $2
+            } else {
+                !echo paste $2 $2.$crabtbp_i.tmp '>' $2
+                !paste -d ' ' $2 $2.$crabtbp_i.tmp > $2.tmp
+                !cat $2.tmp > $2
+            }
+        }
+        !sed -i -e 's/ \#/  /g' $2
+    }
+    #if(dimen($1)==27) {
+    #    echo Output $(dimen($1)) vectors to $2
+    #    print $2 '$(f[0]) $(f[1]) $(f[2]) $(f[3]) $(f[4]) $(f[5]) $(f[6]) $(f[7]) $(f[8]) $(f[9]) $(f[10]) $(f[11]) $(f[12]) $(f[13]) $(f[14]) $(f[15]) $(f[16]) $(f[17]) $(f[18]) $(f[19]) $(f[20]) $(f[21]) $(f[22]) $(f[23]) $(f[24]) $(f[25]) $(f[26])\n' \
+    #             <$(c[0]) $(c[1]) $(c[2]) $(c[3]) $(c[4]) $(c[5]) $(c[6]) $(c[7]) $(c[8]) $(c[9]) $(c[10]) $(c[11]) $(c[12]) $(c[13]) $(c[14]) $(c[15]) $(c[16]) $(c[17]) $(c[18]) $(c[19]) $(c[20]) $(c[21]) $(c[22]) $(c[23]) $(c[24]) $(c[25]) $(c[26])>
+    #}
+    #if(dimen($1)==31) {
+    #    echo Output $(dimen($1)) vectors to $2
+    #    print $2 '$(f[0]) $(f[1]) $(f[2]) $(f[3]) $(f[4]) $(f[5]) $(f[6]) $(f[7]) $(f[8]) $(f[9]) $(f[10]) $(f[11]) $(f[12]) $(f[13]) $(f[14]) $(f[15]) $(f[16]) $(f[17]) $(f[18]) $(f[19]) $(f[20]) $(f[21]) $(f[22]) $(f[23]) $(f[24]) $(f[25]) $(f[26]) $(f[27]) $(f[28]) $(f[29]) $(f[30])\n' \
+    #             <$(c[0]) $(c[1]) $(c[2]) $(c[3]) $(c[4]) $(c[5]) $(c[6]) $(c[7]) $(c[8]) $(c[9]) $(c[10]) $(c[11]) $(c[12]) $(c[13]) $(c[14]) $(c[15]) $(c[16]) $(c[17]) $(c[18]) $(c[19]) $(c[20]) $(c[21]) $(c[22]) $(c[23]) $(c[24]) $(c[25]) $(c[26]) $(c[27]) $(c[28]) $(c[29]) $(c[30])>
+    #}
+    #if(dimen($1)>20 && dimen($1)!=27 && dimen($1)!=31) {
+    #    echo Sorry! dimen($1)=$(dimen($1)) is out of capability!
+    #}
+    if(dimen($1)>8) {
+        if(is_vector(crabtbp_fmt_backup)) {set f = crabtbp_fmt_backup unset crabtbp_fmt_backup} else {unset f}
+        if(is_vector(crabtbp_col_backup)) {set c = crabtbp_col_backup unset crabtbp_col_backup} else {unset c}
+    }
+    #print {crabtbp_fmt crabtbp_col}
+    #define print_noheader 1 verbose 0
+    #print "aaa_headers" '\"' {}
+    #print +"aaa_headers" '%s ' {rfile_headers}
+    #print +"aaa_headers" '\"\n' {}
+    #data "aaa_headers" read row rfile_header 1.s
+    #define print_noheader 0 verbose 1
+    #print "bbb" <$(rfile_header)>
+    #print "matched_to_"$1 <$(rfile_header)>
+    
+

@@ -1,0 +1,1485 @@
+astroPhot 00
+    # 
+    # In this script, we provide many astro constants
+    print '\n' {}
+    print 'astroPhot::\n' {}
+    print '           convert_ad2xy ra dec xoffset yoffset => sky2xy_x sky2xy_y\n' {}
+    print '           convert_mag2flux field band mag magerror => f\$(band) df\$(band) \# field="goodsn","cosmos","AB"\n' {}
+    print '           convert_flux2mag field band mag magerror => f\$(band) df\$(band) \# field="goodsn","cosmos","AB"\n' {}
+    print '           set_goodsn_photometry_constants_24 => \$mBias_24 \$fBias_24 \$SciPhoto_24\n' {}
+    print '           set_goodss_photometry_constants_24 => \$mBias_24 \$fBias_24 \$SciPhoto_24\n' {}
+    print '\n' {}
+    # 
+    # check sky2xy, CrabFitsHeader
+    print 'astroPhot::\n' {}
+    print '           Checking dependency:\n' {}
+    foreach astroPhot_check {sky2xy CrabFitsHeader} {
+        astroPhotOnMute
+        #<old method># !$astroPhot_check 2>&1 | wc -l > "._.AstroPhot._.CHECK._."
+        #<old method># data "._.AstroPhot._.CHECK._." read astroPhot_checked 1
+        #<old method># !\rm "._.AstroPhot._.CHECK._."
+        print '           ' {}
+        !type $astroPhot_check
+        set astroPhot_checked = 2-$exit_status
+        astroPhotUnMute
+        if(astroPhot_checked<=1) {
+            print '           ' {}
+            print 'Error! $astroPhot_check not found! Please contact dzliu (liudz1054@gmail.com).\n' {}
+        }
+    }
+    print '\n' {}
+
+convert_ad2xy 6
+    # InputArg: FitsFile ra$1 de$1 xOffset yOffset Band
+    # OuputVec: x$1 y$1 
+    # Possibly needed: xDisX_$Band, yDisY_$Band, xDisY_$Band, yDisX_$Band
+    # Possibly needed: xDisX_$Band, yDisY_$Band, xDisY_$Band, yDisX_$Band
+    if(!$?1||!$?2||!$?3) {print '\nastroPhot::convert_ad2xy xxxx.fits ra dec => x y\n' {}}
+    set sky2xy_ra = $2
+    set sky2xy_dec = $3
+    astroPhotOnMute
+    print "._.AstroPhot._.AD2XYI._." '%17.7f %17.7f\n' {sky2xy_ra sky2xy_dec}
+    astroPhotUnMute
+    if($verbose){echo "astroPhot::convert_ad2xy: Converted RA Dec for "$(dimen(sky2xy_ra))" objects"
+                 echo sky2xy -j $1}
+    !sky2xy $1 @"._.AstroPhot._.AD2XYI._." > "._.AstroPhot._.AD2XYO._."
+    astroPhotOnMute
+    data "._.AstroPhot._.AD2XYO._." read {sky2xy_x 5 sky2xy_y 6}
+    !\rm "._.AstroPhot._.AD2XYI._."
+    !\rm "._.AstroPhot._.AD2XYO._."
+    astroPhotUnMute
+    ###define aaa ?
+    ###<20160530><dzliu> sky2xy -j conflicts with file name begining with numbers. 
+    if($?4){ set sky2xy_x = sky2xy_x + $4 
+             if($verbose && $4!=0) {echo "astroPhot::convert_ad2xy: correcting displacement X + <x>"} }
+    if($?5){ set sky2xy_y = sky2xy_y + $5 
+             if($verbose && $5!=0) {echo "astroPhot::convert_ad2xy: correcting displacement Y + <y>"} }
+    if($?6){ 
+             if($?xDisX_$6) {set sky2xy_x = sky2xy_x + sky2xy_x*(($xDisX_$6)) 
+             if($verbose && $xDisX_$6!=0) {echo "astroPhot::convert_ad2xy: correcting distortion X * <x>"} }
+            #<TODO># the order of correction??
+            #if($?xDisY_$6){ set sky2xy_x = sky2xy_x + sky2xy_y*(($xDisY_$6)) 
+            #if($verbose && $xDisY_$6!=0) {echo "astroPhot::convert_ad2xy: correcting distortion X * <y>"} }
+            #if($?yDisY_$6){ set sky2xy_y = sky2xy_y + sky2xy_y*(($yDisY_$6)) 
+            #if($verbose && $yDisY_$6!=0) {echo "astroPhot::convert_ad2xy: correcting distortion Y * <y>"} }
+             if($?yDisY_$6){ set sky2xy_y = sky2xy_y + sky2xy_y*(($yDisY_$6)) 
+             if($verbose && $yDisY_$6!=0) {echo "astroPhot::convert_ad2xy: correcting distortion Y * <y>"} }
+             if($?xDisY_$6){ set sky2xy_x = sky2xy_x + sky2xy_y*(($xDisY_$6)) 
+             if($verbose && $xDisY_$6!=0) {echo "astroPhot::convert_ad2xy: correcting distortion X * <y>"} }
+             if($?yDisX_$6){ set sky2xy_y = sky2xy_y + sky2xy_x*(($yDisX_$6)) 
+             if($verbose && $yDisX_$6!=0) {echo "astroPhot::convert_ad2xy: correcting distortion Y * <x>"} }
+             if($?xBiaY_$6){ set sky2xy_x = sky2xy_x + $xBiaY_$6
+             if($verbose && $xBiaY_$6!=0) {echo "astroPhot::convert_ad2xy: correcting displacement X + <x>"} }
+             if($?yBiaX_$6){ set sky2xy_y = sky2xy_y + $yBiaX_$6
+             if($verbose && $yBiaX_$6!=0) {echo "astroPhot::convert_ad2xy: correcting displacement Y + <y>"} }
+    }
+
+convert_mag2flux 04
+    # InputArg: field band m$1 e$1
+    # InterVar: h_$1 m_$1 mJy_$1
+    # OuputVec: f$1 df$1
+    if(!$?1||!$?2||!$?3||!$?4) {
+        print '\n' {}
+        print 'astroPhot::convert_mag2flux supported inputs: \n' {}
+        print '           convert_mag2flux goodsn 16    m16    e16    => output: f16    df16\n' {}
+        print '           convert_mag2flux goodsn 24    m24    e24    => output: f24    df24\n' {}
+        print '           convert_mag2flux goodsn 70    m70    e70    => output: f70    df70\n' {}
+        print '           convert_mag2flux goodsn irac1 mirac2 eirac1 => output: firac1 dfirac1\n' {}
+        print '\n' {}
+        return
+    }
+    #if('$1'=='goodsn' && !$?h_$2) {
+    #    set_goodsn_photometry_constants_$2
+    #}
+    #if('$1'=='cosmos' && !$?h_$2) {
+    #    set_cosmos_photometry_constants_$2
+    #}
+    if(!$?h_$2)         { set_$1""_photometry_constants_$2 }
+    #if(!is_vector($3)) { print 'astroPhot::convert_mag2flux: Error! Vector $3 is invalid!\n' {} return }
+    #if(!is_vector($4)) { print 'astroPhot::convert_mag2flux: Error! Vector $4 is invalid!\n' {} return }
+    if(!$?h_$2)         { print 'astroPhot::convert_mag2flux: Error! Could not determin h_$2!\n' {} return }
+    if(!$?m_$2)         { print 'astroPhot::convert_mag2flux: Error! Could not determin m_$2!\n' {} return }
+    if(!$?mJy_$2)       { print 'astroPhot::convert_mag2flux: Error! Could not determin mJy_$2!\n' {} return }
+    if(!$?mBias_$2)     { define mBias_$2 0.0 }
+    if(!$?fBias_$2)     { define fBias_$2 0.0 }
+    if($?2) {
+        if(is_vector(f$2))  { 
+            print 'astroPhot::convert_mag2flux: Warning! f$2 will be overwrite! (backuped as f$2""_backup)\n' {} 
+            set f$2""_backup = f$2
+        }
+        if(is_vector(df$2)) { 
+            print 'astroPhot::convert_mag2flux: Warning! df$2 will be overwrite! (backuped as df$2""_backup)\n' {} 
+            set df$2""_backup = df$2 
+        }
+        if(is_vector(m$2))  { 
+            print 'astroPhot::convert_mag2flux: Warning! m$2 will be overwrite! (backuped as m$2""_backup)\n' {} 
+            set m$2""_backup = m$2
+        }
+        if(is_vector(em$2)) { 
+            print 'astroPhot::convert_mag2flux: Warning! em$2 will be overwrite! (backuped as em$2""_backup)\n' {} 
+            set em$2""_backup = em$2 
+        }
+        set m$2 = $3  #<added><20150610><dzliu>#
+        set em$2 = $4  #<added><20150610><dzliu>#
+        # convert mag2flux
+        set f$2 = 10**(-0.4*(m$2+$mBias_$2))*$h_$2/$m_$2*$mJy_$2 # [mJy]
+        set df$2 = f$2*em$2/1.08 # [mJy]
+        set f$2 = f$2+$fBias_$2 # [mJy]
+        # print mag2flux
+        if(!is_vector($3)&&!is_vector($4)) {
+            print '%12g%12g%12g%12g\n' <m$2 em$2 f$2 df$2>  #<added><20150610><dzliu># if input is not vector but a number
+        }
+        if($verbose) { 
+            print 'astroPhot::convert_mag2flux: Converted to f$2 and df$2 (fBias $fBias_$2 mBias $mBias_$2) in mJy\n' {} # [mJy]
+        }
+    }
+
+convert_flux2mag 04
+    # InputArg: field band f$1 df$1
+    # InterVar: h_$1 m_$1 mJy_$1
+    # OuputVec: m$1 em$1
+    if(!$?1||!$?2||!$?3||!$?4) {
+        print '\n' {}
+        print 'astroPhot::convert_flux2mag supported inputs: \n' {}
+        print '           convert_flux2mag goodsn 16    f16    df16    => output: m16    em16\n' {}
+        print '           convert_flux2mag goodsn 24    f24    df24    => output: m24    em24\n' {}
+        print '           convert_flux2mag goodsn 70    f70    df70    => output: m70    em70\n' {}
+        print '           convert_flux2mag goodsn irac1 firac2 dfirac1 => output: mirac1 emirac1\n' {}
+        print '\n' {}
+        return
+    }
+    if('$1'=='goodsn' && !$?h_$2) {
+        set_goodsn_photometry_constants_$2
+    }
+    if('$1'=='cosmos' && !$?h_$2) {
+        set_cosmos_photometry_constants_$2
+    }
+    #if(!is_vector($3)) { print 'astroPhot::convert_flux2mag: Error! Vector $3 is invalid!\n' {} return }
+    #if(!is_vector($4)) { print 'astroPhot::convert_flux2mag: Error! Vector $4 is invalid!\n' {} return }
+    if(!$?h_$2)        { print 'astroPhot::convert_flux2mag: Error! Could not determin h_$2!\n' {} return }
+    if(!$?m_$2)        { print 'astroPhot::convert_flux2mag: Error! Could not determin m_$2!\n' {} return }
+    if(!$?mJy_$2)      { print 'astroPhot::convert_flux2mag: Error! Could not determin mJy_$2!\n' {} return }
+    if(!$?mBias_$2)    { define mBias_$2 0.0 }
+    if(!$?fBias_$2)    { define fBias_$2 0.0 }
+    if($?2) {
+        if(is_vector(f$2)) { 
+            print 'astroPhot::convert_flux2mag: Warning! f$2 will be overwrite! (backuped as f$2""_backup)\n' {} 
+            set f$2""_backup = f$2 
+        }
+        if(is_vector(df$2)) { 
+            print 'astroPhot::convert_flux2mag: Warning! df$2 will be overwrite! (backuped as df$2""_backup)\n' {} 
+            set df$2""_backup = df$2 
+        }
+        if(is_vector(m$2)) { 
+            print 'astroPhot::convert_flux2mag: Warning! m$2 will be overwrite! (backuped as m$2""_backup)\n' {} 
+            set m$2""_backup = m$2 
+        }
+        if(is_vector(em$2)) { 
+            print 'astroPhot::convert_flux2mag: Warning! em$2 will be overwrite! (backuped as em$2""_backup)\n' {} 
+            set em$2""_backup = em$2 
+        }
+        # convert flux2mag (note that we exclude negative flux)
+        set f$2 = $3
+        set df$2 = $4
+        set f$2 = float(f$2)
+        set df$2 = float(df$2)
+        set coposf = $3
+        set copose = $4
+        set coposi = 0,dimen(coposf)-1
+        set coposi = coposi if(coposf>0)
+        set em$2 = coposf*0+99
+        set em$2[coposi] = copose[coposi]/coposf[coposi]*1.08 # [mJy]
+        ### set em$2 = $4/$3*1.08 # [mJy]
+        set coposi = 0,dimen(coposf)-1
+        set coposi = coposi if(coposf>$fBias_$2)
+        set m$2 = coposf*0+99
+        set m$2[coposi] = -2.5*lg((coposf[coposi]-$fBias_$2)/$h_$2*$m_$2/$mJy_$2)-$mBias_$2 # [mJy]
+        ### set m$2 = -2.5*lg(($3-$fBias_$2)/$h_$2*$m_$2/$mJy_$2)-$mBias_$2 # [mJy]
+        # print flux2mag
+        if(!is_vector($3)&&!is_vector($4)) {
+            print '\n' {}
+            print '%12g%12g%12g%12g\n' <f$2 df$2 m$2 em$2>  #<added><20150610><dzliu># if input is not vector but a number
+        }
+        if($verbose) { 
+            print 'astroPhot::convert_flux2mag: Converted to m$2 and em$2 (mBias $mBias_$2 fBias $fBias_$2) from mJy\n' {} # [mJy]
+        }
+    }
+
+convert_magVega2magAB 02
+    # 
+    # http://www.astronomy.ohio-state.edu/~martini/usefuldata.html
+    if(!$?2) {print 'usage: convert_magVega2magAB J 20.5\n' {} return}
+    set mVega = $2
+    set mAB = mVega*0-99
+    set mBand = '$1'
+    if(dimen(mBand)==1 && dimen(mVega)>1) {
+        set mBand = mVega>0 ? '$1' : '$1'
+    }
+    set mAB = (mBand=='J')              ? -2.5*lg(10**((mVega)/(-2.5))*1.589e3/3630.780548) : mAB
+    set mAB = (mBand=='H')              ? -2.5*lg(10**((mVega)/(-2.5))*1.021e3/3630.780548) : mAB
+    set mAB = (mBand=='K'||mBand=='Ks') ? -2.5*lg(10**((mVega)/(-2.5))*0.64e3/3630.780548)  : mAB
+    print {mBand mVega mAB}
+    set $0 = mAB
+    return
+
+convert_id_ra_dec_flux_to_ds9_reg 07
+    # Input id ra dec flux, output ds9 reg file, 
+    # each source is a circle, and the circle size indicates the flux, 
+    # a circle size equaling to the beam FWHM/2 size indicates a 5-sigma flux. 
+    if(!$?7) {
+        print 'Usage: convert_id_ra_dec_flux_to_ds9_reg field band id ra dec flux "output.ds9.reg"\n' {}
+        return
+    } else {
+        set_$1""_photometry_constants_$2
+        if(!$?rBeam_$2 || !$?fSigma_$2 || !$?PixScale_$2) {
+            print 'Error! Failed to recognize field $1 or band $2 in astroPhot.sm!\n' {}
+            return
+        }
+        print $7 'global color=yellow width=1\n' {}
+        print +$7 'fk5\n' {}
+        set convert_to_ds9_reg_snr_max = 10.0
+        set convert_to_ds9_reg_zoom = 1.0
+        if('$2'=='100') { set convert_to_ds9_reg_zoom = 6.0 }
+        if('$2'=='160') { set convert_to_ds9_reg_zoom = 3.0 }
+        if('$2'=='350') { set convert_to_ds9_reg_snr_max = 30.0 }
+        #if('$2'=='850') { set convert_to_ds9_reg_zoom = 3.0 } #<commented><20170605><dzliu># 
+        if('$2'=='1160') { set convert_to_ds9_reg_zoom = 6.0 }
+        set convert_to_ds9_reg_id = ($3)
+        set convert_to_ds9_reg_ra = ($4)
+        set convert_to_ds9_reg_de = ($5)
+        set convert_to_ds9_reg_flux = ($6)
+        set convert_to_ds9_reg_dash = convert_to_ds9_reg_flux>3.0*($fSigma_$2) ? 0 : 1 # 3-sigma detection limit: dash=1
+        set convert_to_ds9_reg_r = convert_to_ds9_reg_flux/convert_to_ds9_reg_snr_max*($fSigma_$2) #<TODO># scale from flux to circle radius, normalize to 10-sigma
+        set convert_to_ds9_reg_r = convert_to_ds9_reg_r<0.0 ? 1e-20 : convert_to_ds9_reg_r # prevent floating nan
+        set convert_to_ds9_reg_r = convert_to_ds9_reg_r**0.5 #<TODO># scale from flux to circle radius, using a power index of 0.5
+        set convert_to_ds9_reg_r = convert_to_ds9_reg_r>1.0 ? 1.0 : convert_to_ds9_reg_r #<TODO># set maximum circle radius of 1 times beam size as radius
+        set convert_to_ds9_reg_r = convert_to_ds9_reg_r*convert_to_ds9_reg_zoom #<TODO># scale from flux to circle radius, applying a zoom factor
+        set convert_to_ds9_reg_r = convert_to_ds9_reg_r*($rBeam_$2/2.0) #<TODO># scale from flux to circle radius, using the 1 times beam size as radius
+        set convert_to_ds9_reg_r = convert_to_ds9_reg_r<0.5 ? 0.5 : convert_to_ds9_reg_r #<TODO># set minimum circle radius of 0.5 arcsec
+        #set convert_to_ds9_reg_r = convert_to_ds9_reg_r<($PixScale_$2) ? ($PixScale_$2) : convert_to_ds9_reg_r # set minimum circle radius of 1 pixel
+        define print_noheader 1
+        print +$7 'circle(%0.7f,%0.7f,%0.5f\") \# text={%s} dash=%d\n' {convert_to_ds9_reg_ra convert_to_ds9_reg_de convert_to_ds9_reg_r convert_to_ds9_reg_id convert_to_ds9_reg_dash}
+        echo "Written to "$7"!"
+        define print_noheader 0
+    }
+
+get_telescope_instrument_beam_size 01
+    # get_telescope_instrument_beam_size
+    # usage: 
+    #   set aaa = get_telescope_instrument_beam_size(irac3)
+    # note:
+    #   input argument should not include quote marks
+    if(!$?1) {
+        print 'Error! No input for get_telescope_instrument_beam_size!\n' {}
+        print 'Usage: get_telescope_instrument_beam_size irac1\n' {}
+        define aaa 1 
+        define aaa ?
+        return
+    }
+    if(is_vector(rBeam_instrument)) {
+        # if($verbose) {
+        #     print 'Warning! Backuping vector rBeam_instrument as rBeam_instrument_backup!\n' {}
+        # }
+        set rBeam_instrument_backup = rBeam_instrument
+    }
+    set rBeam_instrument = 0.0
+    if($?1) {
+        # IRAC
+        # http://irsa.ipac.caltech.edu/data/SPITZER/docs/irac/iracinstrumenthandbook/5/
+        if( (index('$1','irac')==0 || index('$1','IRAC')==0) && \
+            (index('$1','1')==strlen('$1')-1 || index('$1','3.6')>0) ) {
+            set rBeam_instrument = 1.66
+        }
+        if( (index('$1','irac')==0 || index('$1','IRAC')==0) && \
+            (index('$1','2')==strlen('$1')-1 || index('$1','4.5')>0) ) {
+            set rBeam_instrument = 1.72
+        }
+        if( (index('$1','irac')==0 || index('$1','IRAC')==0) && \
+            (index('$1','3')==strlen('$1')-1 || index('$1','5.8')>0) ) {
+            set rBeam_instrument = 1.88
+        }
+        if( (index('$1','irac')==0 || index('$1','IRAC')==0) && \
+            (index('$1','4')==strlen('$1')-1 || index('$1','8.0')>0) ) {
+            set rBeam_instrument = 1.98
+        }
+        # MIPS
+        # Le Floc'h et al. 2009?
+        if( '$1'=='24' ) {
+            set rBeam_instrument = 5.7
+        }
+        if( (index('$1','mips')==0 || index('$1','MIPS')==0) && \
+            (index('$1','1')==strlen('$1')-1 || index('$1','24')>0) ) {
+            set rBeam_instrument = 5.7
+        }
+    }
+    set $0 = rBeam_instrument
+    return
+
+get_telescope_instrument_pixel_size 01
+    # get_telescope_instrument_beam_size
+    # usage: 
+    #   set aaa = get_telescope_instrument_pixel_size(irac3)
+    # note:
+    #   input argument should not include quote marks
+    if(!$?1) {
+        print 'Error! No input for get_telescope_instrument_beam_size!\n' {}
+        print 'Usage: get_telescope_instrument_beam_size irac1\n' {}
+        define aaa 1 
+        define aaa ?
+        return
+    }
+    if(is_vector(rPixel_instrument)) {
+        # if($verbose) {
+        #     print 'Warning! Backuping vector rPixel_instrument as rPixel_instrument_backup!\n' {}
+        # }
+        set rPixel_instrument_backup = rPixel_instrument
+    }
+    set rPixel_instrument = 0.0
+    if($?1) {
+        # IRAC
+        # http://irsa.ipac.caltech.edu/data/SPITZER/docs/irac/iracinstrumenthandbook/5/
+        if( (index('$1','irac')==0 || index('$1','IRAC')==0) && \
+            (index('$1','1')==strlen('$1')-1 || index('$1','3.6')>0) ) {
+            set rPixel_instrument = 1.221
+        }
+        if( (index('$1','irac')==0 || index('$1','IRAC')==0) && \
+            (index('$1','2')==strlen('$1')-1 || index('$1','4.5')>0) ) {
+            set rPixel_instrument = 1.213
+        }
+        if( (index('$1','irac')==0 || index('$1','IRAC')==0) && \
+            (index('$1','3')==strlen('$1')-1 || index('$1','5.8')>0) ) {
+            set rPixel_instrument = 1.222
+        }
+        if( (index('$1','irac')==0 || index('$1','IRAC')==0) && \
+            (index('$1','4')==strlen('$1')-1 || index('$1','8.0')>0) ) {
+            set rPixel_instrument = 1.220
+        }
+        # MIPS
+        # Le Floc'h et al. 2009?
+        if( '$1'=='24' ) {
+            set rPixel_instrument = 1.2
+        }
+        if( (index('$1','mips')==0 || index('$1','MIPS')==0) && \
+            (index('$1','1')==strlen('$1')-1 || index('$1','24')>0) ) {
+            set rPixel_instrument = 1.2
+        }
+    }
+    set $0 = rPixel_instrument
+    return
+
+set_default_photometry_constants 01
+    # set default photometry constants
+    # usage: 
+    #     load astroPhot.sm set_default_photometry_constants irac1
+    # note:
+    #     input argument should not contain quote marks nor point
+    if(!$?1) {
+        print 'Error! No input for set_default_photometry_constants!\n' {}
+        print 'Usage: load astroPhot.sm set_default_photometry_constants 24\n' {}
+        define aaa 1 
+        define aaa ?
+        return
+    }
+    define h_$1         1.000       # photometry fudge factor from Jy/beam definition, for small pixels
+    define m_$1         1           # photometry fudge factor from use of finite PSF  (divise)
+    define mJy_$1       1           # converting pixel's flux from Jy to mJy
+    define mBias_$1     0.0         # magnitude bias
+    define fBias_$1     0.0         # flux bias in flux unit, e.g. mJy
+    define rBeam_$1     1.0         # FWHM of PSF in arcsec
+    define BeamSize_$1  1.0         # FWHM of PSF in arcsec
+    define PixScale_$1  1.0         # Pixel Scale in arcsec
+    define SkyValue_$1  0.0         # pixel unit
+    define xStep_$1     80          # x length of the inner region of each box
+    define yStep_$1     80          # y length of the inner region of each box
+    define gBuff_$1     19          # length of the buffer region of each box
+    define fBuff_$1     1           # y length of the buffer region of each box
+    if(index('$1','irac')==0 || index('$1','IRAC')==0 || \
+       index('$1','mips')==0 || index('$1','MIPS')==0 || \
+       '$1'=='24' ) {
+        define rBeam_$1    $(get_telescope_instrument_beam_size($1))
+        define BeamSize_$1 $(get_telescope_instrument_beam_size($1))
+        define PixScale_$1 $(get_telescope_instrument_pixel_size($1))
+        # Calculate h_$1 for MJy/sr unit
+        # 1 MJy/sr = 2.350443e-5 * PixScale**2 / (pi/(4*ln(2)) * BeamSize**2) Jy/beam
+        ##echo $(2.350443e-5 * $PixScale_$1**2 / (pi/(4*ln(2)) * $BeamSize_$1**2) * 1e3) mJy/beam
+        # MIPS 24 -- h_24 = 9.193864189 mJy/beam
+    }
+    set_default_astrometry_constants $1
+    set_default_telescope_constants $1
+
+set_default_astrometry_constants 01
+    # set default astrometry constants
+    define xBias_$1 0.0 # <TODO> astrometry correction -- set sky2xy_x=x*xDisX+xBiaX+y*xDisY+xBiaY+xBias # see goSimu.sm
+    define xDisX_$1 0.0 # <TODO> astrometry correction -- set sky2xy_x=x*xDisX+xBiaX+y*xDisY+xBiaY+xBias # see goSimu.sm
+    define xBiaX_$1 0.0 # <TODO> astrometry correction -- set sky2xy_x=x*xDisX+xBiaX+y*xDisY+xBiaY+xBias # see goSimu.sm
+    define xDisY_$1 0.0 # <TODO> astrometry correction -- set sky2xy_x=x*xDisX+xBiaX+y*xDisY+xBiaY+xBias # see goSimu.sm
+    define xBiaY_$1 0.0 # <TODO> astrometry correction -- set sky2xy_x=x*xDisX+xBiaX+y*xDisY+xBiaY+xBias # see goSimu.sm
+    define yBias_$1 0.0 # <TODO> astrometry correction -- set sky2xy_y=y*yDisY+yBiaY+x*yDisX+yBiaX+yBias # see goSimu.sm
+    define yDisY_$1 0.0 # <TODO> astrometry correction -- set sky2xy_y=y*yDisY+yBiaY+x*yDisX+yBiaX+yBias # see goSimu.sm
+    define yBiaY_$1 0.0 # <TODO> astrometry correction -- set sky2xy_y=y*yDisY+yBiaY+x*yDisX+yBiaX+yBias # see goSimu.sm
+    define yDisX_$1 0.0 # <TODO> astrometry correction -- set sky2xy_y=y*yDisY+yBiaY+x*yDisX+yBiaX+yBias # see goSimu.sm
+    define yBiaX_$1 0.0 # <TODO> astrometry correction -- set sky2xy_y=y*yDisY+yBiaY+x*yDisX+yBiaX+yBias # see goSimu.sm
+
+set_default_telescope_constants 01
+    define SimMag0_$1   0.0         # magnitude -- convert_flux2mag goodsn 24 0.30 0.001 -- 50-sigma
+    define SimMag1_$1   0.0         # magnitude -- convert_flux2mag goodsn 24 0.006 0.001 -- 1-sigma
+    define PixLim0_$1   0.0         # uJy/pixel -- pixel value range for display -- ds9 scale limits
+    define PixLim1_$1   0.0         # uJy/pixel -- pixel value range for display -- ds9 scale limits
+    define SkyValue_$1  0.0         # uJy/pixel -- pixel value of sky background -- currently only consider flat background
+    define PixScale_$1  1.0         # arcsec
+    define Telescop_$1 "unknown"    # 
+    define BandName_$1 "unknown"    # 
+    define BandWave_$1  0.0         # um -- detector central wavelength -- currently not considering filter response function
+    define SciPhoto_$1 "undefined"  # the image fits file (should not include suffix .fits)
+    define RmsPhoto_$1 "undefined"  # the r.m.s. fits file (should not include suffix .fits)
+    define PsfPhoto_$1 "undefined"  # the p.s.f. fits file (should not include suffix .fits)
+    define DirPhoto_$1 "/data"      # 
+
+
+
+
+
+
+set_GOODSN_photometry_constants_24 00
+    set_goodsn_photometry_constants_24
+
+set_goodsn_photometry_constants_24 00
+    # set MIPS24 photometry constants
+    define h_24         6.691                       # photometry fudge factor from Jy/beam definition, for small pixels
+    define m_24         1                           # photometry fudge factor from PEP, from use of finite PSF  (divise)
+    define mJy_24       1e-3                        # converting pixel flux from uJy to mJy
+    define mBias_24    -0.2036                      # from simulation done by Emanuele
+    define fBias_24     0.0                         # <NOTE> -0.553e-3 mJy before 20160115
+    define rBeam_24     5.7 # 3.0                   # FWHM of PSF in arcsec
+    define fSigma_24    5.165e-3                    # 1-sigma flux detection limit in mJy. 
+    set_default_astrometry_constants 24
+    define xBias_24     0.0507825188                # <TODO> astrometry correction -- set sky2xy_x=x*xDisX+xBiaX+y*xDisY+xBiaY+xBias # see goSimu.sm
+    define xDisX_24    -0.000218459022              # <TODO> astrometry correction -- set sky2xy_x=x*xDisX+xBiaX+y*xDisY+xBiaY+xBias # see goSimu.sm
+    define xBiaX_24     0.0507825188                # <TODO> astrometry correction -- set sky2xy_x=x*xDisX+xBiaX+y*xDisY+xBiaY+xBias # see goSimu.sm
+    define xDisY_24     0.0003340516216             # <TODO> astrometry correction -- set sky2xy_x=x*xDisX+xBiaX+y*xDisY+xBiaY+xBias # see goSimu.sm
+    define xBiaY_24    -0.2101281967                # <TODO> astrometry correction -- set sky2xy_x=x*xDisX+xBiaX+y*xDisY+xBiaY+xBias # see goSimu.sm
+    define yBias_24    -0.0941359848                # <TODO> astrometry correction -- set sky2xy_y=y*yDisY+yBiaY+x*yDisX+yBiaX+yBias # see goSimu.sm
+    define yDisY_24     0.0001888914055             # <TODO> astrometry correction -- set sky2xy_y=y*yDisY+yBiaY+x*yDisX+yBiaX+yBias # see goSimu.sm
+    define yBiaY_24    -0.0941359848                # <TODO> astrometry correction -- set sky2xy_y=y*yDisY+yBiaY+x*yDisX+yBiaX+yBias # see goSimu.sm
+    define yDisX_24     0.0002073335871             # <TODO> astrometry correction -- set sky2xy_y=y*yDisY+yBiaY+x*yDisX+yBiaX+yBias # see goSimu.sm
+    define yBiaX_24    -0.1008526574                # <TODO> astrometry correction -- set sky2xy_y=y*yDisY+yBiaY+x*yDisX+yBiaX+yBias # see goSimu.sm
+    ###set x24 =x24-x24*0.000218459022+0.0507825188 # change all signs here wrt the Move160 macro  # see goSimu.sm
+    ###set y24 =y24+y24*0.0001888914055-0.0941359848#                                              # see goSimu.sm
+    ###set x24 =x24+y24*0.0003340516216-0.2101281967# YX                                           # see goSimu.sm
+    ###set y24 =y24+x24*0.0002073335871-0.1008526574# XY                                           # see goSimu.sm
+    define xStep_24     35                          # x length of the inner region of each box
+    define yStep_24     35                          # y length of the inner region of each box
+    define gBuff_24     20                          # length of the buffer region of each box
+    define fBuff_24     1                           # additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 24
+    define SimMag0_24  -2.8416                      # magnitude -- convert_flux2mag goodsn 24 $(0.0044*25) 1 # (mBias -0.2036 fBias -0.000553) -- 25-sigma
+    define SimMag1_24   0.530157                    # magnitude -- convert_flux2mag goodsn 24 $(0.0044*01) 1 # (mBias -0.2036 fBias -0.000553) -- 1-sigma
+    define PixLim0_24   0.15                        # uJy/pixel -- pixel value range for display -- ds9 scale limits
+    define PixLim1_24   0.45                        # uJy/pixel -- pixel value range for display -- ds9 scale limits
+    define SkyValue_24 -0.080                       # uJy/pix
+    define PixScale_24  1.2                         # arcsec
+    define SciPhoto_24 "n_mips_1_s1_v0.37_sci_BS"   # <Daddi> subtracted 30x30 median smooth background after fitting with -0.080 background (test_bm3)
+    define RmsPhoto_24 "n_mips_1_s1_v0_37_rms_ED"
+    define PsfPhoto_24 "hdfn_dao_mipspsf"
+    define DirPhoto_24 "/upgal/GOODSN/GOODSN_Photo"
+
+set_GOODSS_photometry_constants_24 00
+    set_goodss_photometry_constants_24
+
+set_goodss_photometry_constants_24 00
+    # set MIPS24 photometry constants
+    define h_24         6.691                       # photometry fudge factor from Jy/beam definition, for small pixels
+    define m_24         1                           # photometry fudge factor from PEP, from use of finite PSF (divise)
+    define mJy_24       1e-3                        # converting pixel flux to mJy
+    define mBias_24     0.0                         # -0.112 from matching fluxes to Benj's catalog, -.2036 expected ap corr from Benj <Note> same as goodsn?
+    define fBias_24     0.0                         # 1.3954e-3 <TODO> from goFine_South.sm # mJy
+    define rBeam_24     5.7                         # FWHM of PSF in arcsec
+    define fSigma_24    0.0                         # 1-sigma flux detection limit in mJy. 
+    set_default_astrometry_constants 24
+    define xStep_24     35                          # box x length, from Dr. Daddi's goFine.sm
+    define yStep_24     35                          # box y length, from Dr. Daddi's goFine.sm
+    define gBuff_24     20                          # box buffer length g, from Dr. Daddi's goFine.sm
+    define fBuff_24     1                           # box buffer length f, from Dr. Daddi's goFine.sm
+    set_default_telescope_constants 24
+    define PixLim0_24   -0.1                        # DN/sec, 1 DN/sec = 6.691 microJy. 
+    define PixLim1_24   2.0                         # DN/sec, 1 DN/sec = 6.691 microJy. 
+    define PixScale_24  1.2                         # arcsec
+    define Telescop_24  Spitzer                     # 
+    define BandName_24  MIPS                        # 
+    define BandWave_24  24                          # um
+    define SciPhoto_24 "s_mips_1_s1_v0.30_sci_backS" # MIPS 24um aggiunto 0.044 a mano # "s_mips_1_s1_v0.30_sci"
+    define RmsPhoto_24 "s_mips_1_s1_v0_30_rms_ED"
+    define PsfPhoto_24 "hdfn_dao_mipspsf"
+    define DirPhoto_24 "/home/dzliu/Data/DeepFields/GOODSS_Photo/GOODS_S_MIPS_Photo"
+
+set_COSMOS_photometry_constants_24 00
+    set_cosmos_photometry_constants_24
+
+set_cosmos_photometry_constants_24 00
+    # set MIPS24 photometry constants
+    # define h_24       20.13                       # photometry fudge factor = PSF Peak * PSF Area = 0.0232623 * pi/(4*ln(2))*(6.0**2)*2.350443e1 sr [uJy]
+    # define m_24       0.829753                    # photometry fudge factor for the use of finite PSF = 0.0232623 | 0.829753
+    # define h_24       32.5                        # <TODO> photometry fudge factor -- see Rodighiero et al. 2005 Sec.3.3 http://arxiv.org/pdf/astro-ph/0511563v1.pdf
+    #define h_24         23.9635                    # PSF max=0.023262 sum=0.55744 PSF-total-to-peak-ratio=23.9635457
+    #define m_24         2.67764                    # PSF npix=79.12653 pixscale=1.2 bunit=2.35e-5*79.12653*1.2**2*1e3=2.677641775[[mJy/beam]/[MJy/sr]]
+    define h_24         0.033846                    # PSF max=0.023262 sum=0.55744 PSF-total-to-peak-ratio=23.9635457
+    define m_24         1                           # PSF npix=79.12653 pixscale=1.2 bunit=2.35e-5*79.12653*1.2**2*1e3=2.677641775[[mJy/beam]/[MJy/sr]]
+    define mJy_24       1                           # converting pixel flux to mJy
+    define mBias_24     -0.2036                     #-2.5*log(1.715) Emeric psf  #-0.2036 GOODSN psf        # <TODO> 
+    define fBias_24     0.0                         # need to determine flux bias mJy
+    define rBeam_24     6.0                         # FWHM of PSF in arcsec -- from Le Floch et al. 2009
+    #define rBeam_24     5.7                        # 5.7 same as GOODSN 24 -- 6.0 from Le Floch et al. 2009
+    define fSigma_24    0.018                       # 1-sigma flux detection limit in mJy, from Le Floch et al. 2009ApJ...703..222L 
+    set_default_astrometry_constants 24
+    define xStep_24     25                          # Shuowen. The box x length, from Dr. Daddi's goFine.sm
+    define yStep_24     25                          # Shuowen. The box y length, from Dr. Daddi's goFine.sm
+    define gBuff_24     20                          # Shuowen. The box buffer length g, from Dr. Daddi's goFine.sm
+    define fBuff_24     1                           # Shuowen. The box buffer length f, from Dr. Daddi's goFine.sm
+    set_default_telescope_constants 24
+    define SimMag0_24  -3.47                        # magnitude -- convert_flux2mag cosmos 24 10.0 0.001 -- 50-sigma
+    define SimMag1_24  0.33                         # magnitude -- convert_flux2mag cosmos 24 0.05 0.001 -- 1-sigma
+    define PixScale_24  1.2                         # arcsec
+    define Telescop_24  Spitzer                     # 
+    define BandName_24  MIPS                        # 
+    define BandWave_24  24                          # um
+    define SciPhoto_24 "mips_24_GO3_sci_10"         # S-COSMOS BUNIT='MJy/sr'
+    define RmsPhoto_24 "mips_24_GO3_unc_10"         # S-COSMOS
+    define PsfPhoto_24 "hdfn_dao_mipspsf"           # <TODO> use HDFN MIPS PSF for now
+    define DirPhoto_24 "~/Data/DeepFields/COSMOS_Photo/MIPS_Photo"
+
+set_GOODSN_photometry_constants_20cm 00
+    set_goodsn_photometry_constants_20cm
+
+set_goodsn_photometry_constants_20cm 00
+    # same as set_goodsn_photometry_constants_20cm_Owen
+    # set VLA 20cm photometry constants
+    define h_20cm       $(1.00/37.5055*1e6)         # photometry fudge factor from Jy/beam definition, derived from the PSF flux/peak ratio (here Dr. Daddi already divided the map by 4.404)
+    define m_20cm         0.74                      # <TODO> # from comparison to Glenn (average source size ?) see goFine.sm
+    define mJy_20cm       1e-3                      # converting pixel flux from uJy to mJy
+    define mBias_20cm     0                         # <TODO> from Dr. Daddi's goFine.sm
+    define fBias_20cm     0.0                       # <TODO> mJy <-> -0.6uJy from Dr. Daddi's goFine.sm <TODO> from comparison to Simu <TODO>
+    define rBeam_20cm     1.2                       # <TODO> FWHM of PSF in arcsec <-> 1.33256 by 1.10555 (arcsec) at pa 86.3055 (deg) in fits header
+                                                    # <TODO> astrometry correction see goSimu.sm
+    define fSigma_20cm    2.744e-3                  # 1-sigma flux detection limit in mJy. 
+    define xStep_20cm     100                       # x length of the inner region of each box
+    define yStep_20cm     100                       # x length of the inner region of each box
+    define gBuff_20cm     20                        # length of the buffer region of each box
+    define fBuff_20cm     1                         # additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 20cm
+    define SimMag0_20cm   6.70331                   # simulation brightest magnitude -- convert_flux2mag goodsn 20cm 0.075 0.001 -- 30-sigma
+    define SimMag1_20cm   10.3753                   # simulation faintest magnitude -- convert_flux2mag goodsn 20cm 0.0025 0.001 -- 1-sigma
+    define PixLim0_20cm  -1e-3                      # uJy/pixel -- pixel value range for display -- ds9 scale limits
+    define PixLim1_20cm   5e-3                      # uJy/pixel -- pixel value range for display -- ds9 scale limits
+    define PixScale_20cm  0.35                      # arcsec from Morrison's VLA image <TODO> Owen's PixScale ?
+    define Telescop_20cm  "VLA"                     # 
+    define BandName_20cm  "1.4GHz"                  # 
+    define BandWave_20cm  2e5                       # um
+    define SciPhoto_20cm "VLA_Owen_2arcsec_big_NOPBC"
+    define RmsPhoto_20cm "VLA_Owen_2arcsec_big_rms"
+    define PsfPhoto_20cm "VLA_Owen_Maurilio_beam2"      # Dr. Daddi is using this one, before was using "VLA_Owen_2arcsec_PSF"
+    define DirPhoto_20cm "/data/AstroDepth/GOODSN_Photo/VLA"
+
+set_goodsn_photometry_constants_20cm_Owen 00
+    # set VLA 20cm photometry constants
+    define h_20cm_Owen       $(1.00/37.5055*1e6)    # photometry fudge factor from Jy/beam definition, derived from the PSF flux/peak ratio (here Dr. Daddi already divided the map by 4.404)
+    define m_20cm_Owen         1.00                 # <TODO> # 0.74 ? from comparison to Glenn (average source size ?) see goFine.sm
+    define mJy_20cm_Owen       1e-3                 # converting pixel flux from uJy to mJy
+    define mBias_20cm_Owen     0                    # <TODO> from Dr. Daddi's goFine.sm
+    define fBias_20cm_Owen     0.0                  # <TODO> mJy <-> -0.6uJy from Dr. Daddi's goFine.sm <TODO> from comparison to Simu <TODO>
+    define rBeam_20cm_Owen     1.2                  # <TODO> FWHM of PSF in arcsec <-> 1.33256 by 1.10555 (arcsec) at pa 86.3055 (deg) in fits header
+                                                    # <TODO> astrometry correction see goSimu.sm
+    define fSigma_20cm_Owen    2.744e-3             # <TODO> 1-sigma flux detection limit in mJy. 
+    define xStep_20cm_Owen     100                  # x length of the inner region of each box
+    define yStep_20cm_Owen     100                  # x length of the inner region of each box
+    define gBuff_20cm_Owen     20                   # length of the buffer region of each box
+    define fBuff_20cm_Owen     1                    # additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 20cm_Owen
+    define SimMag0_20cm_Owen   6.70331              # simulation brightest magnitude -- convert_flux2mag goodsn 20cm 0.075 0.001 -- 30-sigma
+    define SimMag1_20cm_Owen   10.3753              # simulation faintest magnitude -- convert_flux2mag goodsn 20cm 0.0025 0.001 -- 1-sigma
+    define PixLim0_20cm_Owen  -1e-3                 # uJy/pixel -- pixel value range for display -- ds9 scale limits
+    define PixLim1_20cm_Owen   5e-3                 # uJy/pixel -- pixel value range for display -- ds9 scale limits
+    define PixScale_20cm_Owen  0.35                 # arcsec from Morrison's VLA image <TODO> Owen's PixScale ?
+    define Telescop_20cm_Owen  "VLA"                # 
+    define BandName_20cm_Owen  "1.4GHz"             # 
+    define BandWave_20cm_Owen  2e5                  # um
+    define SciPhoto_20cm_Owen "VLA_Owen_2arcsec_big_NOPBC"
+    define RmsPhoto_20cm_Owen "VLA_Owen_2arcsec_big_rms"
+    define PsfPhoto_20cm_Owen "VLA_Owen_Maurilio_beam2" # Dr. Daddi is using this one, before was using "VLA_Owen_2arcsec_PSF"
+    define DirPhoto_20cm_Owen "/data/AstroDepth/GOODSN_Photo/VLA"
+
+set_goodsn_photometry_constants_20cm_Glenn 00
+    # set VLA 20cm photometry constants, same as set_goodsn_photometry_constants_20cm_Morrison
+    define AsPtInBand             20cm_Glenn
+    define h_$AsPtInBand        $(1.00/13.23*1e6)   # photometry fudge factor from Jy/beam definition, derived from the PSF flux/peak ratio (here Dr. Daddi already divided the map by 4.404)
+    define m_$AsPtInBand          1.00              # from comparison to Glenn (average source size ?) see goFine.sm
+    define mJy_$AsPtInBand        1e-3              # converting pixel flux from uJy to mJy
+    define mBias_$AsPtInBand      0                 # from Dr. Daddi's goFine.sm
+    define fBias_$AsPtInBand      0.0               # mJy <-> -0.6uJy from Dr. Daddi's goFine.sm <TODO> from comparison to Simu <TODO>
+    define rBeam_$AsPtInBand      1.7               # FWHM of PSF in arcsec <-> 1.6"x1.7" from Morrison et al. 2010
+    define fSigma_$AsPtInBand     2.744e-3          # 1-sigma flux detection limit in mJy. 
+                                                    # astrometry correction see goSimu.sm
+    define xStep_$AsPtInBand      150               # x length of the inner region of each box
+    define yStep_$AsPtInBand      150               # y length of the inner region of each box
+    define gBuff_$AsPtInBand      20                # length of the buffer region of each box
+    define fBuff_$AsPtInBand      1                 # additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants $AsPtInBand  
+    define SimMag0_$AsPtInBand    6.14621           # simulation brightest magnitude -- convert_flux2mag goodsn 20cm_Glenn 0.263 0.001 -- Glenn2010 catalog max f20cm 263uJy
+    define SimMag1_$AsPtInBand    9.6961            # simulation faintest magnitude -- convert_flux2mag goodsn 20cm_Glenn 0.010 0.001 -- Glenn2010 catalog min f20cm 21uJy
+    define PixLim0_$AsPtInBand   -1e-3              # uJy/pixel -- pixel value range for display -- ds9 scale limits
+    define PixLim1_$AsPtInBand    5e-3              # uJy/pixel -- pixel value range for display -- ds9 scale limits
+    define PixScale_$AsPtInBand   0.50              # arcsec from Glenn Morrison's VLA image
+    define Telescop_$AsPtInBand  "VLA"              # 
+    define BandName_$AsPtInBand  "1.4GHz"           # 
+    define BandWave_$AsPtInBand   2e5               # um
+    define SciPhoto_$AsPtInBand  "VLA_20cm_Glenn_May09_dzliu"
+    define RmsPhoto_$AsPtInBand  "VLA_20cm_Glenn_May09_rms_dzliu"
+    define PsfPhoto_$AsPtInBand  "VLA_beam_hdfn"
+    define DirPhoto_$AsPtInBand  "/data/AstroDepth/GOODSN_Photo/VLA"
+
+set_goodsn_photometry_constants_20cm_Morrison 00
+    # set VLA 20cm photometry constants
+    define AsPtInBand            20cm_Morrison
+    define h_$AsPtInBand       $(1.00/13.23*1e6)    # photometry fudge factor from Jy/beam definition, derived from the PSF flux/peak ratio (here Dr. Daddi already divided the map by 4.404)
+    define m_$AsPtInBand         1.00               # <TODO> # from comparison to Glenn (average source size ?) see goFine.sm
+    define mJy_$AsPtInBand       1e-3               # converting pixel flux from uJy to mJy
+    define mBias_$AsPtInBand     0                  # from Dr. Daddi's goFine.sm
+    define fBias_$AsPtInBand     0.0                # mJy <-> -0.6uJy from Dr. Daddi's goFine.sm <TODO> from comparison to Simu <TODO>
+    define rBeam_$AsPtInBand     1.7                # FWHM of PSF in arcsec <-> 1.6"x1.7" from Morrison et al. 2010
+    define fSigma_$AsPtInBand    2.744e-3           # 1-sigma flux detection limit in mJy. 
+                                                         # astrometry correction see goSimu.sm
+    define xStep_$AsPtInBand     150                # x length of the inner region of each box
+    define yStep_$AsPtInBand     150                # y length of the inner region of each box
+    define gBuff_$AsPtInBand     20                 # length of the buffer region of each box
+    define fBuff_$AsPtInBand     1                  # additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants $AsPtInBand  
+    define SimMag0_$AsPtInBand   6.14621            # simulation brightest magnitude -- convert_flux2mag goodsn 20cm_Morrison 0.263 0.001 -- Morrison2010 catalog max f20cm 263uJy
+    define SimMag1_$AsPtInBand   9.6961             # simulation faintest magnitude -- convert_flux2mag goodsn 20cm_Morrison 0.010 0.001 -- Morrison2010 catalog min f20cm 21uJy
+    define PixLim0_$AsPtInBand  -1e-3               # uJy/pixel -- pixel value range for display -- ds9 scale limits
+    define PixLim1_$AsPtInBand   5e-3               # uJy/pixel -- pixel value range for display -- ds9 scale limits
+    define PixScale_$AsPtInBand  0.50               # arcsec from Morrison's VLA image
+    define Telescop_$AsPtInBand "VLA"               # 
+    define BandName_$AsPtInBand "1.4GHz"            # 
+    define BandWave_$AsPtInBand  2e5                # um
+    define SciPhoto_$AsPtInBand "VLA_20cm_Glenn_May09_dzliu"
+    define RmsPhoto_$AsPtInBand "VLA_20cm_Glenn_May09_rms_dzliu"
+    define PsfPhoto_$AsPtInBand "VLA_beam_hdfn"
+    define DirPhoto_$AsPtInBand "/data/AstroDepth/GOODSN_Photo/VLA"
+
+set_GOODSS_photometry_constants_20cm 00
+    set_goodss_photometry_constants_20cm
+
+set_goodss_photometry_constants_20cm 00
+    # set VLA 20cm photometry constants
+    define h_20cm       $(1.00/23.965120*1e6)       # photometry fudge factor from Jy/beam definition, derived from the PSF flux/peak ratio
+    define m_20cm         1.00                      # correction for finite PSF. 
+    define mJy_20cm       1e-3                      # converting pixel flux from uJy to mJy
+    define mBias_20cm     0                         # We use simulation correction recipes to correct for this. 
+    define fBias_20cm     0                         # We use simulation correction recipes to correct for this. 
+    define rBeam_20cm     1.7                       # FWHM of PSF in arcsec <-> 2.8"x1.6" from Miller et al. 2013 ApJS
+    define fSigma_20cm    0.0                       # <TODO> 1-sigma flux detection limit in mJy. 
+    set_default_astrometry_constants 20cm
+    define xStep_20cm     80                        # x length of the inner region of each box
+    define yStep_20cm     80                        # y length of the inner region of each box
+    define gBuff_20cm     20                        # length of the buffer region of each box
+    define fBuff_20cm     1                         # additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 20cm
+    define PixLim0_20cm   -5e-6                     # Jy/beam
+    define PixLim1_20cm   4e-5                      # Jy/beam
+    define PixScale_20cm  0.50                      # arcsec from Miller's VLA image no need to use BIG
+    define Telescop_20cm "VLA"                      # 
+    define BandName_20cm "1.4GHz"                   # 
+    define BandWave_20cm  2e5                       # um
+    define SciPhoto_20cm "ECDFS_DR2_SCI_dzliu"      # dzliu: removed some fits history header
+    define RmsPhoto_20cm "ECDFS_DR2_RMS_dzliu"      # dzliu: removed some fits history header
+    define PsfPhoto_20cm "ECDFS_DR2_PSF_dzliu"      # dzliu: created by using SExtractor + PSFEx
+    define DirPhoto_20cm "/home/dzliu/Data/DeepFields/GOODSS_Photo/GOODS_S_VLA_Photo/VLA_ECDFS_DR2"
+
+set_COSMOS_photometry_constants_20cm 00
+    set_cosmos_photometry_constants_20cm
+
+set_cosmos_photometry_constants_20cm 00
+    # set VLA 20cm photometry constants
+    define h_20cm 0.0172981  #$(1/37.5055)          # photometry fudge factor from Jy/beam definition
+    define m_20cm   1                               # photometry fudge factor for the use of finite PSF
+    define mJy_20cm 1e3  #1e3 #1e6                  # converting pixel flux to mJy 
+    define mBias_20cm 0.0                           # 
+    define fBias_20cm 0.0                           # We use simulation correction recipes to correct for this. 
+    define rBeam_20cm 2.5                           # FWHM of PSF in arcsec. Shuowen. 
+    define fSigma_20cm 0.0                          # <TODO> 1-sigma flux detection limit in mJy. 
+    set_default_astrometry_constants 20cm
+    define xStep_20cm 100                           # Shuowen. The x length of the inner region of each box
+    define yStep_20cm 100                           # Shuowen. The y length of the inner region of each box
+    define gBuff_20cm 21                            # Shuowen. The length of the buffer region of each box
+    define fBuff_20cm 1                             # Shuowen. The additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 20cm
+    define PixScale_20cm  0.35
+    define PixLim0_20cm  -0.00015
+    define PixLim1_20cm   0.00030
+    define Telescop_20cm "VLA"
+    define BandName_20cm "1.4GHz"
+    define BandWave_20cm  1e5
+    define SciPhoto_20cm "vla_20cm_dp_sin_10_sub"   #"COSMOS_11ERG_cluster_VLA_20cm.SCI"
+    define RmsPhoto_20cm "vla_20cm_dp_BS128_rms"    #"COSMOS_11ERG_cluster_VLA_20cm.RMS"
+    define PsfPhoto_20cm "vla_20cm_dp_psf"          #"VLA_Owen_Maurilio_beam2" # <TODO> use HDFN VLA PSF for now
+
+set_COSMOS_photometry_constants_3ghz 00
+    set_cosmos_photometry_constants_3ghz
+
+set_cosmos_photometry_constants_3ghz 00
+    # set VLA 3ghz photometry constants
+    define h_3ghz 0.06276                           # photometry fudge factor from Jy/beam definition
+    define m_3ghz   1                               # photometry fudge factor for the use of finite PSF
+    define mJy_3ghz 1e3  #1e3 #1e6                  # converting pixel flux to mJy
+    define mBias_3ghz 0.0                           #
+    define fBias_3ghz 0.0                           # We use simulation correction recipes to correct for this. 
+    define rBeam_3ghz 0.75                          # FWHM of PSF in arcsec. Shuowen. 
+    define fSigma_3ghz 0.0                          # <TODO> 1-sigma flux detection limit in mJy. 
+    set_default_astrometry_constants 3ghz
+    define xStep_3ghz 80                            # Shuowen. x length of the inner region of each box
+    define yStep_3ghz 80                            # Shuowen. y length of the inner region of each box
+    define gBuff_3ghz 21                            # Shuowen. length of the buffer region of each box
+    define fBuff_3ghz 1                             # Shuowen. additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 3ghz
+    define PixScale_3ghz  0.2
+    define PixLim0_3ghz  -0.00015
+    define PixLim1_3ghz   0.00030
+    define Telescop_3ghz "VLA"
+    define BandName_3ghz "3.0GHz"
+    define BandWave_3ghz  1e5
+
+set_GOODSN_photometry_constants_16 00
+    set_goodsn_photometry_constants_16
+
+set_goodsn_photometry_constants_16 00
+    # set Spitzer/IRS peak-up imaging 16um photometry constants
+    define h_16         19.03               # photometry fudge factor from Jy/beam definition, for small pixels
+    define m_16         1                   # photometry fudge factor from PEP, from use of finite PSF  (divise)
+    define mJy_16       1e-3                # converting pixel flux from uJy to mJy
+    define mBias_16     0.0                 # 
+    define fBias_16     0.0                 # 
+    define rBeam_16     3.6                 # FWHM of PSF in arcsec
+    define fSigma_16    0.0                 # <TODO> 1-sigma flux detection limit in mJy. 
+    set_default_astrometry_constants 16
+    define xBias_16     -0.2452505082       # <TODO> astrometry correction -- set sky2xy_x=x*xDisX+y*xDisY+xBias # see goSimu.sm
+    define xDisX_16     0.0002672541013     # <TODO> astrometry correction -- set sky2xy_x=x*xDisX+y*xDisY+xBias # see goSimu.sm
+    define yBias_16     0.1073              # <TODO> astrometry correction -- set sky2xy_y=y*yDisY+x*yDisX+yBias # see goSimu.sm
+    define xStep_16     72                  # x length of the inner region of each box
+    define yStep_16     72                  # y length of the inner region of each box
+    define gBuff_16     16                  # length of the buffer region of each box
+    define fBuff_16     1                   # additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 16
+    define SimMag0_16  -3.927               # magnitude -- convert_flux2mag goodsn 16 0.50 0.001 -- 25-sigma
+    define SimMag1_16   0.2262              # magnitude -- convert_flux2mag goodsn 16 0.020 0.001 -- 1-sigma
+    define PixScale_16  0.9                 # arcsec
+    define Telescop_16  Spitzer             # 
+    define BandName_16  IRSX                # 
+    define BandWave_16  16                  # um
+    define SciPhoto_16 "goods_north_wdriz_frac0pt6_norm_19dec06_subbackDL" # <dzliu> subtracted median smooth background after fitting with 0.0 background
+    define RmsPhoto_16 "goods_north_wdriz_frac0pt6_norm_19dec06_rms"
+    define PsfPhoto_16 "goods_north_psf_internal_18dec06"
+    define DirPhoto_16 "/data/AstroDepth/GOODSN_Photo/IRSX"
+
+set_GOODSN_photometry_constants_100 00
+    set_goodsn_photometry_constants_100 00
+
+set_goodsn_photometry_constants_100 00
+    # set PACS100 photometry constants
+    define h_100        1.0 # 0.94          # photometry fudge factor from Jy/beam definition, derived from the PSF flux/peak ratio #Was used for PEP, no more in HGOODS
+    ###define m_100     0.859               # photometry fudge factor for H-GOODS N, Paola's pixels
+    #define m_100       0.730               # photometry fudge factor H-GOODS N, finer scale
+    define m_100        0.664               # photometry fudge factor H-GOODS N, finer scale, <DZLIU>, readme_PGH_v1.0.pdf
+    define mJy_100      1e+3                # converting pixel flux to mJy
+    define mBias_100    0.0                 # 
+    define fBias_100    0.0                 # 
+    define rBeam_100    7.2                 # FWHM of PSF in arcsec. PEP readme_PGH_v1.0.pdf
+    define fSigma_100   0.315               # 1-sigma flux detection limit in mJy. 
+    set_default_astrometry_constants 100
+    define xStep_100    80                  # x length of the inner region of each box
+    define yStep_100    80                  # y length of the inner region of each box
+    define gBuff_100    12                  # length of the buffer region of each box
+    define fBuff_100    1                   # additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 100
+    define SimMag0_100   6.3037             # magnitude -- convert_flux2mag goodsn 100 4.5 1.0 -- 25-sigma
+    define SimMag1_100   9.62553            # magnitude -- convert_flux2mag goodsn 100 0.18 1.0 -- 1-sigma
+    define PixLim0_100  -0.00015            # pixel value range for display -- ds9 scale limits 1 2
+    define PixLim1_100   0.00030            # pixel value range for display -- ds9 scale limits 1 2
+    define SkyValue_100 -0.25e-5            # Jy/pix
+    define PixScale_100  1.2                # arcsec
+    define Telescop_100 "Herschel"          # 
+    define BandName_100 "PACS"              # 
+    define BandWave_100  100                # um
+    define SciPhoto_100 "pgh_goodsn_green_Map_v1.0_sci_DL"
+    define RmsPhoto_100 "pgh_goodsn_green_Map_v1.0_rms_DL"
+    define PsfPhoto_100 "pgh_goodsn_green_Psf_v1.0"
+    define DirPhoto_100 "/data/AstroDepth/GOODSN_Photo/PACS"
+
+set_cosmos_photometry_constants_100 00
+    # set PACS100 photometry constants
+    define h_100        1.12 #0.0462 #1.12  # photometry fudge factor = PSF Total Flux = 1.12 Jy (Accounting for High-pass-filtering 1.12)
+    define m_100        0.671 # 0.667       # photometry fudge factor for the use of finite PSF -- from PEP 0.667
+    define mJy_100      1e+3                # converting pixel flux from image unit to mJy
+    define mBias_100    0.0                 # 
+    define fBias_100    0.0                 # 
+    define rBeam_100    7.2                 # FWHM of PSF in arcsec
+    define fSigma_100   1.54                # 1-sigma flux detection limit in mJy, from Oliver et al. 2012 (arXiv:1203.2562) Table 5
+    set_default_astrometry_constants 100
+    define xStep_100 30                     # Shuowen. The x length of the inner region of each box
+    define yStep_100 30                     # Shuowen. The y length of the inner region of each box
+    define gBuff_100 12                     # Shuowen. The length of the buffer region of each box
+    define fBuff_100 1                      # Shuowen. The additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 100
+    define PixLim0_100  -0.0004             # Jy/pixel
+    define PixLim1_100  +0.0008             # Jy/pixel
+    define SkyValue_100  0.0 #-0.25e-5      # Jy/pixel
+    define PixScale_100  1.2                # arcsec
+    define Telescop_100 "Herschel"          # 
+    define BandName_100 "PACS"              # 
+    define BandWave_100  100                # um
+    define SciPhoto_100 "pep_COSMOS_green_Map.DR1.sci"
+    define RmsPhoto_100 "pep_COSMOS_green_Map.DR1.err"
+    define PsfPhoto_100 "pep_COSMOS_green_Psf.DR1"
+    define DirPhoto_100 "/data/AstroDepth/COSMOS_Photo/pep_cosmos_DR1"
+
+set_goodsn_photometry_constants_160 00
+    # set PACS160 photometry constants
+    define h_160        1.0 # 0.90          # photometry fudge factor from Jy/beam definition, derived from the PSF flux/peak ratio
+    ###define m_160     0.807               # photometry fudge factor for  H-GOODS N, Paola's pixels
+    ##define m_160      0.775               # photometry fudge factor for H-GOODS N, finer scale
+    define m_160        0.682               # photometry fudge factor for H-GOODS N, <DZLIU>, from readme_PGH_v1.0.pdf
+    define mJy_160      1e+3                # converting pixel flux to mJy
+    define mBias_160    0.0                 # 
+    define fBias_160    0.0                 # 
+    define rBeam_160    12.0                # FWHM of PSF in arcsec # refer readme_PGH_v1.0.pdf
+    define fSigma_160   0.681               # 1-sigma flux detection limit in mJy. 
+    set_default_astrometry_constants 160
+    define xStep_160    50                  # x length of the inner region of each box
+    define yStep_160    50                  # y length of the inner region of each box
+    define gBuff_160    8                   # length of the buffer region of each box
+    define fBuff_160    1                   # additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 160
+    define PixLim0_160  -0.0004             # Jy/pixel
+    define PixLim1_160  +0.0008             # Jy/pixel
+    define SkyValue_160 -1.5e-5             # Jy/pix
+    define PixScale_160  2.4                # arcsec
+    define Telescop_160 "Herschel"          # 
+    define BandName_160 "PACS"              # 
+    define BandWave_160  160                # um
+    define SciPhoto_160 "pgh_goodsn_red_Map_v1.0_sci_DL"
+    define RmsPhoto_160 "pgh_goodsn_red_Map_v1.0_rms_DL"
+    define PsfPhoto_160 "pgh_goodsn_red_Psf_v1.0"
+    define DirPhoto_160 "/data/AstroDepth/GOODSN_Photo/PACS"
+
+set_cosmos_photometry_constants_160 00
+    # set PACS160 photometry constants
+    define h_160        $(1.11/2.9)         # photometry fudge factor = PSF Total Flux = 1 Jy (Accounting for High-pass-filtering 1.11)
+    define m_160        0.687  #0.677       # photometry fudge factor for the use of finite PSF -- from PEP 0.677
+    define mJy_160      1e+3                # converting pixel flux from Jy to mJy
+    define mBias_160    0.0                 # 
+    define fBias_160    0.0                 # 
+    define rBeam_160    12.0                # FWHM of PSF in arcsec, see PEP readme_PGH_v1.0.pdf
+    define fSigma_160   2.94                # 1-sigma flux detection limit in mJy, from Oliver et al. 2012 (arXiv:1203.2562) Table 5
+    set_default_astrometry_constants 160
+    define xStep_160    50                  # x length of the inner region of each box
+    define yStep_160    50                  # y length of the inner region of each box
+    define gBuff_160    8                   # length of the buffer region of each box
+    define fBuff_160    1                   # additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 160
+    define PixLim0_160  -0.0004             # Jy/pixel
+    define PixLim1_160  +0.0008             # Jy/pixel
+    define PixScale_160  2.4                # arcsec
+    define Telescop_160 "Herschel"          # 
+    define BandName_160 "PACS"              # 
+    define BandWave_160  160                # um
+    define SciPhoto_160 "pep_COSMOS_red_Map.DR1.sci"
+    define RmsPhoto_160 "pep_COSMOS_red_Map.DR1.err"
+    define PsfPhoto_160 "pep_COSMOS_red_Psf.DR1"
+    define DirPhoto_160 "/data/AstroDepth/COSMOS_Photo/pep_cosmos_DR1"
+
+set_goodsn_photometry_constants_250 00
+    # set SPIRE250 photometry constants
+    #define h_250       $(1/10.37)          # photometry fudge factor from Jy/beam definition, for big pixels
+    define h_250        $(1/31.16)          # photometry fudge factor from Jy/beam definition, for small pixels
+    define m_250        1                   # photometry fudge factor from PEP, from use of finite PSF  (divise)
+    define mJy_250      1e+3                # converting pixel flux to mJy
+    define mBias_250    0.0                 # 
+    define fBias_250    0.0                 # 
+    define rBeam_250    18.2                # FWHM of PSF in arcsec # refer GOODS-Herschel_release.pdf
+    define fSigma_250   1.571               # 1-sigma flux detection limit in mJy. 
+    set_default_astrometry_constants 250
+    define xStep_250    25                  # x length of the inner region of each box
+    define yStep_250    25                  # y length of the inner region of each box
+    define gBuff_250    15                  # length of the buffer region of each box
+    define fBuff_250    1                   # additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 250
+    define PixLim1_250  -0.005              # Jy/pixel
+    define PixLim1_250   0.035              # Jy/pixel
+    define SkyValue_250 -0.0065             # Jy/pixel
+    define PixScale_250  3.6                # arcsec
+    define Telescop_250 "Herschel"          # 
+    define BandName_250 "SPIRE"             # 
+    define BandWave_250  250                # um
+    define SciPhoto_250 "spire250_ima_3p6_v0_100615"
+    define RmsPhoto_250 "spire250_rms_3p6_v0_100615"
+    define PsfPhoto_250 "psf_goodsn_spire250_3p6arcsec_v0_100622"
+    define DirPhoto_250 "/data/AstroDepth/GOODSN_Photo/SPIRE"
+
+set_cosmos_photometry_constants_250 00
+    # set SPIRE250 photometry constants
+    define h_250        0.0959 #$(1./31.16) # photometry fudge factor from Jy/beam definition, for small pixels
+    define m_250        1                   # photometry fudge factor from PEP, from use of finite PSF  (divise)
+    define mJy_250      1e+3                # converting pixel flux to mJy
+    define mBias_250    0.0                 # 
+    define fBias_250    0.0                 # 
+    define rBeam_250    18.2                # FWHM of PSF in arcsec # refer GOODS-Herschel_release.pdf
+    define fSigma_250   2.2                 # 1-sigma flux detection limit in mJy, from Lee et al. 2013 (arXiv:1310.0474)
+    set_default_astrometry_constants 250
+    define xStep_250    25                  # x length of the inner region of each box
+    define yStep_250    25                  # y length of the inner region of each box
+    define gBuff_250    15                  # length of the buffer region of each box
+    define fBuff_250    1                   # additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 250
+    define PixLim1_250  -0.005              # Jy/pixel
+    define PixLim1_250   0.035              # Jy/pixel
+    define SkyValue_250 -0.0078             # Jy/pixel
+    define PixScale_250  6.0                # arcsec
+    define Telescop_250 "Herschel"          #
+    define BandName_250 "SPIRE"             #
+    define BandWave_250  250                # um
+    define SciPhoto_250 "spire250_ima_3p6_v0_100615"
+    define RmsPhoto_250 "spire250_rms_3p6_v0_100615"
+    define PsfPhoto_250 "psf_goodsn_spire250_3p6arcsec_v0_100622"
+    define DirPhoto_250 "/data/AstroDepth/GOODSN_Photo/SPIRE"
+
+set_goodsn_photometry_constants_350 00
+    # set SPIRE350 photometry constants
+    #define h_350       $(1/10.37)          # photometry fudge factor from Jy/beam definition, for big pixels
+    define h_350        $(1/34.42)          # photometry fudge factor from Jy/beam definition, for small pixels, pi/(4*ln(2))*24.9**2/4.8**2 = 30.49
+    define m_350        1                   # photometry fudge factor from PEP, from use of finite PSF  (divise)
+    define mJy_350      1e+3                # converting pixel flux to mJy
+    define mBias_350    0.0                 # 
+    define fBias_350    0.0                 # 
+    define rBeam_350    24.9                # FWHM of PSF in arcsec # refer GOODS-Herschel_release.pdf
+    define fSigma_350   2.072               # 1-sigma flux detection limit in mJy. 
+    set_default_astrometry_constants 350
+    define xStep_350    25                  # x length of the inner region of each box
+    define yStep_350    25                  # y length of the inner region of each box
+    define gBuff_350    15                  # length of the buffer region of each box
+    define fBuff_350    1                   # additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 350
+    define SkyValue_350 -0.0095             # Jy/pixel
+    define PixScale_350  4.8                # arcsec
+    define Telescop_350 "Herschel"          # 
+    define BandName_350 "SPIRE"             # 
+    define BandWave_350  350                # um
+    define SciPhoto_350 "spire350_ima_4p8_v0_100615"
+    define RmsPhoto_350 "spire350_rms_4p8_v0_100615"
+    define PsfPhoto_350 "psf_goodsn_spire350_4p8arcsec_v0_100622"
+    define DirPhoto_350 "/data/AstroDepth/GOODSN_Photo/SPIRE"
+
+set_cosmos_photometry_constants_350 00
+    # set SPIRE350 photometry constants
+    define h_350        0.09806             # photometry fudge factor from Jy/beam definition, Gaussian PSF, SMAP NEST image.
+    define m_350        1                   # photometry fudge factor from PEP, from use of finite PSF  (divise)
+    define mJy_350      1e+3                # converting pixel flux to mJy
+    define mBias_350    0.0                 # 
+    define fBias_350    0.0                 # 
+    define rBeam_350    24.9                # FWHM of PSF in arcsec # refer GOODS-Herschel_release.pdf
+    define fSigma_350   2.9                 # 1-sigma flux detection limit in mJy, from Lee et al. 2013 (arXiv:1310.0474)
+    set_default_astrometry_constants 350
+    define xStep_350    15                  # Shuowen. The x length of the inner region of each box
+    define yStep_350    15                  # Shuowen. The y length of the inner region of each box
+    define gBuff_350    7                   # Shuowen. The length of the buffer region of each box
+    define fBuff_350    1                   # Shuowen. The additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 350
+    define SkyValue_350  0.0                # Jy/pixel
+    define PixScale_350  8.3                # arcsec
+    define Telescop_350 "Herschel"          #
+    define BandName_350 "SPIRE"             #
+    define BandWave_350  350                # um
+    define SciPhoto_350 "spire350_ima_4p8_v0_100615"
+    define RmsPhoto_350 "spire350_rms_4p8_v0_100615"
+    define PsfPhoto_350 "psf_goodsn_spire350_4p8arcsec_v0_100622"
+    define DirPhoto_350 "/data/AstroDepth/GOODSN_Photo/SPIRE"
+
+set_goodsn_photometry_constants_500 00
+    # set SPIRE500 photometry constants
+    #define h_500       $(1/10.37)          # photometry fudge factor from Jy/beam definition, for big pixels
+    define h_500        $(1/32.198)         # photometry fudge factor from Jy/beam definition, for small pixels, data unit Jy/beam, PSF SUM/MAX = 34.3756
+    define m_500        1                   # photometry fudge factor from PEP, from use of finite PSF  (divise)
+    define mJy_500      1e+3                # converting pixel flux to mJy
+    define mBias_500    0.0                 # 
+    define fBias_500    0.0                 # 
+    define rBeam_500    36.3                # FWHM of PSF in arcsec # refer GOODS-Herschel_release.pdf
+    define fSigma_500   2.570               # 1-sigma flux detection limit in mJy. 
+    set_default_astrometry_constants 500
+    define xStep_500    25                  # x length of the inner region of each box
+    define yStep_500    25                  # y length of the inner region of each box
+    define gBuff_500    10                  # length of the buffer region of each box
+    define fBuff_500    1                   # additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 500
+    define SkyValue_500 -0.0125             # Jy/pixel
+    define PixScale_500  7.2                # arcsec
+    define Telescop_500 "Herschel"
+    define BandName_500 "SPIRE"
+    define BandWave_500  500                # um
+    define SciPhoto_500 "spire500_ima_7p2_v0_100615"
+    define RmsPhoto_500 "spire500_rms_7p2_v0_100615"
+    define PsfPhoto_500 "psf_goodsn_spire500_7p2arcsec_v0_100622"
+    define DirPhoto_500 "/data/AstroDepth/GOODSN_Photo/SPIRE"
+
+set_cosmos_photometry_constants_500 00
+    # set SPIRE500 photometry constants
+    define h_500        0.0964              # photometry fudge factor from Jy/beam definition, for small pixels, calc 12.0**2 / ((pi/(4.0*ln(2.0))*36.3**2)) = 0.09644613353
+    define m_500        1                   # photometry fudge factor from PEP, from use of finite PSF  (divise)
+    define mJy_500      1e+3                # converting pixel flux to mJy
+    define mBias_500    0.0                 # 
+    define fBias_500    0.0                 # 
+    define rBeam_500    36.3                # FWHM of PSF in arcsec # see PEP GOODS-Herschel_release.pdf
+    define fSigma_500   3.2                 # 1-sigma flux detection limit in mJy, from Lee et al. 2013 (arXiv:1310.0474)
+    set_default_astrometry_constants 500
+    define xStep_500    25                  # Shuowen. The x length of the inner region of each box
+    define yStep_500    25                  # Shuowen. The y length of the inner region of each box
+    define gBuff_500    10                  # Shuowen. The length of the buffer region of each box
+    define fBuff_500    1                   # Shuowen. The additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 500
+    define SkyValue_500  0.0                # Jy/pixel
+    define PixScale_500  12                 # arcsec
+    define Telescop_500 "Herschel"          # 
+    define BandName_500 "SPIRE"             # 
+    define BandWave_500  500                # um
+    define SciPhoto_500 "spire500_ima_7p2_v0_100615"
+    define RmsPhoto_500 "spire500_rms_7p2_v0_100615"
+    define PsfPhoto_500 "psf_goodsn_spire500_7p2arcsec_v0_100622"
+    define DirPhoto_500 "/data/AstroDepth/GOODSN_Photo/SPIRE"
+
+set_goodsn_photometry_constants_850 00
+    # set SCUBA2 850 photometry constants
+    define h_850        $(1/2.8954625)      # Jy/beam => mJy/pixel, calc 2.0**2 / ((pi/(4.0*ln(2.0))*14.8**2)) = 0.01611655224, PSF SUM/MAX = 2.39744/0.827999 = 2.8954625
+    define m_850        1                   # from finite PSF
+    define mJy_850      1                   # converting pixel flux to mJy -- already mJy/beam unit
+    define mBias_850    0.0                 # 
+    define fBias_850    0.0                 # flux bias in mJy, used in conversion between flux and galfit magnitudes. 
+    define rBeam_850    14.8                # FWHM of PSF in arcsec # see S2CLS 850um paper http://arxiv.org/pdf/1607.03904v1.pdf Figure 6 # PSF area 1.133*14.8**2 see https://www.eaobservatory.org/jcmt/instrumentation/continuum/scuba-2/calibration/
+    define fSigma_850   1.2                 # 1-sigma flux detection limit in mJy. 
+    set_default_astrometry_constants 850
+    define xStep_850    75                  # x length of the inner region of each box
+    define yStep_850    75                  # y length of the inner region of each box
+    define gBuff_850    10                  # length of the buffer region of each box
+    define fBuff_850    1                   # additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 850
+    define SkyValue_850  0.0                # Jy/pixel
+    define PixScale_850  2.0                # arcsec
+    define Telescop_850 "JCMT"              # 
+    define BandName_850 "SCUBA2"            # 
+    define BandWave_850  850                # um
+    define SciPhoto_850 "S2CLS_GOODS-N_MF_FLUX_DR1"
+    define RmsPhoto_850 "S2CLS_GOODS-N_MF_RMS_DR1"
+    define PsfPhoto_850 "TODO"
+    define DirPhoto_850 "TODO:NONEED"
+
+set_goodsn_photometry_constants_850_NMF 00
+    # set SCUBA2 850 photometry constants
+    define h_850_NMF        $(1/48.36040504)    # Jy/beam => mJy/pixel, calc 2.0**2 / ((pi/(4.0*ln(2.0))*11.0**2)) = 0.02917495539, PSF SUM/MAX = 40.9528/0.846825 = 48.36040504
+    define m_850_NMF        1                   # photometry fudge factor from use of finite PSF  (divise)
+    define mJy_850_NMF      1                   # converting pixel flux to mJy -- already mJy/beam unit
+    define mBias_850_NMF    0.0                 # 
+    define fBias_850_NMF    0.0                 # flux bias in mJy, used in conversion between flux and galfit magnitudes. 
+    define rBeam_850_NMF    11.                 # FWHM of PSF in arcsec # derived by Shuowen Jin & Emanuele Daddi
+    define fSigma_850_NMF   1.2                 # 1-sigma flux detection limit in mJy. 
+    set_default_astrometry_constants 850_NMF
+    define xStep_850_NMF    75                  # x length of the inner region of each box
+    define yStep_850_NMF    75                  # y length of the inner region of each box
+    define gBuff_850_NMF    10                  # length of the buffer region of each box
+    define fBuff_850_NMF    1                   # additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 850_NMF
+    define SkyValue_850_NMF  0.0                # Jy/pixel
+    define PixScale_850_NMF  2.0                # arcsec
+    define Telescop_850_NMF "JCMT"              # 
+    define BandName_850_NMF "SCUBA2"            # 
+    define BandWave_850_NMF  850                # um
+    define SciPhoto_850_NMF "S2CLS_GOODS-N_NMF_FLUX_DR1"
+    define RmsPhoto_850_NMF "S2CLS_GOODS-N_NMF_RMS_DR1"
+    define PsfPhoto_850_NMF "TODO"
+    define DirPhoto_850_NMF "TODO:NONEED"
+
+set_cosmos_photometry_constants_870  00
+    define h_870        0.018423 #0.0751    # photometry fudge factor from Jy/beam definition, for small pixels
+    define m_870        1                   # photometry fudge factor from PEP, from use of finite PSF  (divise)
+    define mJy_870      1e+3                # converting pixel flux to mJy
+    define mBias_870    0.0                 # 
+    define fBias_870    0.0                 # 
+    define rBeam_870    28                  # FWHM of PSF in arcsec # refer GOODS-Herschel_release.pdf
+    set_default_astrometry_constants 500
+    define xStep_870    50                  # Shuowen. The x length of the inner region of each box
+    define yStep_870    50                  # Shuowen. The y length of the inner region of each box
+    define gBuff_870    10                  # Shuowen. The length of the buffer region of each box
+    define fBuff_870    1                   # Shuowen. The additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 500
+    define SkyValue_870  0                  # Jy/pixel
+    define PixScale_870  4                  # arcsec
+    define Telescop_870 "LABOCA"            # 
+    define BandName_870 "LABOCA"            # 
+    define BandWave_870  870                # um
+    define SciPhoto_870 "spire500_ima_7p2_v0_100615"
+    define RmsPhoto_870 "spire500_rms_7p2_v0_100615"
+    define PsfPhoto_870 "psf_goodsn_spire500_7p2arcsec_v0_100622"
+    define DirPhoto_870 "/data/AstroDepth/GOODSN_Photo/SPIRE"
+
+set_goodsn_photometry_constants_1160 00
+    # set JCMT/AzTEC+IRAM/MAMBO photometry constants
+    #define h_1160       $(1/10.37)         # photometry fudge factor from Jy/beam definition, for big pixels
+    #define h_1160       $(1/45.41)         # photometry fudge factor from Jy/beam definition, for small pixels ###<Commented><DZLIU>###
+    define h_1160        $(1/46.95)         # GN20 calibrated photometry fudge factor from Jy/beam definition <TODO>
+    define m_1160        1                  # photometry fudge factor from PEP, from use of finite PSF  (divise)
+    define mJy_1160      1.0                # converting pixel flux to mJy
+    define mBias_1160    0.0                # 
+    define fBias_1160    0.0                # -0.06306955002 # mJy
+    define rBeam_1160    19.5               # FWHM of PSF in arcsec # (JCMT) Penner 2011 AzTEC+MAMBO
+    define fSigma_1160   0.66               # 1-sigma flux detection limit in mJy. 
+    set_default_astrometry_constants 1160
+    define xStep_1160    35                 # The x length of the inner region of each box
+    define yStep_1160    35                 # The y length of the inner region of each box
+    define gBuff_1160    40                 # The length of the buffer region of each box
+    define fBuff_1160    1                  # The additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 1160
+    define SkyValue_1160  0.0               # Jy/pixel
+    define PixScale_1160  2.0               # arcsec
+    define Telescop_1160 "JCMT+IRAM"        # 
+    define BandName_1160 "AzTEC+MAMBO"      # 
+    define BandWave_1160  1160              # um
+    define SciPhoto_1160 "combined_maw0_4_azw0_5_sig_astro"
+    define RmsPhoto_1160 "combined_maw0_4_azw0_5_rms"
+    define PsfPhoto_1160 "totPSFnew"
+    define DirPhoto_1160 "/data/AstroDepth/GOODSN_Photo/AZTEC"
+
+set_cosmos_photometry_constants_1100 00
+    # set JCMT/AzTEC+IRAM/MAMBO photometry constants
+    define h_1100        0.28089            # GN20 calibrated photometry fudge factor from Jy/beam definition <TODO>
+    define m_1100        1                  # photometry fudge factor from PEP, from use of finite PSF  (divise)
+    define mJy_1100      1000.0             # converting pixel flux to mJy
+    define mBias_1100    0.0                #
+    define fBias_1100    0.0                # -0.06306955002 # mJy
+    define rBeam_1100    33.0               # FWHM of PSF in arcsec # (JCMT) Penner 2011 AzTEC+MAMBO
+    set_default_astrometry_constants 1160
+    define xStep_1100    35                 # Shuowen. The x length of the inner region of each box
+    define yStep_1100    35                 # Shuowen. The y length of the inner region of each box
+    define gBuff_1100    40                 # Shuowen. The length of the buffer region of each box
+    define fBuff_1100    1                  # Shuowen. The additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 1160
+    define SkyValue_1100  0.0               # Jy/pixel
+    define PixScale_1100  2.0               # arcsec
+    define Telescop_1100 "JCMT"             #
+    define BandName_1100 "AzTEC"            #
+    define BandWave_1100  1100              # um
+    define SciPhoto_1100 "combined_maw0_4_azw0_5_sig_astro"
+    define RmsPhoto_1100 "combined_maw0_4_azw0_5_rms"
+    define PsfPhoto_1100 "totPSFnew"
+    define DirPhoto_1100 "/data/AstroDepth/GOODSN_Photo/AZTEC"
+
+set_cosmos_photometry_constants_1160 00
+    # set JCMT/AzTEC+IRAM/MAMBO photometry constants
+    define h_1160        0.23195639         # GN20 calibrated photometry fudge factor from Jy/beam definition <TODO>
+    define m_1160        1                  # photometry fudge factor from PEP, from use of finite PSF  (divise)
+    define mJy_1160      1.0                # converting pixel flux to mJy
+    define mBias_1160    0.0                #
+    define fBias_1160    0.0                # -0.06306955002 # mJy
+    define rBeam_1160    33.0               # FWHM of PSF in arcsec # (JCMT) Penner 2011 AzTEC+MAMBO
+    set_default_astrometry_constants 1160
+    define xStep_1160    35                 # Shuowen. The x length of the inner region of each box
+    define yStep_1160    35                 # Shuowen. The y length of the inner region of each box
+    define gBuff_1160    40                 # Shuowen. The length of the buffer region of each box
+    define fBuff_1160    1                  # Shuowen. The additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 1160
+    define SkyValue_1160  0.0               # Jy/pixel
+    define PixScale_1160  2.0               # arcsec
+    define Telescop_1160 "JCMT"             #
+    define BandName_1160 "AzTEC"            #
+    define BandWave_1160  1160              # um
+    define SciPhoto_1160 "combined_maw0_4_azw0_5_sig_astro"
+    define RmsPhoto_1160 "combined_maw0_4_azw0_5_rms"
+    define PsfPhoto_1160 "totPSFnew"
+    define DirPhoto_1160 "/data/AstroDepth/GOODSN_Photo/AZTEC"
+
+set_cosmos_photometry_constants_1250 00
+    # set IRAM/MAMBO photometry constants
+    define h_1250        0.0954             # GN20 calibrated photometry fudge factor from Jy/beam definition <TODO>
+    define m_1250        1                  # photometry fudge factor from PEP, from use of finite PSF  (divise)
+    define mJy_1250      1.0                # converting pixel flux to mJy
+    define mBias_1250    0.0                #
+    define fBias_1250    0.0                # -0.06306955002 # mJy
+    define rBeam_1250    11.0               # FWHM of PSF in arcsec # (JCMT) Penner 2011 AzTEC+MAMBO
+    set_default_astrometry_constants 1250
+    define xStep_1250    35                 # Shuowen. The x length of the inner region of each box
+    define yStep_1250    35                 # Shuowen. The y length of the inner region of each box
+    define gBuff_1250    40                 # Shuowen. The length of the buffer region of each box
+    define fBuff_1250    1                  # Shuowen. The additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants 1250
+    define SkyValue_1250  0.0               # Jy/pixel
+    define PixScale_1250  3.5               # arcsec
+    define Telescop_1250 "IRAM"             #
+    define BandName_1250 "MAMBO"            #
+    define BandWave_1250  1250              # um
+    define SciPhoto_1250 "combined_maw0_4_azw0_5_sig_astro"
+    define RmsPhoto_1250 "combined_maw0_4_azw0_5_rms"
+    define PsfPhoto_1250 "totPSFnew"
+    define DirPhoto_1250 "/data/AstroDepth/GOODSN_Photo/AZTEC"
+
+set_goodsn_photometry_constants_irac1 00
+    define h_irac1        3.922             # map unit is DN/sec
+    define m_irac1        1.0               # 
+    define mJy_irac1      1e-3              # converting pixel flux to mJy
+    define mBias_irac1    0.0               # 
+    define fBias_irac1    0.0               # mJy
+    define rBeam_irac1    1.6               # FWHM of PSF in arcsec # (JCMT) Penner 2011 AzTEC+MAMBO
+    set_default_astrometry_constants irac1
+    define xStep_irac1    90                # The x length of the inner region of each box
+    define yStep_irac1    90                # The y length of the inner region of each box
+    define gBuff_irac1    30                # The length of the buffer region of each box
+    define fBuff_irac1    1                 # The additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants irac1
+    define PixScale_irac1  0.6              # arcsec
+    define Telescop_irac1 "Spitzer"         # 
+    define BandName_irac1 "IRAC1"           # 
+    define BandWave_irac1  3.6              # um
+    define SciPhoto_irac1 "n_irac_1_s12_v0.31_sci"
+    define RmsPhoto_irac1 "n_irac_1_s12_v0.31_rms"
+    define PsfPhoto_irac1 "irac_ch1_flight"
+    define DirPhoto_irac1 "/data/AstroDepth/GOODSN_Photo/IRAC"
+
+set_goodsn_photometry_constants_irac2 00
+    define h_irac2        4.808             # map unit is DN/sec
+    define m_irac2        1.0               # 
+    define mJy_irac2      1e-3              # converting pixel flux to mJy
+    define mBias_irac2    0.0               # 
+    define fBias_irac2    0.0               # mJy
+    define rBeam_irac2    1.8               # FWHM of PSF in arcsec # (JCMT) Penner 2011 AzTEC+MAMBO
+    set_default_astrometry_constants irac2
+    define xStep_irac2    90                # The x length of the inner region of each box
+    define yStep_irac2    90                # The y length of the inner region of each box
+    define gBuff_irac2    30                # The length of the buffer region of each box
+    define fBuff_irac2    1                 # The additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants irac2
+    define PixScale_irac2  0.6              # arcsec
+    define Telescop_irac2 "Spitzer"         # 
+    define BandName_irac2 "IRAC2"           # 
+    define BandWave_irac2  4.5              # um
+    define SciPhoto_irac2 "n_irac_2_s12_v0.31_sci"
+    define RmsPhoto_irac2 "n_irac_2_s12_v0.31_rms"
+    define PsfPhoto_irac2 "irac_ch2_flight"
+    define DirPhoto_irac2 "/data/AstroDepth/GOODSN_Photo/IRAC"
+
+set_goodsn_photometry_constants_irac3 00
+    define h_irac3        20.833            # map unit is DN/sec
+    define m_irac3        1.0               # 
+    define mJy_irac3      1e-3              # converting pixel flux to mJy
+    define mBias_irac3    0.0               # 
+    define fBias_irac3    0.0               # mJy
+    define rBeam_irac3    1.8               # FWHM of PSF in arcsec # (JCMT) Penner 2011 AzTEC+MAMBO
+    set_default_astrometry_constants irac3
+    define xStep_irac3    90                # The x length of the inner region of each box
+    define yStep_irac3    90                # The y length of the inner region of each box
+    define gBuff_irac3    30                # The length of the buffer region of each box
+    define fBuff_irac3    1                 # The additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants irac3
+    define PixScale_irac3  0.6              # arcsec
+    define Telescop_irac3 "Spitzer"         # 
+    define BandName_irac3 "IRAC3"           # 
+    define BandWave_irac3  5.8              # um
+    define SciPhoto_irac3 "n_irac_3_s12_v0.31_sci"
+    define RmsPhoto_irac3 "n_irac_3_s12_v0.31_rms"
+    define PsfPhoto_irac3 "irac_ch3_flight"
+    define DirPhoto_irac3 "/data/AstroDepth/GOODSN_Photo/IRAC"
+
+set_goodsn_photometry_constants_irac4 00
+    define h_irac4        7.042             # map unit is DN/sec
+    define m_irac4        1.0               # 
+    define mJy_irac4      1e-3              # converting pixel flux to mJy
+    define mBias_irac4    0.0               # 
+    define fBias_irac4    0.0               # mJy
+    define rBeam_irac4    1.8               # FWHM of PSF in arcsec # (JCMT) Penner 2011 AzTEC+MAMBO
+    set_default_astrometry_constants irac4
+    define xStep_irac4    90                # The x length of the inner region of each box
+    define yStep_irac4    90                # The y length of the inner region of each box
+    define gBuff_irac4    30                # The length of the buffer region of each box
+    define fBuff_irac4    1                 # The additional length of the buffer region of each box, historical variable, always 1
+    set_default_telescope_constants irac4
+    define PixScale_irac4  0.6              # arcsec
+    define Telescop_irac4 "Spitzer"         # 
+    define BandName_irac4 "IRAC4"           # 
+    define BandWave_irac4  7.9              # um
+    define SciPhoto_irac4 "n_irac_4_s12_v0.31_sci"
+    define RmsPhoto_irac4 "n_irac_4_s12_v0.31_rms"
+    define PsfPhoto_irac4 "irac_ch4_flight"
+    define DirPhoto_irac4 "/data/AstroDepth/GOODSN_Photo/IRAC"
+
+
+
+
+
+
+
+set_any_photometry_constants_AB 00
+    # set AB magnitude photometry constants
+    define h_AB   3630.780548 # photometry fudge factor -- convert between flux and AB magnitude = 10**(23-48.60/2.5) -- Oke, J.B. & Gunn, J. 1983, ApJ, 266, 713
+    define m_AB   1      # 
+    define mJy_AB 1e+3   # converting pixel flux from Jy to mJy
+    define mBias_AB 0.0  # AB magnitude zero point is 48.60
+    define fBias_AB 0.0  # 
+
+set_cosmos_photometry_constants_AB 00
+    # set AB magnitude photometry constants
+    define h_AB   3630.780548 # photometry fudge factor -- convert between flux and AB magnitude = 10**(23-48.60/2.5) -- Oke, J.B. & Gunn, J. 1983, ApJ, 266, 713
+    define m_AB   1      # 
+    define mJy_AB 1e+3   # converting pixel flux from Jy to mJy
+    define mBias_AB 0.0  # AB magnitude zero point is 48.60
+    define fBias_AB 0.0  # 
+
+set_cosmos_photometry_constants_AdamMuzzin2013 00
+    # set AB magnitude photometry constants
+    define h_AdamMuzzin2013   0.363   # photometry fudge factor -- convert between flux and AB magnitude
+    define m_AdamMuzzin2013   1       # 
+    define mJy_AdamMuzzin2013 1       # converting pixel flux from 0.363 mJy to mJy
+    define mBias_AdamMuzzin2013 0.0   # Muzzin et al. 2013 uses mag = -2.5 lg flux + 25.0, this means a flux unit of 0.363 mJy, see Damen et al. 2011 -- http://vizier.china-vo.org/ftp/cats/J_ApJ/727/1/ReadMe
+    define fBias_AdamMuzzin2013 0.0   # 
+
+
+
+
+
+
+
+
+
+set_uds_photometry_constants_24 00
+    set_default_photometry_constants 24
+    define h_24         1.0                         # PSF image total/peak if pixel unit is Jy/beam, or 1.0 if Jy/pixel. 
+    define mJy_24     $(23.5045*1.2*1.2*1e-3)       # a factor converting MJy/sr to mJy: MJy/sr -- * 23.5045 -:> uJy/arcsec**2 -- * 1.2*1.2 -:> uJy/pixel -- * 1e-3 -:> mJy/pixel
+    define fSigma_24    5.165e-3                    # mJy
+    define xStep_24     35                          # x length of the inner region of each box
+    define yStep_24     35                          # y length of the inner region of each box
+    define gBuff_24     20                          # length of the buffer region of each box
+    define fBuff_24     1                           # additional length of the buffer region of each box, historical variable, always 1
+    define SciPhoto_24 "mips_mosaic"
+    define RmsPhoto_24 "mips_mosaic_unc"
+    define PsfPhoto_24 "hdfn_dao_mipspsf"
+    define DirPhoto_24 "/Users/dzliu/Work/DeepFields/Works/Photometry_UDS/Images/MIPS/"
+
+
+
+
+
+
+
+
+
+astroPhotOnMute 00
+    #
+    if($?print_noheader) { if($print_noheader!=1) {
+        define astroPhot_pref_noheader $print_noheader
+        define print_noheader 1
+    } } else {
+        define astroPhot_pref_noheader 0
+        define print_noheader 1
+    }
+    if($?verbose) { if($verbose!=0) {
+        define astroPhot_pref_verbose $verbose
+        verbose 0
+    } }
+    #echo astroPhotOnMute:pref_verbose=$pref_verbose
+
+astroPhotUnMute 00
+    #
+    #echo astroPhotUnMute:pref_verbose=$pref_verbose
+    if($?astroPhot_pref_noheader) { define print_noheader $astroPhot_pref_noheader
+        undef astroPhot_pref_noheader }
+    if($?astroPhot_pref_verbose) { verbose $astroPhot_pref_verbose
+        undef astroPhot_pref_verbose }
+
+get_image_size 01
+    # need wcstools
+    if(!$?1) {print '\nastroPhot::get_image_size xxxx.fits => nAxis1 nAxis2\n' {} return}
+    if(!is_file($1)) {print '\nastroPhot::get_image_size Error! $1 not found!\n' {} return}
+    !CrabFitsHeader $1 > "._.AstroPhot._.GetImageSize._."
+    !CrabTableReadInfo   "._.AstroPhot._.GetImageSize._."  NAXIS1 / > "._.AstroPhot._.GetImageSizeX._."
+    !CrabTableReadInfo   "._.AstroPhot._.GetImageSize._."  NAXIS2 / > "._.AstroPhot._.GetImageSizeY._."
+    astroPhotOnMute
+    data "._.AstroPhot._.GetImageSizeX._." read nAxis1 1
+    data "._.AstroPhot._.GetImageSizeY._." read nAxis2 1
+    !rm  "._.AstroPhot._.GetImageSize._."
+    !rm  "._.AstroPhot._.GetImageSizeX._."
+    !rm  "._.AstroPhot._.GetImageSizeY._."
+    astroPhotUnMute
+    if($verbose){print 'astroPhot::get_image_size: Got image sizes nAxis1=$(nAxis1) nAxis2=$(nAxis2) for $1\n' {}}
+
+get_image_aper_mean_rect 05
+    # need iraf
+    if(!$?1||!$?2||!$?3||!$?4||!$?5) {
+    print '\nastroPhot::get_image_aper_mean_rect xxxx.fits rect_cx rect_cy rect_width rect_height => astroPhotAperMean\n' {} return}
+    if(!is_file($1)) {print '\nastroPhot::get_image_aper_mean_rect: Error! $1 not found!\n' {} return}
+    set astroPhotCX = $2 set astroPhotCY = $3
+    set astroPhotRX = float($4+1.0)/2.0 set astroPhotRY = float($5+1.0)/2.0
+    set astroPhotX1 = int(astroPhotCX-astroPhotRX)
+    set astroPhotX2 = int(astroPhotCX+astroPhotRX)
+    set astroPhotY1 = int(astroPhotCY-astroPhotRY)
+    set astroPhotY2 = int(astroPhotCY+astroPhotRY)
+    get_image_size $1
+    set astroPhotX1 = astroPhotX1>=1 ? astroPhotX1 : 1 set astroPhotX1 = astroPhotX1<=nAxis1 ? astroPhotX1 : nAxis1
+    set astroPhotX2 = astroPhotX2>=1 ? astroPhotX2 : 1 set astroPhotX2 = astroPhotX2<=nAxis1 ? astroPhotX2 : nAxis1
+    set astroPhotY1 = astroPhotY1>=1 ? astroPhotY1 : 1 set astroPhotY1 = astroPhotY1<=nAxis2 ? astroPhotY1 : nAxis2
+    set astroPhotY2 = astroPhotY2>=1 ? astroPhotY2 : 1 set astroPhotY2 = astroPhotY2<=nAxis2 ? astroPhotY2 : nAxis2
+    set astroPhotX1 = float(astroPhotX1) set astroPhotX2 = float(astroPhotX2)
+    set astroPhotY1 = float(astroPhotY1) set astroPhotY2 = float(astroPhotY2) ###<Added><DZLIU>###
+    unset nAxis1 unset nAxis2 #<fixed><20150922><dzliu># otherwise astroGalbox.sm will got wrong results
+    astroPhotOnMute
+    !rm    "._.AstroPhot._.GotImageAperX._." 2>/dev/null
+    print  "._.AstroPhot._.GetImageAperX._." 'images\nimutil\n' {}
+    print +"._.AstroPhot._.GetImageAperX._." 'imstat $1[%.0f:%.0f,%.0f:%.0f] nclip=0 >> "._.AstroPhot._.GotImageAperX._." \n' \
+           {astroPhotX1 astroPhotX2 astroPhotY1 astroPhotY2}
+    print +"._.AstroPhot._.GetImageAperX._." 'logout\n\n' {}
+    !cl <  "._.AstroPhot._.GetImageAperX._." >> /dev/null 2>&1
+    data   "._.AstroPhot._.GotImageAperX._." read astroPhotAperMean 4
+    !rm    "._.AstroPhot._.GotImageAperX._." 2>/dev/null
+    !rm    "._.AstroPhot._.GetImageAperX._." 2>/dev/null
+    astroPhotUnMute
+    if($verbose){
+    print 'astroPhot::get_image_aper_mean_rect: Calculated $(dimen(astroPhotX1)) apetures and saved into vector astroPhotAperMean\n' {}}
+
+get_goodsn_photometry_photo 01
+    # 
+    if(!$?1) { print '\nastroPhot::get_goodsn_photometry_photo xxxx.fits\n' {} return }
+    set astroPhotFindDir = {../}
+    set astroPhotFindCount = 0
+    set astroPhotFindFlag = 0
+    astroPhotOnMute
+    while { astroPhotFindFlag==0 && astroPhotFindCount < 7 } {
+        # echo !find $(astroPhotFindDir) -name $1.fits | wc -l > "._.AstroPhot._.GetPhotoSet._."
+        !rm "._.AstroPhot._.GetPhoto._." 2>/dev/null
+        !find $(astroPhotFindDir) -name $1 > "._.AstroPhot._.GetPhoto._."
+        !cat "._.AstroPhot._.GetPhoto._." | wc -l > "._.AstroPhot._.GetPhotoCount._."
+         data "._.AstroPhot._.GetPhotoCount._." read astroPhotFindFlag 1
+        !rm   "._.AstroPhot._.GetPhotoCount._." 2>/dev/null
+        if(astroPhotFindFlag>0) {
+        #!echo \$(head -n 1 "._.AstroPhot._.GetPhoto._.")
+        !cp   \$(head -n 1 "._.AstroPhot._.GetPhoto._.") . 2>/dev/null
+        # $(astroPhotFindDir) -name $1 -print0 | xargs -0 -I % cp % .
+        }
+        !rm   "._.AstroPhot._.GetPhoto._."
+        set astroPhotFindDir = {../} + astroPhotFindDir
+        set astroPhotFindCount = astroPhotFindCount+1
+        # echo $(astroPhotFindCount) $(astroPhotFindDir)
+    }
+    if(astroPhotFindFlag==0) {
+        print 'astroPhot::get_goodsn_photometry_photo: Error! $1.fits not found!\n' {}
+    }
+    astroPhotUnMute
+
+get_goodsn_photometry_photoset 01
+    # 
+    if(!$?1) { print '\nastroPhot::get_goodsn_photometry_photoset 24\n' {} return }
+    if(!$?SciPhoto_$1||!$?RmsPhoto_$1||!$?PsfPhoto_$1) { set_goodsn_photometry_constants_$1 }
+    get_goodsn_photometry_photo $SciPhoto_$1.fits
+    get_goodsn_photometry_photo $RmsPhoto_$1.fits
+    get_goodsn_photometry_photo $PsfPhoto_$1.fits
+
+
+

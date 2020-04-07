@@ -1,0 +1,10 @@
+fonts		/home/dzliu/Cloud/Github/DeepFields.SuperDeblending/softwares/Supermongo_Glibc_2.12/lib/sm/fonts.bin
+history_file	.smhist
+history		80
+temp_dir	/tmp/
+graphcap	/home/dzliu/Cloud/Github/DeepFields.SuperDeblending/softwares/Supermongo_Glibc_2.12/lib/sm/graphcap
++graphcap	/home/dzliu/Cloud/Github/DeepFields.SuperDeblending/softwares/Supermongo_Glibc_2.12/lib/sm/graphcap.local
+filecap		/home/dzliu/Cloud/Github/DeepFields.SuperDeblending/softwares/Supermongo_Glibc_2.12/lib/sm/filecap
+termcap		/home/dzliu/Cloud/Github/DeepFields.SuperDeblending/softwares/Supermongo_Glibc_2.12/lib/sm/termcap
+help		/home/dzliu/Cloud/Github/DeepFields.SuperDeblending/softwares/Supermongo_Glibc_2.12/lib/sm/help/
+macro		/home/dzliu/Cloud/Github/DeepFields.SuperDeblending/softwares/Supermongo_Glibc_2.12/lib/sm/macro/

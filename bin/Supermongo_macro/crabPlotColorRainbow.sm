@@ -1,0 +1,127 @@
+crabPlotColorRainbow 02
+    # 
+    # 
+    # 
+    if(!$?1) {
+        print 'Usage: \n\tcrabPlotColorRainbow 0.0\tcrabPlotColorRainbow 1.0\n' {}
+        print '\tcrabPlotColorRainbow 9.9 min_max_var \# For example set min_max_var = {3.0 9.9}\n' {}
+        return
+    }
+    if(!$?2) {
+        ctypeRGB $(int(float($1)*255.0))
+    } else {
+        set __crabPlot_inpvar = ($2)
+        vecminmax __crabPlot_inpvar __crabPlot_colorMIN __crabPlot_colorMAX
+        set __crabPlot_colorVAR = float($1)
+        set __crabPlot_colorVAL = (__crabPlot_colorVAR - ($__crabPlot_colorMIN)) / (($__crabPlot_colorMAX)-($__crabPlot_colorMIN)) # normalize to 0 to 1
+        #echo $__crabPlot_colorMIN
+        #echo $__crabPlot_colorMAX
+        #echo $(__crabPlot_colorVAR)
+        #echo $(__crabPlot_colorVAL)
+        ctypeRGB $(int(float(__crabPlot_colorVAL)*255.0))
+    }
+    
+
+
+
+crabPlotColorRainbowColorBar 01
+    # 
+    if(!$?1) {
+        print 'Usage: \n\crabPlotColorRainbowColorBar min_max_var\# For example set min_max_var = {3.0 9.9}\n' {}
+        return
+    }
+    load crabPlot.sm
+    set __crabPlot_inpvar = ($1)
+    vecminmax __crabPlot_inpvar __crabPlot_colorMIN __crabPlot_colorMAX
+    #load crabPlot.sm
+    #crabPlotLegend ""
+    set __crabPlot_xRainbow = 0.600*($fx2-$fx1) + $fx1
+    set __crabPlot_yRainbow = 0.900*($fy2-$fy1) + $fy1
+    set __crabPlot_wRainbow = 0.020*($fx2-$fx1)
+    set __crabPlot_hRainbow = 0.045*($fy2-$fy1)
+    set __crabPlot_xRainbow = __crabPlot_xRainbow concat $(__crabPlot_xRainbow[0]+__crabPlot_wRainbow)
+    set __crabPlot_yRainbow = __crabPlot_yRainbow concat $(__crabPlot_yRainbow[0])
+    set __crabPlot_xRainbow = __crabPlot_xRainbow concat $(__crabPlot_xRainbow[0]+__crabPlot_wRainbow)
+    set __crabPlot_yRainbow = __crabPlot_yRainbow concat $(__crabPlot_yRainbow[0]+__crabPlot_hRainbow)
+    set __crabPlot_xRainbow = __crabPlot_xRainbow concat $(__crabPlot_xRainbow[0])
+    set __crabPlot_yRainbow = __crabPlot_yRainbow concat $(__crabPlot_yRainbow[0]+__crabPlot_hRainbow)
+    set __crabPlot_xRainbow = __crabPlot_xRainbow concat $(__crabPlot_xRainbow[0])
+    set __crabPlot_yRainbow = __crabPlot_yRainbow concat $(__crabPlot_yRainbow[0])
+    #print {__crabPlot_xRainbow __crabPlot_yRainbow}
+    do __crabPlot_iRainbow=0,255,15 {
+        ctypeRGB $__crabPlot_iRainbow
+        shade 0 __crabPlot_xRainbow __crabPlot_yRainbow
+        # 
+        # now plot text (color corresponding value)
+        #if(($__crabPlot_iRainbow<200 && $__crabPlot_iRainbow%45==0) || $__crabPlot_iRainbow==255)
+        if(($__crabPlot_iRainbow%45==0) ) {
+            #echo $__crabPlot_iRainbow
+            set __crabPlot_colorVAL = ($__crabPlot_iRainbow - 0.0) / 255.0 * (($__crabPlot_colorMAX)-($__crabPlot_colorMIN)) + ($__crabPlot_colorMIN)
+            #relocate $($fx1+(__crabPlot_xRainbow[0]+0.5*__crabPlot_wRainbow)*($fx2-$fx1)) $($fy1+(__crabPlot_yRainbow[0]-0.1*__crabPlot_hRainbow)*($fy2-$fy1))
+            relocate $(__crabPlot_xRainbow[0]+0.5*__crabPlot_wRainbow) $(__crabPlot_yRainbow[0]-0.1*__crabPlot_hRainbow)
+            expand 0.65 lweight 3.05 putlabel 2 $(sprintf('%.3g',__crabPlot_colorVAL))
+        }
+        # 
+        if($__crabPlot_iRainbow==0) { set __crabPlot_xRainbow_0 = __crabPlot_xRainbow[0] }
+        set __crabPlot_xRainbow = __crabPlot_xRainbow + __crabPlot_wRainbow
+        if($__crabPlot_iRainbow==255) { set __crabPlot_xRainbow_1 = __crabPlot_xRainbow[0] }
+    }
+    # 
+    relocate $((__crabPlot_xRainbow_0+__crabPlot_xRainbow_1)/2.0) $(__crabPlot_yRainbow[0]-0.85*__crabPlot_hRainbow)
+    !echo '$1' | sed -e 's/[_]/\\\\_/g' | sed -e 's/[ ]/\\\\_/g' > ".crabPlotColorRainbowColorBar.tmp"
+    crabPlotOnMute
+    data ".crabPlotColorRainbowColorBar.tmp" read row __crabPlot_sRainbow 1.s
+    if(is_vector(__crabPlot_sRainbow)) {!rm ".crabPlotColorRainbowColorBar.tmp"}
+    crabPlotUnMute
+    ctype default expand 0.85 lweight 3.05 putlabel 2 "Colored by "$(__crabPlot_sRainbow)
+
+    
+
+
+
+
+ctypeRGB 01
+    if(!$?__crabPlot_hasRainbow) {
+        xtcoloursRGB
+    } else {
+        if(!$__crabPlot_hasRainbow) {
+            xtcoloursRGB
+        }
+    }
+    # 
+    if(($1)>255) {
+        ctype Rainbow255
+    } else {
+        if(($1)<0) {
+            ctype Rainbow000
+        } else {
+            ctype Rainbow$(sprintf('%03d',($((int($1)-int($1)%15)))))
+        }
+    }
+
+xtcoloursRGB
+    # 
+    add_ctype Rainbow255  248   12   18
+    add_ctype Rainbow240  238   17    0
+    add_ctype Rainbow225  255   51   17
+    add_ctype Rainbow210  255   68   34
+    add_ctype Rainbow195  255  102   68
+    add_ctype Rainbow180  255  153   51
+    add_ctype Rainbow165  254  174   45
+    add_ctype Rainbow150  204  187   51
+    add_ctype Rainbow135  208  195   16
+    add_ctype Rainbow120  170  204   34
+    add_ctype Rainbow105  105  208   37
+    add_ctype Rainbow090   34  204  170
+    add_ctype Rainbow075   18  189  185
+    add_ctype Rainbow060   17  170  187
+    add_ctype Rainbow045   68   68  221
+    add_ctype Rainbow030   51   17  187
+    add_ctype Rainbow015   59   12  189
+    add_ctype Rainbow000   68   34  153
+    define __crabPlot_hasRainbow 1
+
+
+
+
+

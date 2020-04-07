@@ -1,0 +1,55 @@
+#!/bin/bash
+#
+
+type readlink > /dev/null
+type dirname > /dev/null
+
+if [[ $(type sm 2>/dev/null | wc -l) -eq 0 ]]; then
+    echo ""
+    echo "*************************************"
+    echo "Error! Supermongo was not installed! "
+    echo "*************************************"
+    echo ""
+    exit
+fi
+
+SMPATH=$(dirname $(dirname $(readlink -f $0)))
+SMDATE=$(date +%s.$(date +%N|cut -b 1,2,3,4)) # SMDATE=$(date +%Y%m%d.%H%M%S.%N.%Z)
+
+SMTEMP="/tmp"; if [[ x"$TMPDIR" != x ]]; then SMTEMP="$TMPDIR"; fi
+
+export SMPATH
+export SMDATE
+export SMTEMP
+
+mkdir                                                  "$SMTEMP/sm.$SMDATE" 2>/dev/null
+echo "fonts          //fonts.bin/"                  >  "$SMTEMP/sm.$SMDATE/.sm"
+echo "history_file   .smhist"                       >> "$SMTEMP/sm.$SMDATE/.sm"
+echo "history        80"                            >> "$SMTEMP/sm.$SMDATE/.sm"
+echo "temp_dir       $SMTEMP/"                      >> "$SMTEMP/sm.$SMDATE/.sm"
+echo "graphcap       //graphcap/"                   >> "$SMTEMP/sm.$SMDATE/.sm"
+echo "+graphcap      //graphcap.local/"             >> "$SMTEMP/sm.$SMDATE/.sm"
+echo "filecap        //filecap/"                    >> "$SMTEMP/sm.$SMDATE/.sm"
+echo "termcap        //termcap/"                    >> "$SMTEMP/sm.$SMDATE/.sm"
+echo "help           //help/"                       >> "$SMTEMP/sm.$SMDATE/.sm"
+echo "macro          $SMTEMP/sm.$SMDATE/macro/"     >> "$SMTEMP/sm.$SMDATE/.sm"
+#echo "help          $SMPATH/lib/sm/help/"          >> "$SMTEMP/sm.$SMDATE/.sm"
+#echo "macro         $SMPATH/lib/sm/macro/"     >> "$SMTEMP/sm.$SMDATE/.sm"
+chmod 777                                         "$SMTEMP/sm.$SMDATE/.sm"
+
+#ln -fs "$SMPATH/lib/sm/macro" "$SMTEMP/sm.$SMDATE/macro" 2>/dev/null
+cp -rL "$SMPATH/lib/sm/macro" "$SMTEMP/sm.$SMDATE/" 2>/dev/null
+cp "$SMPATH/../Supermongo_macro/"*.sm "$SMTEMP/sm.$SMDATE/macro/" 2>/dev/null
+ln -fs "$SMPATH/lib/sm/help" "$SMTEMP/sm.$SMDATE/help" 2>/dev/null
+#if [[ -f $SMPATH/bin/sm ]]; then
+#$SMPATH/bin/sm -f "$SMTEMP/sm.$SMDATE/.sm" $*
+#else
+#echo ""
+#echo "*************************************"
+#echo "Error! Supermongo was not installed! "
+#echo "*************************************"
+#echo ""
+#fi
+sm -f "$SMTEMP/sm.$SMDATE/.sm" $*
+rm -rf "$SMTEMP/sm.$SMDATE" 2>/dev/null
+

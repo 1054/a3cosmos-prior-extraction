@@ -1,0 +1,13 @@
+test_string_vector_length
+    # 
+    set aaa =     'character_1234567090'
+    set aaa = aaa+'character_1234567090'
+    set aaa = aaa+'character_1234567090'
+    set aaa = aaa+'character_1234567090'
+    set aaa = aaa+'character_1234567090'
+    set aaa = aaa+'character_1234567090'
+    set aaa = aaa+'character_1234567090'
+    set aaa = aaa+'character_1234567090'
+    set aaa = aaa+'character_1234567090'
+    set aaa = aaa+'character_1234567090'
+    print {aaa}

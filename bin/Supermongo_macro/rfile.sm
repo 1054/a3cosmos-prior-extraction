@@ -1,0 +1,143 @@
+rfile 03
+        # Automated table readin. Use vector names given in the
+        # first line of file  <filename> . Optional 2nd and 3rd
+        # arguments select the lines to be read [line1 line2] .
+        # Received from: M.Franx (origin RHL?)
+        # Noted by: E.Daddi
+        # Moded by: DzLIU
+        ##if(!$?1){print 'Usage: rfile filename.txt 0 100\n' {}}
+        # 2015-06-26 now we allow 0 input argument -- assuming 
+        # the user has already called data some file
+        # 2016-06-24 now if header name contains STR, we will read as string
+        # 2017-09-09 now allow auto-determine head_line and data_line
+        # 
+        # check input file
+        if(!$?1) { return }
+        # 
+        # check verbose
+        define rfile_verbose $verbose verbose 0
+        # 
+        # determine column header line <20170909><20180920>
+        if(!$?rfile_head_line)  {define rfile_head_line 0}
+        if(!$?rfile_data_line)  {define rfile_data_line 0}
+        define rfile_curr_line 1
+        define rfile_total_line 0
+        while { ($rfile_data_line==0 && $rfile_curr_line>=0) } {
+            # check whether a line is commented by # or !
+            define rfile_is_commented_line 0
+            !cat $1 | head -n $rfile_curr_line | tail -n 1 | sed -e 's/ *//g' | grep -q "^\#"
+            if($exit_status==0) { define rfile_is_commented_line 1 }
+            !cat $1 | head -n $rfile_curr_line | tail -n 1 | sed -e 's/ *//g' | grep -q "^!"
+            if($exit_status==0) { define rfile_is_commented_line 1 }
+            if($rfile_is_commented_line) {
+                # when we meet commented line, we check if this line has valid content, if yes, then we take it as the head line. 
+                !cat $1 | head -n $rfile_curr_line | tail -n 1 | sed -e 's/ *//g' | sed -e 's/\#//g' | sed -e 's/!//g' | grep -v -q "^\$"
+                if($exit_status==0) {
+                    define rfile_head_line $rfile_curr_line
+                    #echo define rfile_head_line $rfile_curr_line
+                }
+            } else {
+                # when first meet non commented line, we take this as the first line of data
+                !cat $1 | head -n $rfile_curr_line | tail -n 1 | sed -e 's/ *//g' | grep -v -q "^\$"
+                if($exit_status==0) {
+                    define rfile_data_line $rfile_curr_line
+                    #echo define rfile_data_line $rfile_curr_line
+                }
+            }
+            # check whether the file is EOF
+            define rfile_is_end_of_file 0
+            !if [[ $rfile_curr_line -gt \$(cat $1 | wc -l) ]]; then exit 1; fi
+            if($exit_status!=0) { define rfile_is_end_of_file 1 }
+            if($rfile_is_end_of_file) {
+                # end the loop
+                define rfile_curr_line -1
+            } else {
+                # go to next line
+                define rfile_curr_line $($rfile_curr_line+1)
+            }
+        }
+        if($rfile_head_line==0) {
+            print 'Error! rfile.sm could not determine the head line from the input data file' {}
+            print ' \"$1\"!' {}
+            print ' Please make sure head line exists and starts with \"\#\" or \"!\"!\n' {}
+            if(is_vector(rfile_vectors)) { unset rfile_vectors }
+            return
+        }
+        if($rfile_data_line==0) {
+            print 'Error! rfile.sm could not determine the data line from the input data file' {}
+            print ' \"$1\"!' {}
+            print ' Please make sure data line exists and does not start with \"\#\" nor \"!\"!\n' {}
+            if(is_vector(rfile_vectors)) { unset rfile_vectors }
+            return
+        }
+        #echo rfile_head_line = $rfile_head_line
+        #echo rfile_data_line = $rfile_data_line
+        #echo rfile_curr_line = $rfile_curr_line
+        # 
+        # determine data lines, 
+        # if $2 is provided, then select data since $2-th uncommented line, 
+        # if $3 is also provided, then select data from $2-th to $3-th uncommented lines. 
+        data $1
+        if($?2) {
+            define rfli $rfile_head_line # column header line
+            if(!$?3) {
+                lines $($rfile_data_line-1+$2) 0 # selected data lines
+                if($rfile_verbose){!echo Read lines since $($rfile_data_line-1+$2) \(data array elements $2 and after\)}
+            } else {
+                lines $($rfile_data_line-1+$2) $($rfile_data_line-1+$3) # selected data lines
+                if($rfile_verbose){!echo Read lines from $($rfile_data_line-1+$2) to $($rfile_data_line-1+$3) \(data array elements $2 to $3\)}
+            }
+        } else {
+            lines $rfile_data_line 0 #<20180920>#
+            define rfli $rfile_head_line
+        }
+        #if($?2 && !$?3) { lines $2 0 define rfli $2 }
+        #if($?2 && $?3) { lines $2 $3 define rfli $2 }
+        # 
+        # read data for each column header
+        declare rfile_headers 0.s # a header list
+        define rfhi 0 # column number index
+        if(is_vector(rfile_vectors)) {
+            unset rfile_vectors
+        }
+        while {$?rfhc || !$rfhi} {
+            define rfhi $($rfhi+1)
+            define rfhc read $rfli $rfhi
+            if($?rfhc) {
+                if(is_vector($rfhc)) {
+                    set $rfhc""_rfile_backup=$rfhc
+                    if($rfile_verbose){!echo Read column $rfhi as $rfhc \(backuped existing $rfhc as $rfhc""_rfile_backup\)}
+                }
+                set rfile_headers = rfile_headers concat '$rfhc'
+                if('$rfhc'=='Type' || '$rfhc'=='Note' || \
+                    index('$rfhc','Source')>=0 || index('$rfhc','Name')>=0 || index('$rfhc','NAME')>=0 || index('$rfhc','Alias')>=0 || \
+                    index('$rfhc','source')>=0 || index('$rfhc','name')>=0 || index('$rfhc','nAME')>=0 || index('$rfhc','alias')>=0 || \
+                    index('$rfhc','file')>=0 || index('$rfhc','File')>=0 || index('$rfhc','FILE')>=0 || \
+                    '$rfhc'=='image_dir' || \
+                    '$rfhc'=='image_file' || \
+                    index('$rfhc','_STR')>=0 || \
+                    index('$rfhc','_str')>=0 || \
+                    index('$rfhc','gal_Type_')>=0 ) {
+                    read $rfhc $rfhi.s
+                    if($rfile_verbose){echo Read column $rfhi as $rfhc (string)}
+                } else {
+                    read $rfhc $rfhi
+                    if($rfile_verbose){echo Read column $rfhi as $rfhc}
+                }
+                if(is_vector(rfile_vectors)) {
+                    set rfile_vectors = rfile_vectors concat <$rfhc>
+                } else {
+                    set rfile_vectors = <$rfhc>
+                }
+                #if(is_vector(rfvectors)) {
+                #set rfvectors=rfvectors concat $rfhc
+                #} else { set rfvectors=$rfhc }
+            }
+        } # read the 1st row 1st column
+        verbose $rfile_verbose
+        undef rfile_head_line
+        undef rfile_data_line
+        undef rfile_curr_line
+        undef rfile_total_line
+        return
+

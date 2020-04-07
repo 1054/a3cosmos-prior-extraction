@@ -1,0 +1,524 @@
+vecQuickCompare 08
+        # 
+        # compare vec1 and vec2 and output plots
+        # device x11
+        # macro read vecQuickCompare.sm vecQuickCompare vec1 vec2
+        # 
+        if($?1==0||$?2==0) {
+            print 'Usage:\n  device x11\n  vecQuickCompare vec1 vec2 [xlabel ylabel xerror yerror x2label y2label]\n' {} 
+            print 'Note:\n  for log_10 plot, please use vecQuickCompare_log10 vec1 vec2\n' {} 
+            return
+        }
+        if(dimen($1)!=dimen($2)) {return}
+        # 
+        # device x11
+        # erase
+        # 
+        # save
+        set vecQuickCompare_gx1 = $gx1
+        set vecQuickCompare_gx2 = $gx2
+        set vecQuickCompare_gy1 = $gy1
+        set vecQuickCompare_gy2 = $gy2
+        # 
+        # vecQuickCompare_plot_left_panel
+        location 5000 15000 10000 22000
+        if($?3==0) {
+            vecQuickCompare_plot_left_panel $1 $2
+        } else {
+            if($?4==0) {
+                vecQuickCompare_plot_left_panel $1 $2 $3
+            } else {
+                if($?5==0) {
+                    vecQuickCompare_plot_left_panel $1 $2 $3 $4
+                } else {
+                    if($?6==0) {
+                        vecQuickCompare_plot_left_panel $1 $2 $3 $4 $5
+                    } else {
+                        vecQuickCompare_plot_left_panel $1 $2 $3 $4 $5 $6
+                    }
+                }
+            }
+        }
+        # 
+        # vecQuickCompare_plot_right_panel
+        location 21000 31000 10000 22000
+        if($?3==0) {
+            vecQuickCompare_plot_right_panel $1 $2
+        } else {
+            if($?4==0) {
+                vecQuickCompare_plot_right_panel $1 $2 $3
+            } else {
+                if($?5==0) {
+                    vecQuickCompare_plot_right_panel $1 $2 $3 $4
+                } else {
+                    if($?6==0) {
+                        vecQuickCompare_plot_right_panel $1 $2 $3 '$4-$3' $5
+                    } else {
+                        if($?7==0) {
+                            vecQuickCompare_plot_right_panel $1 $2 $3 '$4-$3' $5 $6
+                        } else {
+                            if($?8==0) {
+                                vecQuickCompare_plot_right_panel $1 $2 $7 '$4-$7' $5 $6
+                            } else {
+                                vecQuickCompare_plot_right_panel $1 $2 $7 $8 $5 $6
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        # 
+        # restore
+        location $(vecQuickCompare_gx1) $(vecQuickCompare_gx2) $(vecQuickCompare_gy1) $(vecQuickCompare_gy2)
+
+
+
+vecQuickCompare_plot_left_panel 06
+        # need: $1 $2
+        # optional: $3 $4 -- xlabel and ylabel
+        # optional: $5 $6 -- xerror and yerror -- when supplied we will show errorbar
+        # 
+        if($?1==0||$?2==0) {return}
+        if(dimen($1)!=dimen($2)) {return}
+        # 
+        set vecqc_1 = $1
+        set vecqc_2 = $2
+        # 
+        # <added><20151106> show errorbar
+        # 
+        if($?5) {
+            set vecxerr = $5
+        } else {
+            if(is_vector(vecxerr)) {unset vecxerr}
+        }
+        if($?6) {
+            set vecyerr = $6
+        } else {
+            if(is_vector(vecyerr)) {unset vecyerr}
+        }
+        # 
+        define TeX_strings 1
+        define vecqc_lweight $lweight
+        define vecqc_expand $expand
+        ctype default expand 1.15 lweight 2.5
+        crabPlot_CheckLocation
+        if(!$crabPlot_HasLocation){location 5000 15000 10000 22000} # generally the left panel should be in the location of left half
+        # 
+        vecminmax vecqc_1 vecqc_1MIN vecqc_1MAX
+        vecminmax vecqc_2 vecqc_2MIN vecqc_2MAX
+        set vecqc_MIN = $vecqc_1MIN<$vecqc_2MIN ? $vecqc_1MIN : $vecqc_2MIN
+        set vecqc_MAX = $vecqc_1MAX>$vecqc_2MAX ? $vecqc_1MAX : $vecqc_2MAX
+        set vecqc_DIS = vecqc_MAX - vecqc_MIN
+        set vecqc_MIN = vecqc_MIN - 0.1*vecqc_DIS
+        set vecqc_MAX = vecqc_MAX + 0.1*vecqc_DIS
+        limits $(vecqc_MIN) $(vecqc_MAX) $(vecqc_MIN) $(vecqc_MAX)
+        #expand 0.85 box
+        expand 0.85
+        if($gx1<10000 && $gx2>16500) {expand 1.70 lweight 3.5}
+        box
+        expand 1.15
+        ptype 4 1 angle 00 lweight $vecqc_lweight expand $vecqc_expand ctype blue points vecqc_1 vecqc_2
+        if(is_vector(vecxerr)) {errorbar vecqc_1 vecqc_2 vecxerr 1}
+        if(is_vector(vecxerr)) {errorbar vecqc_1 vecqc_2 vecxerr 3}
+        if(is_vector(vecyerr)) {errorbar vecqc_1 vecqc_2 vecyerr 2}
+        if(is_vector(vecyerr)) {errorbar vecqc_1 vecqc_2 vecyerr 4}
+        ptype 4 1 angle 00 lweight 2.5 expand 1.15 ctype default
+        ltype 1 rel $(vecqc_MIN) $(vecqc_MIN) draw $(vecqc_MAX) $(vecqc_MAX)
+        ltype 0
+        # 
+        if($gx1<10000 && $gx2>16500) {expand 2.35}
+        if($?3){xlabel $3} else{xlabel $(strReplaceUnderscore($1))}
+        if($?4){ylabel $4} else{ylabel $(strReplaceUnderscore($2))}
+        # 
+        lweight $vecqc_lweight
+        expand $vecqc_expand
+
+
+
+vecQuickCompare_plot_right_panel 06
+        # need: $1 $2
+        # optional: $3 $4 -- xlabel and ylabel
+        # optional: $5 $6 -- xerror and yerror -- when supplied we will divide quatratic error
+        # 
+        if($?1==0||$?2==0) {return}
+        if(dimen($1)!=dimen($2)) {return}
+        # 
+        set vecqc_1 = $1
+        set vecqc_2 = $2
+        # 
+        define TeX_strings 1
+        define vecqc_lweight $lweight
+        define vecqc_expand $expand
+        ctype default expand 1.15 lweight 2.5
+        crabPlot_CheckLocation
+        if(!$crabPlot_HasLocation){location 21000 31000 10000 22000} # generally the right panel should be in the location of right half
+        # 
+        set vecqc_d = vecqc_2 - vecqc_1
+        vecminmax vecqc_1 vecqc_1MIN vecqc_1MAX
+        vecminmax vecqc_2 vecqc_2MIN vecqc_2MAX
+        vecminmax vecqc_d vecqc_dMIN vecqc_dMAX
+        set vecqc_MIN = $vecqc_1MIN<$vecqc_2MIN ? $vecqc_1MIN : $vecqc_2MIN
+        set vecqc_MAX = $vecqc_1MAX>$vecqc_2MAX ? $vecqc_1MAX : $vecqc_2MAX
+        set vecqc_DIS = vecqc_MAX - vecqc_MIN
+        set vecqc_MIN = vecqc_MIN - 0.1*vecqc_DIS
+        set vecqc_MAX = vecqc_MAX + 0.1*vecqc_DIS
+        set vecqc_dMAX = $vecqc_dMAX * 1.15
+        # 
+        # <added><20151026> dividing error
+        # 
+        if($?5 && $?6) {
+            set vecqerr = sqrt(($5)**2 + ($6)**2)
+            set vecqc_d = vecqc_d / vecqerr
+            set vecqc_dMAX = vecqc_dMAX / vecqerr
+        } else {
+            if(is_vector(vecqerr)) {unset vecqerr}
+        }
+        # 
+        limits $(vecqc_MIN) $(vecqc_MAX) -$(vecqc_dMAX) +$(vecqc_dMAX)
+        #expand 0.85 box
+        expand 0.85
+        if($gx1<10000 && $gx2>16500) {expand 1.70 lweight 3.5}
+        box
+        expand 1.15
+        ptype 4 1 angle 00 lweight $vecqc_lweight expand $vecqc_expand ctype blue points vecqc_1 vecqc_d
+        ptype 4 1 angle 00 lweight 2.5 expand 1.15 ctype default
+        ltype 1 rel $(vecqc_MIN) 0 draw $(vecqc_MAX) 0
+        ltype 0
+        # 
+        # calc sorted id
+        set vecqc_sorted_id = 0,dimen(vecqc_d)-1 
+        set vecqc_sorted_d  = vecqc_d
+        set vecqc_sorted_1  = vecqc_1
+        set vecqc_sorted_2  = vecqc_1
+        sort { vecqc_sorted_d vecqc_sorted_id vecqc_sorted_1 vecqc_sorted_2 }
+        # print {$1_id[vecqc_sorted_id] $2_id[vecqc_sorted_id] $1[vecqc_sorted_id] $2[vecqc_sorted_id]}
+        # 
+        # 
+        if($gx1<10000 && $gx2>16500) {expand 2.35}
+        if($?3){xlabel $3} else{xlabel $(strReplaceUnderscore($1))}
+        if($?4){ylabel $4} else{
+            if($?5 && $?6) {ylabel $(strReplaceUnderscore('$2 - $1'))} else {ylabel $(strReplaceUnderscore('($2 - $1)/error'))}
+        }
+        # 
+        lweight $vecqc_lweight
+        expand $vecqc_expand
+
+
+
+vecQuickCompare_log10 08
+        # 
+        # compare vec1 and vec2 and output log10 plots
+        # macro read vecQuickCompare.sm vecQuickCompare_log10 
+        # 
+        if($?1==0||$?2==0) {
+            print 'Usage:\n  device x11\n  vecQuickCompare_log10 vec1 vec2 [xlabel ylabel xerror yerror x2label y2label]\n' {} 
+            print 'Note:\n  for linear plot, please use vecQuickCompare vec1 vec2\n' {} 
+            return
+        }
+        if(dimen($1)!=dimen($2)) {return}
+        # 
+        # save
+        set vecQuickCompare_gx1 = $gx1
+        set vecQuickCompare_gx2 = $gx2
+        set vecQuickCompare_gy1 = $gy1
+        set vecQuickCompare_gy2 = $gy2
+        # 
+        # vecQuickCompare_log10_plot_left_panel
+        location 5000 15000 10000 22000
+        if($?3==0) {
+            vecQuickCompare_log10_plot_left_panel $1 $2
+        } else {
+            if($?4==0) {
+                vecQuickCompare_log10_plot_left_panel $1 $2 $3
+            } else {
+                if($?5==0) {
+                    vecQuickCompare_log10_plot_left_panel $1 $2 $3 $4
+                } else {
+                    if($?6==0) {
+                        vecQuickCompare_log10_plot_left_panel $1 $2 $3 $4 $5
+                    } else {
+                        vecQuickCompare_log10_plot_left_panel $1 $2 $3 $4 $5 $6
+                    }
+                }
+            }
+        }
+        # 
+        # vecQuickCompare_log10_plot_right_panel
+        location 21000 31000 10000 22000
+        if($?3==0) {
+            vecQuickCompare_log10_plot_right_panel $1 $2
+        } else {
+            if($?4==0) {
+                vecQuickCompare_log10_plot_right_panel $1 $2 $3
+            } else {
+                if($?5==0) {
+                    vecQuickCompare_log10_plot_right_panel $1 $2 $3 $4
+                } else {
+                    if($?6==0) {
+                            vecQuickCompare_log10_plot_right_panel $1 $2 $3 $4-$3 $5
+                    } else {
+                        if($?7==0) {
+                            vecQuickCompare_log10_plot_right_panel $1 $2 $3 $4-$3 $5 $6
+                        } else {
+                            if($?8==0) {
+                                vecQuickCompare_log10_plot_right_panel $1 $2 $7 $4-$7 $5 $6
+                            } else {
+                                vecQuickCompare_log10_plot_right_panel $1 $2 $7 $8 $5 $6
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        # 
+        # restore
+        location $(vecQuickCompare_gx1) $(vecQuickCompare_gx2) $(vecQuickCompare_gy1) $(vecQuickCompare_gy2)
+
+
+
+crabPlot_CheckLocation
+    if($gx1!=3500 || $gx2!=31000 || $gy1!=3500 || $gy2!=31000) {define crabPlot_HasLocation 1}
+    if(!$?crabPlot_HasLocation) {define crabPlot_HasLocation 0}
+
+
+
+vecQuickCompare_log10_plot_left_panel 06
+        # need: $1 $2
+        # optional: $3 $4 -- xlabel and ylabel
+        # optional: $5 $6 -- xerror and yerror -- when supplied we will show errorbar
+        # 
+        if($?1==0||$?2==0) {return}
+        if(dimen($1)!=dimen($2)) {return}
+        # 
+        set vecqc_poi = 0,dimen($1)-1
+        set vecqc_poi = vecqc_poi if($1>0&&$2>0)
+        set vecqc_1 = (lg($1[vecqc_poi]))
+        set vecqc_2 = (lg($2[vecqc_poi]))
+        # 
+        # <added><20151106> show errorbar
+        # 
+        if($?5) {
+            set vecxerr = ($5[vecqc_poi])/(10**vecqc_1)
+        } else {
+            if(is_vector(vecxerr)) {unset vecxerr}
+        }
+        if($?6) {
+            set vecyerr = ($6[vecqc_poi])/(10**vecqc_2)
+        } else {
+            if(is_vector(vecyerr)) {unset vecyerr}
+        }
+        # 
+        define TeX_strings 1
+        define vecqc_lweight $lweight
+        define vecqc_expand $expand
+        ctype default expand 1.15 lweight 2.5
+        crabPlot_CheckLocation
+        if(!$crabPlot_HasLocation){location 5000 15000 10000 22000} # generally the left panel should be in the location of left half
+        # 
+        vecminmax vecqc_1 vecqc_1MIN vecqc_1MAX
+        vecminmax vecqc_2 vecqc_2MIN vecqc_2MAX
+        set vecqc_MIN = $vecqc_1MIN<$vecqc_2MIN ? $vecqc_1MIN : $vecqc_2MIN
+        set vecqc_MAX = $vecqc_1MAX>$vecqc_2MAX ? $vecqc_1MAX : $vecqc_2MAX
+        set vecqc_DIS = vecqc_MAX - vecqc_MIN
+        set vecqc_MIN = vecqc_MIN - 0.15*vecqc_DIS
+        set vecqc_MAX = vecqc_MAX + 0.15*vecqc_DIS
+        set vecqc_MAX = $vecqc_1MAX>$vecqc_2MAX ? $vecqc_1MAX : $vecqc_2MAX
+        set vecqc_MIN = vecqc_MIN-0.1*(vecqc_MAX-vecqc_MIN)
+        set vecqc_MAX = vecqc_MAX+0.1*(vecqc_MAX-vecqc_MIN)
+        limits $(vecqc_MIN) $(vecqc_MAX) $(vecqc_MIN) $(vecqc_MAX)
+        #expand 0.85 box
+        expand 0.85
+        if($gx1<10000 && $gx2>16500) {expand 1.70 lweight 3.5}
+        box
+        expand 1.15
+        ptype 4 1 angle 00 lweight $vecqc_lweight expand $vecqc_expand ctype blue points vecqc_1 vecqc_2
+        if(is_vector(vecxerr)) {errorbar vecqc_1 vecqc_2 vecxerr 1}
+        if(is_vector(vecxerr)) {errorbar vecqc_1 vecqc_2 vecxerr 3}
+        if(is_vector(vecyerr)) {errorbar vecqc_1 vecqc_2 vecyerr 2}
+        if(is_vector(vecyerr)) {errorbar vecqc_1 vecqc_2 vecyerr 4}
+        ptype 4 1 angle 00 lweight 2.5 expand 1.15 ctype default
+        ltype 1 rel $(vecqc_MIN) $(vecqc_MIN) draw $(vecqc_MAX) $(vecqc_MAX)
+        ltype 0
+        # 
+        if($gx1<10000 && $gx2>16500) {expand 2.35}
+        if($?3){xlabel $3} else{xlabel lg($(strReplaceUnderscore($1)))}
+        if($?4){ylabel $4} else{ylabel lg($(strReplaceUnderscore($2)))}
+        # 
+        lweight $vecqc_lweight
+        expand $vecqc_expand
+
+
+
+vecQuickCompare_log10_plot_right_panel 06
+        # need: $1 $2
+        # more: set $1""_id and $2""_id then this code will give some print on sorted comparing list
+        # more: define vecqc_doDividing 1 -- do vec2/vec1 instead of vec2-vec1 (all in linear)
+        # optional: $3 $4 -- xlabel and ylabel -- the x y title
+        # optional: $5 $6 -- xerror and yerror -- when supplied we will divide quatratic error
+        # 
+        if($?1==0||$?2==0) {return}
+        if(dimen($1)!=dimen($2)) {return}
+        # 
+        set vecqc_poi = 0,dimen($1)-1
+        set vecqc_poi = vecqc_poi if($1>0&&$2>0)
+        set vecqc_1 = (lg($1[vecqc_poi]))
+        set vecqc_2 = (lg($2[vecqc_poi]))
+        # 
+        define TeX_strings 1
+        define vecqc_lweight $lweight
+        define vecqc_expand $expand
+        ctype default expand 1.15 lweight 2.5 # this is internal default expand and lweight, for box and lines but not for points
+        crabPlot_CheckLocation
+        if(!$crabPlot_HasLocation){location 21000 31000 10000 22000} # generally the right panel should be in the location of right half
+        # 
+        define vecqc_doDividing 1 #<TODO># show (arr2-arr1) or show (arr2/arr1) as the y axis?
+        if($?5 && $?6) { define vecqc_doDividing 0 } # <added><20151026> dividing error -- (y1-y2)/sqrt(e1**2+e2**2)
+        # 
+        vecminmax vecqc_1 vecqc_1MIN vecqc_1MAX
+        vecminmax vecqc_2 vecqc_2MIN vecqc_2MAX
+        set vecqc_MIN = $vecqc_1MIN<$vecqc_2MIN ? $vecqc_1MIN : $vecqc_2MIN
+        set vecqc_MAX = $vecqc_1MAX>$vecqc_2MAX ? $vecqc_1MAX : $vecqc_2MAX
+        set vecqc_MIN = vecqc_MIN-0.1*(vecqc_MAX-vecqc_MIN)
+        set vecqc_MAX = vecqc_MAX+0.1*(vecqc_MAX-vecqc_MIN)
+        if($vecqc_doDividing) {
+        set vecqc_d = 10**vecqc_2 / 10**vecqc_1 set vecqc_d = lg(vecqc_d) } else {
+        set vecqc_d = 10**vecqc_2 - 10**vecqc_1 }
+        # 
+        # <added><20151026> dividing error
+        # 
+        if($?5 && $?6) {
+            set vecqerr = sqrt(($5[vecqc_poi])**2 + ($6[vecqc_poi])**2)
+            set vecqc_d = vecqc_d / vecqerr
+        } else {
+            if(is_vector(vecqerr)) {unset vecqerr}
+        }
+        # 
+        set vecqc_dABS = abs(vecqc_d)
+        vecminmax vecqc_dABS vecqc_dMIN vecqc_dMAX
+        set vecqc_dDIS = $vecqc_dMAX - $vecqc_dMIN
+        set vecqc_dMAX = $vecqc_dMAX + 0.15*vecqc_dDIS
+        if($vecqc_doDividing) {
+        limits $(vecqc_MIN) $(vecqc_MAX) -$(vecqc_dMAX) +$(vecqc_dMAX) } else {
+        limits $(vecqc_MIN) $(vecqc_MAX) -$(vecqc_dMAX) +$(vecqc_dMAX) }
+        ### limits $(vecqc_MIN) $(vecqc_MAX) -$(vecqc_dMAX) +$(vecqc_dMAX)
+        #expand 0.85 box
+        expand 0.85
+        if($gx1<10000 && $gx2>16500) {expand 1.70 lweight 3.5}
+        box
+        expand 1.15
+        ptype 4 1 angle 00 lweight $vecqc_lweight expand $vecqc_expand ctype blue points vecqc_1 vecqc_d
+        ptype 4 1 angle 00 lweight 2.5 expand 1.15 ctype default
+        if($vecqc_doDividing) {
+        ltype 1 rel $(vecqc_MIN) 0.0 draw $(vecqc_MAX) 0.0 } else {
+        ltype 1 rel $(vecqc_MIN) 0.0 draw $(vecqc_MAX) 0.0 }
+        ltype 0
+        # 
+        # calc sorted id
+        set vecqc_sorted_id = 0,dimen(vecqc_d)-1 
+        set vecqc_sorted_d  = vecqc_d
+        set vecqc_sorted_1  = vecqc_1
+        set vecqc_sorted_2  = vecqc_2
+        sort { vecqc_sorted_d vecqc_sorted_id vecqc_sorted_1 vecqc_sorted_2 }
+        #### print { vecqc_sorted_d vecqc_sorted_id vecqc_sorted_1 vecqc_sorted_2 }
+        if(is_vector($1""_id) && is_vector($2""_id)) {
+            set sorted_$1""_id = $1""_id[vecqc_sorted_id]
+            set sorted_$2""_id = $2""_id[vecqc_sorted_id]
+            set sorted_$1      = $1[vecqc_sorted_id]
+            set sorted_$2      = $2[vecqc_sorted_id]
+            set sorted_differ  = vecqc_sorted_d
+            print '%25.0f%25.0f%25g%25g%25g\n' <sorted_$1""_id sorted_$2""_id sorted_$1 sorted_$2 vecqc_sorted_d>
+        }
+        # 
+        if($gx1<10000 && $gx2>16500) {expand 2.35}
+        if($?3){xlabel $3} else{xlabel lg($(strReplaceUnderscore($1)))}
+        if($?4){ylabel $4} else{
+            if($vecqc_doDividing) {
+                ylabel lg($(strReplaceUnderscore($2))/$(strReplaceUnderscore($1))) 
+            } else {
+                if($?5 && $?6) {
+                    # $(strReplaceUnderscore('($2 - $1)'))
+                    ylabel $(strReplaceUnderscore($2)) - $(strReplaceUnderscore($1)) 
+                } else {
+                    ylabel $(strReplaceUnderscore('($2 - $1)/error'))
+                }
+            }
+        }
+        # 
+        #if(is_vector(vecqc_1)) {unset vecqc_1}
+        #if(is_vector(vecqc_d)) {unset vecqc_d}
+        #if(is_vector(vecqerr)) {unset vecqerr}
+        # 
+        lweight $vecqc_lweight
+        expand $vecqc_expand
+
+
+
+
+
+
+
+
+
+
+
+strReplaceUnderscore_test 01
+        echo $(strReplaceUnderscore('lg($1)'))
+
+strReplaceUnderscore 01
+        # replace '_' in the input string 
+        if($?1==0) {return}
+        if('$1'=='__strReplaceUnderscore_arg1') {
+            !echo '$($1)' | sed -E 's/_/\\\\_/g' > ".strReplaceUnderscore.tmp"
+            #!cat ".strReplaceUnderscore.tmp"
+        } else {
+            !echo '$1' | sed -E 's/_/\\\\_/g' > ".strReplaceUnderscore.tmp"
+            #!cat ".strReplaceUnderscore.tmp"
+        }
+        #return
+        # 
+        #if('$1'=='__strReplaceUnderscore_arg1') {
+        #    set strRepStr1 = {"}+<'$($1)'>+{"}
+        #} else {
+        #    set strRepStr1 = {"}+<'$1'>+{"}
+        #}
+        unset strRepStr2
+        if(is_file(".strReplaceUnderscore.tmp")){ #<modified><20150429><dzliu>#
+            if($verbose>0){define strRepVerbose 1}else{define strRepVerbose 0}
+            verbose 0 data ".strReplaceUnderscore.tmp" read strRepStr2 1.s
+            define rfhi 1
+            while {$?rfhc||$rfhi==1} { define rfhi $($rfhi+1) define rfhc read 1 $rfhi
+                if($?rfhc) { set strRepStr3 = ' ' read strRepStr4 $rfhi.s 
+                    set strRepStr2 = strRepStr2 + strRepStr3 + strRepStr4
+                }
+            }
+            #!rm ".strReplaceUnderscore.tmp"
+            verbose $strRepVerbose
+        }
+        #while {index(strRepStr1,'_')>=0} {
+        #    if(index(strRepStr1,'_')==0) {
+        #        if(!is_vector(strRepStr2)) { set strRepStr2 = <'\\'>+<'_'>
+        #        } else { set strRepStr2 = strRepStr2+<'\\'>+<'_'>
+        #        }
+        #    } else {
+        #        if(!is_vector(strRepStr2)) { set strRepStr2 = substr(strRepStr1,0,index(strRepStr1,'_'))+<'\\'>+<'_'>
+        #        } else { set strRepStr2 = strRepStr2+substr(strRepStr1,0,index(strRepStr1,'_'))+<'\\'>+<'_'>
+        #        }
+        #    }
+        #    set strRepStr1 = substr(strRepStr1,index(strRepStr1,'_')+1,0)
+        #    #print {strRepStr1}
+        #    #print {strRepStr2}
+        #    #if(substr(strRepStr1,index(strRepStr1,'_')-1,1) != '\\') {
+        #    #    set strRepStr = substr(strRepStr,0,index(strRepStr,'_'))+<'\\'>+substr(strRepStr,index(strRepStr,'_'),0)
+        #    #    echo $(strRepStr)
+        #    #}
+        #}
+        #if(!is_vector(strRepStr2)) { 
+        #    set strRepStr2 = strRepStr1
+        #} else {
+        #    set strRepStr2 = strRepStr2+strRepStr1
+        #}
+        set $0 = strRepStr2
+        #print {strRepStr2}
+        return
+
+

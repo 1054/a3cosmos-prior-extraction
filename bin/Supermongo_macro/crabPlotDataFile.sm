@@ -1,0 +1,710 @@
+crabPlotDataFile
+    # 
+    print 'Usage: \n' {}
+    print '    \# make sure we have \"aaa.plt\" ready\n' {}
+    print '    load crabPlotDataFile.sm\n' {}
+    print '    open_PS "aaa"\n' {}
+    print '    plot_Data "bbb.dat"\n' {}
+    print '    plot_Data "ccc.dat"\n' {}
+    print '    close_PS\n' {}
+    print '\n' {}
+    print 'Example of aaa.plt\n' {}
+    print '------------------------------\n' {}
+    print '\# \n' {}
+    print '\# limits -0.5 7.5 -2 4 \n' {}
+    print '\# ticksize 1 1 -1 10 \n' {}
+    print '\# xtitle "z" \n' {}
+    print '\# ytitle "sSFR" \n' {}
+    print '\n' {}
+    print 'Example of bbb.dat\n' {}
+    print '------------------------------\n' {}
+    print '\# \n' {}
+    print '\# expand 0.6\n' {}
+    print '\# lweight 1.0\n' {}
+    print '\# ptype 15 0\n' {}
+    print '\# ctype blue\n' {}
+    print '\# ylog \n' {}
+    print '\# legend "z<3 MS"\n' {}
+    print '\# \n' {}
+    print '\#            z        lgUmean\n' {}
+    print '\# \n' {}
+    print '          1.316            -99\n' {}
+    print '           2.51            -99\n' {}
+    print '         0.8178        0.78533\n' {}
+    print '------------------------------\n' {}
+    print 'Example of ccc.dat\n' {}
+    print '------------------------------\n' {}
+    print '\# \n' {}
+    print '\# expand 0.6\n' {}
+    print '\# lweight 2.0\n' {}
+    print '\# ctype royalblue\n' {}
+    print '\# connect 1 \# 1 means ltype 1 \n' {}
+    print '\# legend "some curve"\n' {}
+    print '\# \n' {}
+    print '\#            x              y\n' {}
+    print '\# \n' {}
+    print '           1.0            0.01\n' {}
+    print '           2.0            0.20\n' {}
+    print '           3.0            0.90\n' {}
+    print '------------------------------\n' {}
+    print '\n' {}
+
+plot_Data 01
+    # 
+    #  input a well-formatted text file, 
+    #  read the formats in there, and plot data points
+    #  
+    #  the *.plt file can contain '# legend "aaa bbb ccc"'
+    # 
+    # Check file
+    if(!$?1) {
+        print '\nError! Please run as crabPlotDataFile "some_file_name"!\n\n' {}
+        return
+    }
+    if(!is_file(""$1"")) {
+        print '\nError! ""$1"" was not found!\n\n' {}
+        return
+    }
+    # 
+    # Read plotting parameters in the input well-formatted text file
+    if($?verbose) {define open_PS_verbose $verbose} else {define open_PS_verbose 1} verbose 0
+    echo "Reading and plotting" $1
+    data $1
+    set temp_iline = 1
+    set temp_xcol = 1
+    set temp_ycol = 2
+    set temp_xlog = 0
+    set temp_ylog = 0
+    set temp_connect = -1
+    declare temp_yecol 0.d # y err column
+    declare temp_xecol 0.d # x err column
+    declare temp_legend 0.s
+    declare plot_legend_px 0.f
+    declare plot_legend_py 0.f
+    declare plot_legend_pt 0.f
+    declare plot_legend_ps 0.f
+    declare plot_legend_pa 0.d # legend alignment
+    declare plot_legend_dy 0.f # legend spacing or lineheight
+    declare plot_legend_ws 0.d # whether plot symbol with legend
+    # default lweight
+    lweight 3.0
+    expand 1.0
+    while {temp_iline>0} {
+        declare temp_sline 0.s
+        read row temp_sline $(temp_iline).s
+        if(dimen(temp_sline)>0) {
+            #<DEBUG># print {temp_iline temp_sline}
+            #
+            if(dimen(temp_sline)>=2) {
+                #<DEBUG># echo $(temp_sline[1])
+                # 
+                # define plot ctype
+                if(temp_sline[0]=='\#' && temp_sline[1]=='ctype') {
+                    if(dimen(temp_sline)>2) {
+                        echo "ctype" $(temp_sline[2])
+                        ctype $(temp_sline[2])
+                    }
+                }
+                # 
+                # define plot expand
+                if(temp_sline[0]=='\#' && temp_sline[1]=='expand') {
+                    if(dimen(temp_sline)>2) {
+                        echo "expand" $(temp_sline[2])
+                        expand $(temp_sline[2])
+                    }
+                }
+                # 
+                # define plot lweight
+                if(temp_sline[0]=='\#' && temp_sline[1]=='lweight') {
+                    if(dimen(temp_sline)>2) {
+                        echo "lweight" $(temp_sline[2])
+                        lweight $(temp_sline[2])
+                    }
+                }
+                # 
+                # define plot ptype
+                if(temp_sline[0]=='\#' && temp_sline[1]=='ptype') {
+                    if(dimen(temp_sline)>2) {
+                        if(temp_sline[2]=='upper') {
+                            upper ptype $upper
+                        } else {
+                            if(dimen(temp_sline)>3) {
+                                ptype $(temp_sline[2]) $(temp_sline[3])
+                            }
+                        }
+                    }
+                }
+                # 
+                # define plot ltype
+                if(temp_sline[0]=='\#' && temp_sline[1]=='ltype') {
+                    if(dimen(temp_sline)>2) {
+                        echo "ltype" $(temp_sline[2])
+                        ltype $(temp_sline[2])
+                    }
+                }
+                # 
+                # define plot legend
+                if(temp_sline[0]=='\#' && temp_sline[1]=='legend') {
+                    if(dimen(temp_sline)>2) {
+                        set temp_legend = temp_legend concat temp_sline[2]
+                        do temp_ichar=3,dimen(temp_sline)-1 {
+                            set temp_legend[dimen(temp_legend)-1] = temp_legend[dimen(temp_legend)-1]+' '+temp_sline[$temp_ichar]
+                        }
+                    }
+                }
+                # 
+                # define plot legend-location
+                if(temp_sline[0]=='\#' && (temp_sline[1]=='legend-location' || temp_sline[1]=='legend-position' || temp_sline[1]=='legend-pos')) {
+                    if(dimen(temp_sline)>2) {
+                        set plot_legend_px = plot_legend_px concat float(temp_sline[2])
+                        set plot_legend_py = plot_legend_py concat float(temp_sline[3])
+                    }
+                }
+                # 
+                # define plot legend-alignment
+                if(temp_sline[0]=='\#' && (temp_sline[1]=='legend-alignment' || temp_sline[1]=='legend-align')) {
+                    if(dimen(temp_sline)>2) {
+                        set plot_legend_pa = plot_legend_pa concat int(temp_sline[2])
+                    }
+                }
+                # 
+                # define plot legend-expand
+                if(temp_sline[0]=='\#' && (temp_sline[1]=='legend-expand' || temp_sline[1]=='legend-charsize' || temp_sline[1]=='legend-size')) {
+                    if(dimen(temp_sline)>2) {
+                        set plot_legend_ps = plot_legend_ps concat float(temp_sline[2])
+                    }
+                }
+                # 
+                # define plot legend-lweight
+                if(temp_sline[0]=='\#' && (temp_sline[1]=='legend-lweight' || temp_sline[1]=='legend-weight' || temp_sline[1]=='legend-charthick')) {
+                    if(dimen(temp_sline)>2) {
+                        set plot_legend_pt = plot_legend_pt concat float(temp_sline[2])
+                    }
+                }
+                # 
+                # define plot legend-spacing
+                if(temp_sline[0]=='\#' && (temp_sline[1]=='legend-spacing' || temp_sline[1]=='legend-lineheight')) {
+                    if(dimen(temp_sline)>2) {
+                        set plot_legend_dy = plot_legend_dy concat float(temp_sline[2])
+                    }
+                }
+                # 
+                # define plot legend-with-symbol
+                if(temp_sline[0]=='\#' && (temp_sline[1]=='legend-with-symbol' || temp_sline[1]=='legend-with-symbol')) {
+                    if(dimen(temp_sline)>2) {
+                        set plot_legend_ws = plot_legend_ws concat int(temp_sline[2])
+                    }
+                }
+                # 
+                # define plot angle
+                if(temp_sline[0]=='\#' && temp_sline[1]=='angle') {
+                    if(dimen(temp_sline)>2) {
+                        angle $(temp_sline[2])
+                    }
+                }
+                # 
+                # define data xcol
+                if(temp_sline[0]=='\#' && (temp_sline[1]=='xcol' || (temp_sline[1]=='x'))) {
+                    if(dimen(temp_sline)>2) {
+                        set temp_xcol = int($(temp_sline[2]))
+                    }
+                }
+                # 
+                # define data xcol
+                if(temp_sline[0]=='\#' && (temp_sline[1]=='ycol' || (temp_sline[1]=='y'))) {
+                    if(dimen(temp_sline)>2) {
+                        set temp_ycol = int($(temp_sline[2]))
+                    }
+                }
+                # 
+                # define bool xlog
+                if(temp_sline[0]=='\#' && (temp_sline[1]=='xlog')) {
+                    if(dimen(temp_sline)>2) {
+                        set temp_xlog = int(temp_sline[2])
+                    } else {
+                        set temp_xlog = 1
+                    }
+                }
+                # 
+                # define bool ylog
+                if(temp_sline[0]=='\#' && (temp_sline[1]=='ylog')) {
+                    if(dimen(temp_sline)>2) {
+                        set temp_ylog = int(temp_sline[2])
+                    } else {
+                        set temp_ylog = 1
+                    }
+                }
+                # 
+                # define data yecol
+                if(temp_sline[0]=='\#' && (temp_sline[1]=='yecol' || temp_sline[1]=='yerr' || temp_sline[1]=='err')) {
+                    if(dimen(temp_sline)>=3) {
+                        set temp_yecol = int($(temp_sline[2]))
+                        do temp_ichar=3,dimen(temp_sline)-1 {
+                            set temp_yecol = temp_yecol concat (int($(temp_sline[$temp_ichar])))
+                        }
+                    }
+                    #<20160731><fixed># print {temp_sline}
+                    #<20160731><fixed># print {temp_yecol}
+                    #<20160731><fixed># echo $(temp_sline[2])
+                    #<20160731><fixed># echo $(int($(temp_sline[2])))
+                    #<20160731><fixed># define aaa ? # do not use int(aaa) but use int($(aaa))
+                }
+                # 
+                # define data xecol
+                if(temp_sline[0]=='\#' && (temp_sline[1]=='xecol' || temp_sline[1]=='xerr')) {
+                    if(dimen(temp_sline)>=3) {
+                        set temp_xecol = int($(temp_sline[2]))
+                        do temp_ichar=3,dimen(temp_sline)-1 {
+                            set temp_xecol = temp_xecol concat (int($(temp_sline[$temp_ichar])))
+                        }
+                    }
+                }
+                # 
+                # define data label id
+                if(temp_sline[0]=='\#' && (temp_sline[1]=='id' || temp_sline[1]=='idcol' || temp_sline[1]=='label')) {
+                    if(dimen(temp_sline)>2) {
+                        set temp_idcol = int($(temp_sline[2]))
+                    }
+                }
+                # 
+                # define data color coding
+                if(temp_sline[0]=='\#' && (temp_sline[1]=='ccol' || temp_sline[1]=='color' || temp_sline[1]=='color-coding')) {
+                    if(dimen(temp_sline)>2) {
+                        set temp_ccol = int($(temp_sline[2]))
+                    }
+                }
+                # 
+                # define data color coding range
+                if(temp_sline[0]=='\#' && (temp_sline[1]=='crange' || temp_sline[1]=='color-range')) {
+                    if(dimen(temp_sline)>=3) {
+                        set temp_crange = <$(float(temp_sline[2])) $(float(temp_sline[3]))>
+                    } else {
+                        print 'Error! The color-range is invalid in $1!\n' {}
+                        print 'Please check \"$(temp_sline)\"\n' {}
+                        return
+                    }
+                }
+                # 
+                # define connect data points or not
+                if(temp_sline[0]=='\#' && (temp_sline[1]=='connect')) {
+                    echo $(temp_sline[1])
+                    set temp_connect = 0
+                    if(dimen(temp_sline)>=3) { 
+                        set temp_connect = int($(temp_sline[2]))
+                    }
+                }
+                # 
+                # fallback
+                if(temp_sline[0]!='\#') {
+                    set temp_iline = -2
+                }
+            }
+            # 
+            set temp_iline = temp_iline + 1
+        } else {
+            set temp_iline = -1
+        }
+    }
+    # 
+    # now read data points, default xcol=1 ycol=2
+    if(temp_xcol>0 && temp_ycol>0) {
+        echo "xcol" $(temp_xcol)
+        echo "ycol" $(temp_ycol)
+        read <xdat $(temp_xcol) ydat $(temp_ycol)>
+        # 
+        # plot data points
+        if(dimen(xdat)>0 && dimen(ydat)>0) {
+            # 
+            # check crange
+            if(is_vector(temp_ccol)) {
+                if(!is_vector(temp_crange)) {
+                    set temp_crange = {0.0 255.0}
+                }
+                if(is_file("do_calc_colours.sm")) {
+                    macro read do_calc_colours.sm
+                    read <cdat $(temp_ccol)>
+                }
+            }
+            # 
+            # convert to logarithm
+            if(temp_xlog) {
+                set xdat_lin = (xdat>0.0) ? xdat : 1e-99
+                set xdat_log = lg(xdat_lin)
+                set xdat = xdat_log
+                echo "xlog"
+            }
+            if(temp_ylog) {
+                set ydat_lin = (ydat>0.0) ? ydat : 1e-99
+                set ydat_log = lg(ydat_lin)
+                set ydat = ydat_log
+                echo "ylog"
+            }
+            # 
+            # plot data points (if has cdat vector, then plot data points one by one with their own color)
+            #<20160721># color each data point
+            if(!is_vector(cdat)) {
+                if(temp_connect<0) { 
+                    points xdat ydat 
+                } else { 
+                    ltype $(temp_connect) connect xdat ydat ltype 0 
+                }
+            } else {
+                if(temp_connect<0) { 
+                    do idat=0,dimen(xdat)-1 {
+                        ctype_by_value $(cdat[$idat]) $(temp_crange[0]) $(temp_crange[1])
+                        points $(xdat[$idat]) $(ydat[$idat])
+                    }
+                } else { 
+                    do idat=0,dimen(xdat)-2 {
+                        ctype_by_value $(cdat[$idat]) $(temp_crange[0]) $(temp_crange[1])
+                        set temp_connect_x = xdat[$idat] concat xdat[$idat+1]
+                        set temp_connect_y = ydat[$idat] concat ydat[$idat+1]
+                        ltype $(temp_connect) connect temp_connect_x temp_connect_y ltype 0 
+                        unset temp_connect_x
+                        unset temp_connect_y
+                    }
+                }
+            }
+            # 
+            # restore angle
+            angle 0
+            # 
+            # plot error bars (y axis)
+            #echo yecol $(dimen(temp_yecol))
+            if(dimen(temp_yecol)>=2) {
+                echo "yecol" $(temp_yecol[0]) $(temp_yecol[1])
+                
+                # read y error column (lower value)
+                read <yerr $(temp_yecol[0])> # -y errorbar
+                #<20170108># convert to logarithm
+                if(temp_ylog) {
+                    set yerr = yerr/(10**ydat)*1.08
+                }
+                #<20160721># color each data point
+                if(!is_vector(cdat)) {
+                    errorbar xdat ydat (ydat-yerr) 4
+                } else {
+                    do idat=0,dimen(xdat)-1 {
+                        ctype_by_value $(cdat[$idat]) $(temp_crange[0]) $(temp_crange[1])
+                        errorbar $(xdat[$idat]) $(ydat[$idat]) $(ydat[$idat]-yerr[$idat]) 4
+                    }
+                }
+                
+                # read y error column (upper value)
+                read <yerr $(temp_yecol[1])> # +y errorbar
+                #<20170108># convert to logarithm
+                if(temp_ylog) {
+                    set yerr = yerr/(10**ydat)*1.08
+                }
+                #<20160721># color each data point
+                if(!is_vector(cdat)) {
+                    errorbar xdat ydat (yerr-ydat) 2
+                } else {
+                    do idat=0,dimen(xdat)-1 {
+                        ctype_by_value $(cdat[$idat]) $(temp_crange[0]) $(temp_crange[1])
+                        errorbar $(xdat[$idat]) $(ydat[$idat]) $(yerr[$idat]-ydat[$idat]) 2
+                    }
+                }
+                
+            } else {
+                if(dimen(temp_yecol)==1) {
+                    echo "yecol" $(temp_yecol[0])
+                    
+                    # read y error column (symmetric error)
+                    read <yerr $(temp_yecol[0])> # +-y errorbar
+                    #<20170108># convert to logarithm
+                    if(temp_ylog) {
+                        set yerr = yerr/(10**ydat)*1.08
+                    }
+                    #<20160721># color each data point
+                    if(!is_vector(cdat)) {
+                        error_y xdat ydat yerr
+                    } else {
+                        do idat=0,dimen(xdat)-1 {
+                            ctype_by_value $(cdat[$idat]) $(temp_crange[0]) $(temp_crange[1])
+                            error_y $(xdat[$idat]) $(ydat[$idat]) $(yerr[$idat])
+                        }
+                    }
+                }
+            }
+            # 
+            # plot error bars (x axis)
+            #echo xecol $(dimen(temp_xecol))
+            if(dimen(temp_xecol)>=2) {
+                echo "xecol" $(temp_xecol[0]) $(temp_xecol[1])
+                
+                # read x error column (lower value)
+                read <xerr $(temp_xecol[0])> # -x errorbar
+                #<20170108># convert to logarithm
+                if(temp_xlog) {
+                    set xerr = xerr/(10**xdat)*1.08
+                }
+                #<20160721># color each data point
+                if(!is_vector(cdat)) {
+                    errorbar xdat ydat (xdat-xerr) 3
+                } else {
+                    do idat=0,dimen(xdat)-1 {
+                        ctype_by_value $(cdat[$idat]) $(temp_crange[0]) $(temp_crange[1])
+                        errorbar $(xdat[$idat]) $(ydat[$idat]) $(xdat[$idat]-xerr[$idat]) 3
+                    }
+                }
+                
+                # read x error column (upper value)
+                read <xerr $(temp_xecol[1])> # +x errorbar
+                #<20170108># convert to logarithm
+                if(temp_xlog) {
+                    set xerr = xerr/(10**xdat)*1.08
+                }
+                #<20160721># color each data point
+                if(!is_vector(cdat)) {
+                    errorbar xdat ydat (xerr-xdat) 1
+                } else {
+                    do idat=0,dimen(xdat)-1 {
+                        ctype_by_value $(cdat[$idat]) $(temp_crange[0]) $(temp_crange[1])
+                        errorbar $(xdat[$idat]) $(ydat[$idat]) $(xerr[$idat]-xdat[$idat]) 1
+                    }
+                }
+                
+            } else {
+                if(dimen(temp_xecol)==1) {
+                    echo "xecol" $(temp_xecol[0])
+                    
+                    # read x error column (symmetric error)
+                    read <xerr $(temp_xecol[0])> # +-x errorbar
+                    #<20170108># convert to logarithm
+                    if(temp_xlog) {
+                        set xerr = xerr/(10**xdat)*1.08
+                    }
+                    #<20160721># color each data point
+                    if(!is_vector(cdat)) {
+                        error_x xdat ydat xerr
+                    } else {
+                        do idat=0,dimen(xdat)-1 {
+                            ctype_by_value $(cdat[$idat]) $(temp_crange[0]) $(temp_crange[1])
+                            error_x $(xdat[$idat]) $(ydat[$idat]) $(xerr[$idat])
+                        }
+                    }
+                }
+            }
+            # 
+            # plot data label id
+            if(is_vector(temp_idcol)) {
+                read <iddat $(temp_idcol)>
+                do idat=0,dimen(iddat)-1 {
+                    relocate $(xdat[$idat]) $(ydat[$idat])
+                    putlabel 9 $(iddat[$idat])
+                }
+            }
+            # 
+            # plot legend
+            # #<Added><20170118><dzliu># Now compatible with crabPlot.sm
+            if(dimen(temp_legend)>0) {
+                do temp_ichar=0,dimen(temp_legend)-1 {
+                    if($temp_ichar<dimen(plot_legend_px)) {set _crabPlot_legend_px=plot_legend_px[$temp_ichar]} else {if(!is_vector(_crabPlot_legend_px)) {set _crabPlot_legend_px=0.05}}
+                    if($temp_ichar<dimen(plot_legend_py)) {set _crabPlot_legend_py=plot_legend_py[$temp_ichar]} else {if(!is_vector(_crabPlot_legend_py)) {set _crabPlot_legend_py=0.92}}
+                    if($temp_ichar<dimen(plot_legend_pt)) {set _crabPlot_legend_pt=plot_legend_pt[$temp_ichar]} else {if(!is_vector(_crabPlot_legend_pt)) {set _crabPlot_legend_pt=3.5}} # legend text thick
+                    if($temp_ichar<dimen(plot_legend_ps)) {set _crabPlot_legend_ps=plot_legend_ps[$temp_ichar]} else {if(!is_vector(_crabPlot_legend_ps)) {set _crabPlot_legend_ps=1.1}} # legend text size
+                    if($temp_ichar<dimen(plot_legend_pa)) {set _crabPlot_legend_pa=plot_legend_pa[$temp_ichar]} else {if(!is_vector(_crabPlot_legend_pa)) {set _crabPlot_legend_pa=6}} # 6 mean align left
+                    if($temp_ichar<dimen(plot_legend_dy)) {set _crabPlot_legend_dy=plot_legend_dy[$temp_ichar]} else {if(!is_vector(_crabPlot_legend_dy)) {set _crabPlot_legend_dy=0.052*_crabPlot_legend_ps**1.5}} # line spacing or line height
+                    if($temp_ichar<dimen(plot_legend_ws)) {set _crabPlot_legend_ws=plot_legend_ws[$temp_ichar]} else {if(!is_vector(_crabPlot_legend_ws)) {set _crabPlot_legend_ws=0}} # whether plot symbol with legend
+                    #echo legend $(temp_legend[$temp_ichar])
+                    #echo legend expand $(_crabPlot_legend_ps)
+                    #echo legend lweight $(_crabPlot_legend_pt)
+                    #expand $(_crabPlot_legend_ps) lweight $(_crabPlot_legend_pt)
+                    #<20170118># plot symbol with legend / legend with symbol <TODO> assuming the symbol has a size of +0.02*_crabPlot_legend_ps
+                    if(_crabPlot_legend_ws==0) {
+                        relocate $($fx1+_crabPlot_legend_px*($fx2-$fx1)) $($fy1+_crabPlot_legend_py*($fy2-$fy1))
+                    } else {
+                        if(_crabPlot_legend_ws>0) {
+                            # if _crabPlot_legend_ws>0, then plot legend with symbol, otherwise with line
+                            set _temp_legend_x = $fx1+_crabPlot_legend_px*($fx2-$fx1)
+                            set _temp_legend_y = $fy1+_crabPlot_legend_py*($fy2-$fy1)
+                            expand $(_crabPlot_legend_ps*float(_crabPlot_legend_ws)) lweight $(_crabPlot_legend_pt)
+                            points _temp_legend_x _temp_legend_y
+                            relocate $($fx1+(_crabPlot_legend_px+0.02*_crabPlot_legend_ps)*($fx2-$fx1)) $($fy1+_crabPlot_legend_py*($fy2-$fy1))
+                        } else {
+                            # if _crabPlot_legend_ws>0, then plot legend with symbol, otherwise with line
+                            set _temp_legend_x =                         $fx1+(_crabPlot_legend_px-0.020*_crabPlot_legend_ps*float(-_crabPlot_legend_ws))*($fx2-$fx1)
+                            set _temp_legend_y =                         $fy1+(_crabPlot_legend_py+0.000*_crabPlot_legend_ps*float(-_crabPlot_legend_ws))*($fy2-$fy1)
+                            set _temp_legend_x = _temp_legend_x concat $($fx1+(_crabPlot_legend_px+0.015*_crabPlot_legend_ps*float(-_crabPlot_legend_ws))*($fx2-$fx1))
+                            set _temp_legend_y = _temp_legend_y concat $($fy1+(_crabPlot_legend_py+0.000*_crabPlot_legend_ps*float(-_crabPlot_legend_ws))*($fy2-$fy1))
+                            lweight $(_crabPlot_legend_pt)
+                            if(temp_connect>=0) {
+                                ltype $(temp_connect)
+                                ltype expand 0.5
+                            }
+                            connect _temp_legend_x _temp_legend_y
+                            if(temp_connect>=0) {
+                                ltype 0
+                                ltype expand 1.0
+                            }
+                            relocate $($fx1+(_crabPlot_legend_px+0.02*_crabPlot_legend_ps)*($fx2-$fx1)) $($fy1+_crabPlot_legend_py*($fy2-$fy1))
+                        }
+                    }
+                    #<20160721># color each data point
+                    echo legend $(temp_legend[$temp_ichar])
+                    echo legend expand $(_crabPlot_legend_ps)
+                    echo legend lweight $(_crabPlot_legend_pt)
+                    expand $(_crabPlot_legend_ps) lweight $(_crabPlot_legend_pt)
+                    if(!is_vector(cdat)) {
+                        putlabel $(_crabPlot_legend_pa) $(temp_legend[$temp_ichar])
+                    } else {
+                        ctype_by_value $(cdat[$temp_ichar]) $(temp_crange[0]) $(temp_crange[1])
+                        putlabel $(_crabPlot_legend_pa) $(temp_legend[$temp_ichar])
+                    }
+                    #puts ""
+                    set _crabPlot_legend_py = _crabPlot_legend_py - _crabPlot_legend_dy
+                    # 
+                    # unset
+                    unset _crabPlot_legend_ws # legend-with-symbol
+                    unset _crabPlot_legend_pt # legend-weight
+                    unset _crabPlot_legend_dy # legend-spacing
+                }
+            }
+        }
+    }
+    # 
+    if(is_vector(temp_ccol)) {unset temp_ccol}
+    if(is_vector(temp_idcol)) {unset temp_idcol}
+    if(is_vector(temp_crange)) {unset temp_crange}
+    if(is_vector(xdat)) {unset xdat}
+    if(is_vector(ydat)) {unset ydat}
+    if(is_vector(cdat)) {unset cdat}
+    if(is_vector(iddat)) {unset iddat}
+    verbose $open_PS_verbose undef open_PS_verbose
+    
+
+open_PS 01
+    # Aim:
+    #     input a well-formatted text file name without the suffix ".plt"
+    #     the well-formatted text file should contain some header info
+    #     e.g.
+    #     # location 6000 30500 6000 25500
+    # Usage: 
+    #     load crabPlotDataFile.sm OpenPS
+    # 
+    # Check file
+    if(!$?1) {
+        print '\nError! Please run as open_PS "some_file_name"!\n\n' {}
+        return
+    }
+    if(!is_file(""$1".plt")) {
+        print '\nError! ""$1".plt" was not found!\n\n' {}
+        return
+    }
+    # 
+    # Open PS
+    define open_PS_filename $1
+    #device postencap ""$1".eps"
+    #define TeX_strings 1
+    #xtcolours
+    #add_ctype gray 230 230 230
+    #add_ctype midgray 210 210 210
+    #add_ctype darkgray 170 170 170
+    crabPlotOpenPS $1.eps
+    location 6500 30500 6500 25500
+    #notation 0 0 -1 1.1
+    #limits -0.5 7.5 -3.5 1.5
+    #ticksize 1 1 -1 10
+    #lweight 3.5
+    # 
+    # Read plotting parameters in the input well-formatted text file
+    if($?verbose) {define open_PS_verbose $verbose} else {define open_PS_verbose 1} verbose 0
+    data ""$1".plt"
+    set temp_iline = 1
+    declare temp_xtitle 0.s
+    declare temp_ytitle 0.s
+    while {temp_iline>0} {
+        declare temp_sline 0.s
+        read row temp_sline $(temp_iline).s
+        if(dimen(temp_sline)>0) {
+            #<DEBUG># print {temp_iline temp_sline}
+            #
+            if(dimen(temp_sline)>2) {
+                # 
+                # define plot location
+                if(temp_sline[0]=='\#' && temp_sline[1]=='location') {
+                    echo location $(temp_sline[2]) $(temp_sline[3]) $(temp_sline[4]) $(temp_sline[5])
+                    location $(temp_sline[2]) $(temp_sline[3]) $(temp_sline[4]) $(temp_sline[5])
+                }
+                # 
+                # define plot notation
+                if(temp_sline[0]=='\#' && temp_sline[1]=='notation') {
+                    echo notation $(temp_sline[2]) $(temp_sline[3]) $(temp_sline[4]) $(temp_sline[5])
+                    notation $(temp_sline[2]) $(temp_sline[3]) $(temp_sline[4]) $(temp_sline[5])
+                }
+                # 
+                # define plot limits
+                if(temp_sline[0]=='\#' && temp_sline[1]=='limits') {
+                    echo limits $(temp_sline[2]) $(temp_sline[3]) $(temp_sline[4]) $(temp_sline[5])
+                    limits $(temp_sline[2]) $(temp_sline[3]) $(temp_sline[4]) $(temp_sline[5])
+                }
+                # 
+                # define plot ticksize
+                if(temp_sline[0]=='\#' && temp_sline[1]=='ticksize') {
+                    echo ticksize $(temp_sline[2]) $(temp_sline[3]) $(temp_sline[4]) $(temp_sline[5])
+                    ticksize $(temp_sline[2]) $(temp_sline[3]) $(temp_sline[4]) $(temp_sline[5])
+                    if(float(temp_sline[2])<0) {set temp_xlog = 1}
+                    if(float(temp_sline[4])<0) {set temp_ylog = 1}
+                }
+                # 
+                # define plot xtitle
+                if(temp_sline[0]=='\#' && temp_sline[1]=='xtitle') {
+                    set temp_xtitle = temp_sline[2]
+                    do temp_ichar=3,dimen(temp_sline)-1 {
+                        set temp_xtitle = temp_xtitle+' '+temp_sline[$temp_ichar]
+                    }
+                }
+                # 
+                # define plot ytitle
+                if(temp_sline[0]=='\#' && temp_sline[1]=='ytitle') {
+                    set temp_ytitle = temp_sline[2]
+                    do temp_ichar=3,dimen(temp_sline)-1 {
+                        set temp_ytitle = temp_ytitle+' '+temp_sline[$temp_ichar]
+                    }
+                }
+                # 
+                # fallback
+                if(temp_sline[0]!='\#') {
+                    set temp_iline = -2
+                }
+            }
+            # 
+            set temp_iline = temp_iline + 1
+        } else {
+            set temp_iline = -1
+        }
+    }
+    expand 1.50 lweight 3.5
+    ctype default box
+    # 
+    expand 1.65 lweight 3.5
+    # 
+    if(dimen(temp_xtitle)>0) {
+        echo xlabel $(temp_xtitle)
+        xlabel $(temp_xtitle)
+    }
+    if(dimen(temp_ytitle)>0) {
+        echo ylabel $(temp_ytitle)
+        ylabel $(temp_ytitle)
+    }
+    # 
+    verbose $open_PS_verbose undef open_PS_verbose
+
+
+close_PS
+    # 
+    if(is_vector(_crabPlot_legend_px)) {unset _crabPlot_legend_px}
+    if(is_vector(_crabPlot_legend_py)) {unset _crabPlot_legend_py}
+    if(is_vector(_crabPlot_legend_dy)) {unset _crabPlot_legend_dy}
+    # 
+    #ctype default
+    #device nodevice
+    
+    location $($gx1-500) $gx2 $gy1 $($gy2-3300)
+    crabPlotClosePS
+
+
+
+
+

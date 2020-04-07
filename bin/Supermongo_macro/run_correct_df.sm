@@ -1,0 +1,342 @@
+correctdf
+    # 
+    # This macro was originally named goCorrectdf.sm
+    # 
+    # Example:
+    #     # assume we have:
+    #     #        SimFlux, SimFErr, SimRMS, fRes$imax, closeDis$imax
+    #     #        aaF, ccF, aaS, ccS, aaD, ccD
+    #     # then we can do: 
+    #     define doCorrectEdf 1
+    #     set f$imax = SimFlux set df$imax = SimFErr set noi$imax = SimRMS
+    #     macro read goCorrectdf.sm correctdf
+    # 
+    # 
+    # 
+    # In this procedure, we correct galfit output df to a reasonable level consisting with simulations
+    # 
+    # In simulations, we found that the galfit output df is significantly lower, and have strong 
+    # dependence on the value of itself (df), residual flux (fRes), crowdness (closeDis), and 
+    # the value of its flux (f). E.g. larger galfit df objects have larger true df, larger 
+    # fRes objects also have larger true df, the more closeDis close to 1 means larger true df, 
+    # and the higher f corresponds to larger true df. 
+    # We correct galfit df by these parameter-dependent corrections, and got the final corrected 
+    # df named Edf. 
+    # 
+    # Step 1: 
+    #     correcting galfit df by the dependence of galfit df itself 
+    #     => spline Galfit(df/rms) Simula((Xf-Tf)/rms) Galfit(df/rms) Correct(df/rms)
+    # 
+    # Step 2: 
+    #     correcting galfit df by the dependence of residual flux
+    #     if an simulate object has a large residual flux, then its galfit flux tends to have 
+    #     a larger deviation to its true flux, which means it has a larger true df. 
+    #     => spline Galfit(fRes/rms) Simula((Xf-Tf)/rms) Galfit(fRes/rms) Correct(df/rms)/Correct(df/rms)
+    # 
+    
+    if(!is_vector(aaF)) { return }
+    if(!is_vector(ccF)) { return }
+    if($?doCorrectEdf) { if($doCorrectEdf<=0) { return } }
+    
+    # 
+    # Please first call: 
+    # xSet_$imax
+    # R_MIPS$imax""_E
+    # 
+    
+    if($?imax==1) {
+        if(is_vector(rms$imax) && !is_vector(noi$imax)) {set noi$imax = rms$imax} #<20150626><dzliu>#
+        set _gCdfIsValid = (df$imax>0 && df$imax<1e10) ## && x$imax>=0 && y$imax>=0
+        set _gCdfValid = 0,dimen(df$imax)-1
+        set _gCdfValid = _gCdfValid if(_gCdfIsValid)
+        set _gCdfInpdf = df$imax    if(_gCdfIsValid)
+        set _gCdfOutdf = df$imax    if(_gCdfIsValid)
+        set _gCdfInRMS = noi$imax   if(_gCdfIsValid)
+        set _gCdfInpTf =  f$imax    if(_gCdfIsValid)
+    } else {
+        echo 
+        echo 
+        echo goCorrectdf: Error! Please define imax!!!
+        echo 
+        echo 
+        return
+    }
+    
+    if(is_vector(_gCdfInpdf) && is_vector(_gCdfInRMS) && is_vector(aaF) && is_vector(ccF)) {
+        ### aaF ccF ###
+        set aaFdf = _gCdfInpdf/_gCdfInRMS
+        set uui=1,dimen(aaFdf) sort {aaFdf uui} interp2 aaF ccF aaFdf ccFdf 
+                                                #spline aaF ccF aaFdf ccFdf 
+        set uuk=0,dimen(aaFdf)-1
+        set dfCorr1aaVordered = aaFdf set dfCorr1ccVordered = ccFdf/aaFdf ### aaV -- according // ccV -- correcting
+        ### print "aaFccF_normnoise_ordered_splined_array" '%16.7g %16.7g %10.0f %10.0f\n' {dfCorr1aaVordered dfCorr1ccVordered uuk uui}
+        sort {uui uuk aaFdf ccFdf} set _gCdfOutdf1 = ccFdf*_gCdfInRMS # aaF-ccF--corrected df
+        define pref_verbose $verbose verbose 0
+         device postencap "aaFccFdfCorr1orderedspline.eps"
+          set _gCdfSel = dfCorr1aaVordered if(dfCorr1aaVordered>=aaF[1])
+          limits (lg(_gCdfSel)) (lg(_gCdfInpdf concat _gCdfOutdf1)) location 3900 31000 3600 31000
+          define TeX_strings 1 erase expand 1.5 lweight 2.5 box 
+          ctype blue ptype 4 1 angle 45 lweight 0.5 expand 0.45 points (lg(dfCorr1aaVordered)) (lg(_gCdfInpdf)) 
+          ctype red  ptype 4 1 angle 0  lweight 0.5 expand 0.45 points (lg(dfCorr1aaVordered)) (lg(_gCdfOutdf1)) 
+          ctype blue lweight 2.5 expand 1.5 relocate (11000 28000) puts "before step 1 correction (df)"
+          ctype red  lweight 2.5 expand 1.5 relocate (11000 27000) puts "after step 1 correction (df)"
+          xlabel "sources ordered by lg(df/rms)"
+          ylabel "lg(df)"
+          ctype 0
+         device nodevice
+        verbose $pref_verbose undef pref_verbose
+        if(sum(ccFdf<0)>=1) {print '\n\n\n\n\tError!\n\tspline aaF ccF got negative value!\n\tPlease Check this!\n\n\n\n' {}}
+        ### <Added><Normalize><20141006><DzLIU><EDADDI>
+        echo goCorrectdf << aaF ccF
+        if(is_vector(aaFccF_Normalize)) {
+            echo goCorrectdf << aaF ccF normalized by $(aaFccF_Normalize)
+            set _gCdfOutdf1 = _gCdfOutdf1 * aaFccF_Normalize
+        }
+        ### 
+        set _gCdfOutdf = _gCdfOutdf1 # aaF-ccF--corrected df
+        ### 
+        ### 
+        ### 
+        ### 
+        ### 
+        if(is_vector(aaS) && is_vector(ccS)) {
+            if(!is_vector(fRes$imax)) {
+                if(is_file("aaFccFdfCorr2fRes.csv")) {
+                    data "aaFccFdfCorr2fRes.csv" read < fRes$imax 1 >
+                    if(dimen(fRes$imax)!=dimen(_gCdfIsValid)) {
+                        unset fRes$imax
+                    } else {
+                        echo 
+                        echo We are reading the residual fluxes from "aaFccFdfCorr2fRes.csv". If you want to re-measure fresidual, please first delete this file. 
+                        echo 
+                    }
+                }
+            }
+            if(!is_vector(fRes$imax)) {
+                if($?imax_name_psf==0) {
+                    define _xdate $xdate # <Corrected><20140910><DzLIU>
+                    macro read goFine.sm xSet_$imax
+                    define xdate $_xdate # <Corrected><20140910><DzLIU>
+                }
+                # load run_image_util.sm getResPixStats "FIT_goodsn_"$imax"_Map_"$xdate".fits[2]" x$imax y$imax $imax_name_psf".fits"
+                load run_image_util.sm getResPixStats $imax_name_res.fits x$imax y$imax $imax_name_psf.fits
+                set fRes$imax = ResPixStats_ABS
+                print "aaFccFdfCorr2fRes.csv" '%20g\n' < fRes$imax >
+                set fResRMS = fRes$imax if(_gCdfIsValid)
+                # set sRes$imax = ResPixStats_SIG
+            } else {
+                set fRes$imax = _gCdfIsValid ? fRes$imax : -99
+                set fResRMS = fRes$imax if(_gCdfIsValid)
+            }
+            ### aaS ccS ###
+            set fResRMS = fResRMS/_gCdfInRMS
+            set uui=1,dimen(fResRMS) sort {fResRMS uui} interp2 aaS ccS fResRMS cFactor # cFactor is the correction factor be multiplied to df
+            set uuk=0,dimen(fResRMS)-1
+            set cFactor = cFactor<0 ? 1.0 : cFactor
+            set dfCorr2aaVordered = fResRMS set dfCorr2ccVordered = cFactor ### aaV -- according // ccV -- correcting
+            sort {uui uuk fResRMS cFactor} set _gCdfOutdf2 = _gCdfOutdf*cFactor # aaF-ccF--aaS-ccS--corrected df
+            define pref_verbose $verbose verbose 0
+             device postencap "aaFccFdfCorr2orderedspline.eps"
+              limits (lg(fResRMS)) (lg(_gCdfOutdf concat _gCdfOutdf2)) location 3900 31000 3600 31000
+              erase expand 1.5 lweight 2.5 box define TeX_strings 1
+              ctype blue ptype 4 1 angle 45 lweight 0.5 expand 0.45 points (lg(fResRMS)) (lg(_gCdfOutdf)) 
+              ctype red  ptype 4 1 angle 0  lweight 0.5 expand 0.45 points (lg(fResRMS)) (lg(_gCdfOutdf2)) 
+              ctype blue lweight 2.5 expand 1.5 relocate (11000 28000) puts "before step 2 correction (df)"
+              ctype red  lweight 2.5 expand 1.5 relocate (11000 27000) puts "after step 2 correction (df)"
+              xlabel "sources ordered by lg(f_{residual}/rms)"
+              ylabel "lg(df)"
+              ctype magenta ptype 1 0 lweight 0.5 connect (lg(dfCorr2aaVordered)) ((dfCorr2ccVordered-1)*0.5+1)
+              ctype 0 lweight 2.5
+             device nodevice
+            verbose $pref_verbose undef pref_verbose
+            if(sum(cFactor<0)>=1) {print '\n\n\n\n\tError!\n\tspline aaS ccS got negative value!\n\tPlease Check this!\n\n\n\n' {}}
+            ### <Added><Normalize><20141006><DzLIU><EDADDI>
+            echo goCorrectdf << aaF ccF aaS ccS
+            if(is_vector(aaSccS_Normalize)) {
+                echo goCorrectdf << aaF ccF aaS ccS normalized by $(aaSccS_Normalize)
+                set _gCdfOutdf2 = _gCdfOutdf2 * aaSccS_Normalize
+            }
+            ### <TODO><DEBUG>
+            ### <TODO><DEBUG> stats_med _gCdfOutdf _tmp_median _tmp_aaaa echo $_tmp_median
+            ### <TODO><DEBUG> stats_med _gCdfOutdf2 _tmp_median _tmp_aaaa echo $_tmp_median
+            ### 
+            set _gCdfOutdf = _gCdfOutdf2 # aaF-ccF--aaS-ccS--corrected df
+        }
+        ### 
+        ### 
+        ### 
+        ### 
+        ### 
+        if(is_vector(aaD) && is_vector(ccD)) {
+            if(!is_vector(closeDis$imax)) {
+                if(is_file("aaFccFdfCorr3crowdness.csv")) {
+                    data "aaFccFdfCorr3crowdness.csv" read < closeDis$imax 1 >
+                    if(dimen(closeDis$imax)!=dimen(_gCdfIsValid)) {
+                        unset closeDis$imax
+                    } else {
+                        echo 
+                        echo We are reading the crowdness values from "aaFccFdfCorr3crowdness.csv". If you want to re-measure crowdness, please first delete this file. 
+                        echo 
+                    }
+                }
+            }
+            if(!is_vector(closeDis$imax)) {
+                ## macro read run_image_util.sm getClosestDistances x$imax y$imax
+                ## set closeDis$imax = ClosestDistances
+                load run_image_util.sm getCrowdnessVars x$imax y$imax
+                set closeDis$imax = CrowdnessVars ###<TODO><20141120><DzLIU>### lg ???
+                print "aaFccFdfCorr3crowdness.csv" '%20g\n' < closeDis$imax >
+                set closeDis = closeDis$imax if(_gCdfIsValid)
+            } else {
+                set closeDis$imax = _gCdfIsValid ? closeDis$imax : -99
+                set closeDis = closeDis$imax if(_gCdfIsValid)
+            }
+            ### aaD ccD ### 
+            set closeDis = closeDis #/_gCdfInRMS*_gCdfInRMS # already in log form 
+            set uui=1,dimen(closeDis) sort {closeDis uui} interp2 aaD ccD closeDis cFactor 
+            set uuk=0,dimen(closeDis)-1
+            set cFactor = cFactor<0 ? 1.0 : cFactor
+            set dfCorr3aaVordered = closeDis set dfCorr3ccVordered = cFactor ### aaV -- according // ccV -- correcting
+            sort {uui uuk closeDis cFactor} set _gCdfOutdf3 = _gCdfOutdf*cFactor # aaF-ccF--aaS-ccS--aaD-ccD--corrected df
+            define pref_verbose $verbose verbose 0
+             device postencap "aaFccFdfCorr3orderedspline.eps"
+              set _gCdfCloseDis_Sel = closeDis if(closeDis>aaD[0])
+              limits (_gCdfCloseDis_Sel) (lg(_gCdfOutdf concat _gCdfOutdf3)) location 3900 31000 3600 31000
+              erase expand 1.5 lweight 2.5 box define TeX_strings 1
+              ctype blue ptype 4 1 angle 45 lweight 0.5 expand 0.45 points closeDis (lg(_gCdfOutdf)) 
+              ctype red  ptype 4 1 angle 0  lweight 0.5 expand 0.45 points closeDis (lg(_gCdfOutdf3))
+              ctype blue lweight 2.5 expand 1.5 relocate (11000 28000) puts "before step 3 correction (df)" 
+              ctype red  lweight 2.5 expand 1.5 relocate (11000 27000) puts "after step 3 correction (df)"
+              xlabel "sources ordered by crowdness lg\Sigma e^{-d^2/fwhm^2}"
+              ylabel "lg(df)"
+              ctype magenta ptype 1 0 lweight 2.5 connect dfCorr3aaVordered ((dfCorr3ccVordered-1)*0.5+1)
+              ctype 0 lweight 2.5
+             device nodevice
+            verbose $pref_verbose undef pref_verbose
+            if(sum(cFactor<0)>=1) {print '\n\n\n\n\tError!\n\tspline aaD ccD got negative value!\n\tPlease Check this!\n\n\n\n' {}}
+            ### <Added><Normalize><20141006><DzLIU><EDADDI>
+            echo goCorrectdf << aaF ccF aaD ccD
+            if(is_vector(aaDccD_Normalize)) {
+                echo goCorrectdf << aaF ccF aaD ccD normalized by $(aaDccD_Normalize)
+                set _gCdfOutdf3 = _gCdfOutdf3 * aaDccD_Normalize
+            }
+            ### 
+            set _gCdfOutdf = _gCdfOutdf3 # aaF-ccF--aaS-ccS--aaD-ccD--corrected df
+        }
+        ### 
+        ### 
+        ### 
+        ### 
+        ### 
+        ### if(is_vector(dfCorr4aaF) && is_vector(dfCorr4ccF) && is_vector(_gCdfInpTf) && is_vector(_gCdfInRMS)) {
+        ###     set dfCorr4aaV = _gCdfInpTf/_gCdfInRMS
+        ###     set uui=1,dimen(dfCorr4aaV) sort {dfCorr4aaV uui} spline dfCorr4aaF dfCorr4ccF dfCorr4aaV dfCorr4ccV 
+        ###     set uuk=0,dimen(dfCorr4aaV)-1
+        ###     ### print "aaFccF_dfCorr4_ordered_splined_array" '%16.7g %16.7g %10.0f %10.0f\n' {dfCorr4aaV dfCorr4ccV uuk uui}
+        ###     set dfCorr4ccV = dfCorr4ccV<0 ? 1.0 : dfCorr4ccV
+        ###     set dfCorr4aaVordered = dfCorr4aaV set dfCorr4ccVordered = dfCorr4ccV
+        ###     sort {uui uuk dfCorr4aaV dfCorr4ccV}
+        ###     set _gCdfOutdf4 = _gCdfOutdf*dfCorr4ccV # dfCorr4
+        ###     ### print "aaFccF_dfCorr4" '%16.7g %16.7g %16.7g %16.7g %16.7g %16.7g %16.7g %16.7g %16.7g %16.7g %16.7g %16.7g\n' \
+        ###     ###       {aaF ccF aaFdf ccFdf dfCorr4aaF dfCorr4ccF dfCorr4aaV dfCorr4ccV _gCdfInpdf _gCdfOutdf _gCdfOutdf4 _gCdfInRMS}
+        ###     define pref_verbose $verbose verbose 0
+        ###      device postencap "aaFccFdfCorr4orderedspline.eps"
+        ###       limits dfCorr4aaV (lg(_gCdfOutdf concat _gCdfOutdf4)) location 3900 31000 3600 31000
+        ###       erase expand 1.5 lweight 2.5 box define TeX_strings 1
+        ###       ctype blue ptype 4 1 angle 45 lweight 0.5 expand 0.45 points dfCorr4aaV (lg(_gCdfOutdf)) 
+        ###       ctype red  ptype 4 1 angle 0  lweight 0.5 expand 0.45 points dfCorr4aaV (lg(_gCdfOutdf4))
+        ###       ctype blue lweight 2.5 expand 1.5 relocate (11000 28000) puts "before step 4 correction (df)" 
+        ###       ctype red  lweight 2.5 expand 1.5 relocate (11000 27000) puts "after step 4 correction (df)"
+        ###       xlabel "sources ordered by f_{galfit}/rms"
+        ###       ylabel "lg(df)"
+        ###       ctype magenta ptype 1 0 lweight 0.5 connect dfCorr4aaVordered ((dfCorr4ccVordered-1)*0.5+1)
+        ###       ctype 0 lweight 2.5
+        ###      device nodevice
+        ###     verbose $pref_verbose undef pref_verbose
+        ###     if(sum(dfCorr4ccV<0)>=1) {print '\n\n\n\n\tError!\n\tspline dfCorr4aaV dfCorr4ccV got negative value!\n\tPlease Check this!\n\n\n\n' {}}
+        ###     ### <Added><Normalize><20141006><DzLIU><EDADDI>
+        ###     echo goCorrectdf << aaF ccF dfCorr4aaF dfCorr4ccF
+        ###     if(is_vector(dfCorr4Normalize)) {
+        ###         echo goCorrectdf << aaF ccF dfCorr4aaF dfCorr4ccF normalized by $(dfCorr4Normalize)
+        ###         set _gCdfOutdf4 = _gCdfOutdf4 * dfCorr4Normalize
+        ###     }
+        ###     ### 
+        ###     set _gCdfOutdf = _gCdfOutdf4 # aaF-ccF--aaS-ccS--aaD-ccD--corrected df
+        ### }
+        
+        
+        
+        ### 
+        ### 
+        ### 
+        ### <Added><20141008><DzLIU><EDADDI> dfCorr4 dfCorr5
+        ### <Noted><20141008><DzLIU> dfCorr1 = aaF ccF spline  df/noise 
+        ### <Noted><20141008><DzLIU> dfCorr2 = aaF ccF spline  fres/noise
+        ### <Noted><20141008><DzLIU> dfCorr3 = aaF ccF spline  crowdness
+        ### if(is_vector(dfCorr4)) { set _gCdfOutdf = _gCdfOutdf * dfCorr4 } # <TODO> dfCorr5
+        if(is_vector(final_Normalize)) { 
+            echo goCorrectdf << final df normalized by $(final_Normalize)
+            set _gCdfOutdf = _gCdfOutdf * final_Normalize 
+        }
+        
+        
+        
+        ### 
+        ### 
+        ### <Added><20141006><DzLIU><EDADDI> histogram of df$imax
+        ### set _gCdfNdf = lg(_gCdfOutdf)
+        set _gCdfNdf = _gCdfOutdf
+        stats _gCdfNdf _gCdfMEAN _gCdfSIGMA _gCdfKURT
+        set _gCdfNdf = _gCdfNdf if(abs(_gCdfNdf-$_gCdfMEAN)<=3.0*$_gCdfSIGMA)
+        vecminmax _gCdfNdf _gCdfMIN _gCdfMAX # define _gCdfMIN 0.00 # define _gCdfMAX 0.36
+        get_hist ((_gCdfOutdf)) _gCdfHisX _gCdfHisY $_gCdfMIN $_gCdfMAX $(($_gCdfMAX-$_gCdfMIN)/50)
+        define pref_verbose $verbose verbose 0
+         device postencap "aaaEdfHistogram.eps"
+          erase expand 1.5 lweight 3.0 limits _gCdfHisX _gCdfHisY box
+          hist _gCdfHisX _gCdfHisY
+          xlabel df$imax
+          ylabel N
+         device nodevice
+        verbose $pref_verbose undef pref_verbose
+        
+        
+        
+        ### 
+        ### 
+        ### <Added><20141006><DzLIU>
+        set df$imax[_gCdfValid] = _gCdfOutdf # final corrected 
+    }
+
+
+
+
+
+covarianceMatrixWeighted
+    # 
+    # macro read goCorrectdf.sm covarianceMatrixWeighted
+    # Inputs: covMWx covMWy covMWmag
+    # 
+    # set covMWx = { 3.3920 10.7740 14.5380 }
+    # set covMWy = { 26.2680 13.0540 14.3370 }
+    # set covMWmag = { 4.2328 -3.4115 -1.5013 }
+    if($?imax==0) {return}
+    if(is_vector(x$imax)==0) {return} else {set covMWx = x$imax}
+    if(is_vector(y$imax)==0) {return} else {set covMWy = y$imax}
+    if(is_vector(m$imax)==0 || ($?h_$imax==0) || ($?m_$imax==0)) {return} else {set covMWflux = 10**(-0.4*m$imax)*1000*$h_$imax/$m_$imax}
+    set covMWrsisq = 2.0 * (8.0/2.35482)**2
+    if(is_vector(covMWx) && is_vector(covMWy) && is_vector(covMWmag)) {
+        do covMWi=0,dimen(covMWmag)-1 {
+            set covMWdx = covMWx - covMWx[$covMWi]
+            set covMWdy = covMWy - covMWy[$covMWi]
+            set covMWxy = covMWmag * exp(-(covMWdx**2+covMWdy**2)/covMWrsisq)
+            set covMWxy[$covMWi] = 0.0 # do not include the object itself!
+            set covMWtt = sum(covMWxy)
+            # echo $(covMWtt)
+            echo $(covMWtt*1.08/covMWmag[$covMWi])
+        }
+    }
+
+
+
+
+

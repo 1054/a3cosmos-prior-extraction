@@ -1,0 +1,152 @@
+crowdiness 04
+        # 
+        # compute crowdiness for a catalog
+        # 
+        # usage:
+        #    load crowdiness.sm crowdiness(ra,dec,psfsize,fovsize)
+        # 
+        # 
+        if($?3==0) {
+            print 'Usage: \n' {}
+            print '    load crowdiness.sm set c = crowdiness(ra,dec,psfsize,fovsize)\n' {}
+            print '    * ra dec are in unit of degree\n' {}
+            print '    * psfsize has unit of arcsec\n' {}
+            print '    * fovsize has unit of psfsize\n' {}
+            print '    - select fovsize depending on the scale you are interested.\n' {}
+            print '    - crowdiness is computed including each source it self, so the values will >=1.0.\n' {}
+            return
+        }
+        # 
+        define _crd_verbose $verbose verbose 0
+        # 
+        set _crd_ra = $1
+        set _crd_de = $2
+        set _crd_fwhm = $3
+        if($?4) {set _crd_view = $4} else {set _crd_view = 1.5}
+        # 
+        declare _crd_crow 0
+        declare _crd_numb 0
+        do _crd_i=0,dimen(_crd_ra)-1 {
+            ##set _crd_s = 0,dimen(_crd_ra)-1 # do not include it self when calculating gaussian distance
+            ##set _crd_s = _crd_s if(_crd_s!=$_crd_i) # do not include it self when calculating gaussian distance
+            ##set _crd_one_crow = calcOneCrowdiness(_crd_ra[_crd_s],_crd_de[_crd_s],_crd_ra[$_crd_i],_crd_de[$_crd_i],_crd_fwhm,_crd_view)
+            set _crd_one_crow = calcOneCrowdiness(_crd_ra,_crd_de,_crd_ra[$_crd_i],_crd_de[$_crd_i],_crd_fwhm,_crd_view)
+            set _crd_crow = _crd_crow concat _crd_one_crow
+            set _crd_numb = _crd_numb concat _crd_coc_numb # this is how many sources within fov view circle
+        }
+        set $0 = _crd_crow
+        # 
+        verbose $_crd_verbose
+        undef _crd_verbose
+        unset _crd_ra
+        unset _crd_de
+        unset _crd_fwhm
+        return
+
+calcOneCrowdiness 06
+        # compute crowdiness for one catalog source
+        # set crow_one = calcOneCrowdiness(ra,dec,ra0,de0,psfsize,fovsize)
+        define _crd_coc_verbose $verbose verbose 0
+        # 
+        set _crd_coc_ra = $1
+        set _crd_coc_de = $2
+        set _crd_coc_ra0 = $3
+        set _crd_coc_de0 = $4
+        set _crd_coc_fwhm = $5
+        set _crd_coc_view = $6
+        # 
+        set _crd_coc_disq = ((_crd_coc_ra-_crd_coc_ra0)*COS(_crd_coc_de0/180*pi))**2 + (_crd_coc_de-_crd_coc_de0)**2
+        set _crd_coc_disq = _crd_coc_disq * 3600.0**2 # square-degree to square-arcsec
+        set _crd_coc_gdis = _crd_coc_disq if(_crd_coc_disq<=(_crd_coc_view*_crd_coc_fwhm)**2) # and only count for close by ones
+        set _crd_coc_gexp = exp(-_crd_coc_gdis/_crd_coc_fwhm**2*(4*ln(2)))
+        set _crd_coc_crow = sum(_crd_coc_gexp)
+        set _crd_coc_numb = dimen(_crd_coc_gexp)
+        set $0 = _crd_coc_crow
+        # 
+        verbose $_crd_coc_verbose
+        undef _crd_coc_verbose
+        unset _crd_coc_ra
+        unset _crd_coc_de
+        unset _crd_coc_ra0
+        unset _crd_coc_de0
+        unset _crd_coc_fwhm
+        unset _crd_coc_view
+        return
+
+crowdiness_inPixel 04
+        # 
+        # compute crowdiness for a catalog using X Y coordinate instead of the default RA Dec J2000 coordinate
+        # 
+        # usage:
+        #    load crowdiness.sm crowdiness_inPixel(px,py,psfsize,fovsize)
+        # 
+        # 
+        if($?3==0) {
+            print 'Usage: \n' {}
+            print '    load crowdiness.sm set c = crowdiness_inPixel(px,py,psfsize,fovsize)\n' {}
+            print '    * px py are in unit of pixel\n' {}
+            print '    * psfsize has unit of pixel\n' {}
+            print '    * fovsize has unit of psfsize\n' {}
+            print '    - select fovsize depending on the scale you are interested.\n' {}
+            print '    - crowdiness is computed including each source it self, so the values will >=1.0.\n' {}
+            return
+        }
+        # 
+        define _crd_verbose $verbose verbose 0
+        # 
+        set _crd_px = $1
+        set _crd_py = $2
+        set _crd_fwhm = $3
+        if($?4) {set _crd_view = $4} else {set _crd_view = 3.0}
+        # 
+        declare _crd_crow 0
+        declare _crd_numb 0
+        do _crd_i=0,dimen(_crd_px)-1 {
+            ##set _crd_s = 0,dimen(_crd_px)-1 # do not include it self when calculating gaussian distance
+            ##set _crd_s = _crd_s if(_crd_s!=$_crd_i) # do not include it self when calculating gaussian distance
+            ##set _crd_one_crow = calcOneCrowdiness(_crd_px[_crd_s],_crd_py[_crd_s],_crd_px[$_crd_i],_crd_py[$_crd_i],_crd_fwhm,_crd_view)
+            set _crd_one_crow = calcOneCrowdiness_inPixel(_crd_px,_crd_py,_crd_px[$_crd_i],_crd_py[$_crd_i],_crd_fwhm,_crd_view)
+            set _crd_crow = _crd_crow concat _crd_one_crow
+            set _crd_numb = _crd_numb concat _crd_coc_numb # this is how many sources within fov view circle
+        }
+        set $0 = _crd_crow
+        # 
+        verbose $_crd_verbose
+        undef _crd_verbose
+        unset _crd_px
+        unset _crd_py
+        unset _crd_fwhm
+        return
+
+calcOneCrowdiness_inPixel 06
+        # compute crowdiness for one catalog source in pixel coordinate
+        # set crow_one = calcOneCrowdinessInPixel(px,py,px0,py0,psfsizepix,fovsize)
+        define _crd_coc_verbose $verbose verbose 0
+        # 
+        set _crd_coc_px = $1
+        set _crd_coc_py = $2
+        set _crd_coc_px0 = $3
+        set _crd_coc_py0 = $4
+        set _crd_coc_fwhm = $5
+        set _crd_coc_view = $6
+        # 
+        set _crd_coc_disq = ((_crd_coc_px-_crd_coc_px0))**2 + (_crd_coc_py-_crd_coc_py0)**2
+        set _crd_coc_disq = _crd_coc_disq # in pixel unit, not degree here
+        set _crd_coc_gdis = _crd_coc_disq if(_crd_coc_disq<=(_crd_coc_view*_crd_coc_fwhm)**2) # and only count for close by ones
+        set _crd_coc_gexp = exp(-_crd_coc_gdis/_crd_coc_fwhm**2*(4*ln(2)))
+        set _crd_coc_crow = sum(_crd_coc_gexp)
+        set _crd_coc_numb = dimen(_crd_coc_gexp)
+        set $0 = _crd_coc_crow
+        # 
+        verbose $_crd_coc_verbose
+        undef _crd_coc_verbose
+        unset _crd_coc_px
+        unset _crd_coc_py
+        unset _crd_coc_px0
+        unset _crd_coc_py0
+        unset _crd_coc_fwhm
+        unset _crd_coc_view
+        return
+
+
+

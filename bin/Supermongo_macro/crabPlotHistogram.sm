@@ -1,0 +1,465 @@
+crabPlotHistogram 05
+    # 
+    # quickly make histogram
+    # 
+    # $1 is output pdf
+    # $2 is vector
+    # $3 is lower limit
+    # $4 is upper limit
+    # $5 is interval
+    # output histogram_x histogram_y
+    # 
+    if($?2==0) {
+        print 'usage: crabPlotHistogram output_pdf vector lower_limit upper_limit interval\n' {} 
+        return
+    }
+    if($?5) {
+        crabPlotHistogramCalculation $2 $3 $4 $5
+    } else {
+        if($?4) {
+            crabPlotHistogramCalculation $2 $3 $4
+        } else {
+            if($?3) {
+                crabPlotHistogramCalculation $2 $3
+            } else {
+                crabPlotHistogramCalculation $2
+            }
+        }
+    }
+    echo "crabPlotHistogram_xy begin"
+    crabPlotHistogram_xy $1 _crabpl_vbase _crabpl_vnumb
+    echo "crabPlotHistogram_xy done"
+    unset _crabpl_vbase
+    unset _crabpl_vnumb
+    return
+
+
+
+
+
+
+test_crabPlotQuickHisto 02
+    # 
+    # make histogram even quicker
+    # 
+    # input are: filename.pdf 
+    # 
+    load vecStats.sm
+    load crabPlot.sm
+    if($?1) {
+        set _crabpl_qh_var = $1
+    } else {
+        if(is_vector(_crabpl_qh_file)) {
+            crabPlotResetAll
+            device nodevice
+            !pdfcrop --margins 15 $(_crabpl_qh_file).pdf $(_crabpl_qh_file).pdf >/dev/null
+            echo "Plotted to "$(_crabpl_qh_file)".pdf!"
+            unset _crabpl_qh_file
+        } else {
+            print 'Usage: crabPlotQuickHisto df keep\n' {}
+            print '       crabPlotQuickHisto df2 \# plot a second histo\n' {}
+            print '       crabPlotQuickHisto \# close the plot\n' {}
+        }
+        return
+    }
+    
+    # first compute var range
+    vecStats _crabpl_qh_var
+    define _crabpl_qh_var_MIN $(_crabpl_qh_var_MIN_3SIGMA)
+    define _crabpl_qh_var_MAX $(_crabpl_qh_var_MAX_3SIGMA)
+    define _crabpl_qh_var_ITV $(_crabpl_qh_var_SIGMA_3SIGMA*0.1)
+    
+    # plot flux histogram
+    if(!is_vector(_crabpl_qh_file)) {
+        set _crabpl_qh_file = {"histogram_of_var_"}
+        set _crabpl_qh_fmin = $_crabpl_qh_var_MIN
+        set _crabpl_qh_fmax = $_crabpl_qh_var_MAX
+        set _crabpl_qh_step = $_crabpl_qh_var_ITV
+        set _crabpl_qh_nleg = 0 # legends
+        set _crabpl_qh_nlab = 0 # labels
+        crabPlotSavePen
+        location 6000 31500 16000 31500
+        lweight 5.0
+        crabPlotHistogramPlot _crabpl_qh_var _crabpl_qh_fmin _crabpl_qh_fmax _crabpl_qh_step $(_crabpl_qh_file).pdf keep
+        echo "Plotting to "$(_crabpl_qh_file).pdf
+        # plot axis title
+        ctype default lweight 5.0 expand 2.0 xlabel "flux 20cm [uJy]"
+        # restore input pen
+        crabPlotRestorePen
+    } else {
+        # overplot flux varertainty histogram
+        crabPlotSavePen
+        crabPlotHistogramOverPlot _crabpl_qh_var _crabpl_qh_fmin _crabpl_qh_fmax _crabpl_qh_step
+        crabPlotRestorePen
+    }
+    # 
+    # plot median
+    # crabPlotQuickLabel "Median="$(sprintf('%.4g',_crabpl_qh_var_MED)"\,uJy" $(_crabpl_qh_var_MEDIAN)
+
+
+
+test_crabPlotQuickHistoLabel 04
+    # 
+    # overplot median value dashed line onto crabPlotQuickHisto
+    # 
+    # input are label, xpos, ypos, plotline
+    # xpos is in data unit
+    # ypos is in line unit
+    # 
+    if($?1 && $?2) {
+        # plot a dashed line
+        lweight 3.5 expand 2.0
+        if(!$?4) {
+            rel $2 $fy1 ltype 1
+            draw $2 $fy2 ltype 0
+        }
+        # plot the text label
+        lweight 3.5 expand 1.2
+        if($?3) { 
+            set _crabpl_qh_ypos = $3 
+        } else {
+            set _crabpl_qh_ypos = _crabpl_qh_nlab
+        }
+        do _crabpl_qh_line=0,_crabpl_qh_nlab {
+            puts ""
+        }
+        if($2>($fx1+$fx2)/2.0) {
+            putlabel 4 $1
+        } else {
+            putlabel 6 $1
+        }
+        set _crabpl_qh_nlab = _crabpl_qh_nlab + 1
+        if(_crabpl_qh_ypos>_crabpl_qh_nlab) {
+            set _crabpl_qh_nlab = _crabpl_qh_ypos
+        }
+    }
+
+
+
+test_crabPlotQuickHistoLegend 02
+    # 
+    # overplot legend onto crabPlotQuickHisto
+    # 
+    # input are legend, ypos
+    # ypos is in line unit
+    # 
+    if(1) {
+        relocate $($fx2-0.25*($fx2-$fx1)) $fy2
+        lweight 3.5 expand 1.1
+        if($?3) { 
+            set _crabpl_qh_ypos = $2
+        } else {
+            set _crabpl_qh_ypos = _crabpl_qh_nleg
+        }
+        do _crabpl_qh_line=0,_crabpl_qh_nleg {
+            puts ""
+        }
+        if($?1) {
+            puts $1
+        }
+        set _crabpl_qh_nleg = _crabpl_qh_nleg + 1
+        if(_crabpl_qh_ypos>_crabpl_qh_nleg) {
+            set _crabpl_qh_nleg = _crabpl_qh_ypos
+        }
+    }
+
+
+
+
+
+
+crabPlotHistogramPlot 06
+    # 
+    # make a histogram by given lower_limit upper_limit and interval
+    # 
+    # $1 is vector
+    # $2 is lower limit
+    # $3 is upper limit
+    # $4 is interval
+    # $5 is output pdf
+    # $6 is keepopen
+    # output histogram_x histogram_y
+    # 
+    if($?5==0) {
+        print 'Usage: crabPlotHistogramPlot vector lower_limit upper_limit interval output_pdf keep_open\n' {} 
+        return
+    } else {
+        if($?6) {define crabPlotHistogram_KeepDevice 1}
+        crabPlotHistogramCalculation $1 $2 $3 $4
+    } 
+    crabPlotHistogram_xy $5 _crabpl_vbase _crabpl_vnumb
+    unset _crabpl_vbase
+    unset _crabpl_vnumb
+
+
+
+crabPlotHistogramOverPlot 04
+    # 
+    # $1 is vector
+    # $2 is lower limit
+    # $3 is upper limit
+    # $4 is interval
+    # output histogram_x histogram_y
+    # 
+    if($?1==0) {
+        print 'usage: crabPlotHistogramOverPlot vector lower_limit upper_limit interval\n' {} 
+        return
+    }
+    if($?4) {
+        crabPlotHistogramCalculation $1 $2 $3 $4
+    } else {
+        if($?3) {
+            crabPlotHistogramCalculation $1 $2 $3
+        } else {
+            if($?2) {
+                crabPlotHistogramCalculation $1 $2
+            } else {
+                crabPlotHistogramCalculation $1
+            }
+        }
+    }
+    crabPlotHistogram_xy overplot _crabpl_vbase _crabpl_vnumb
+    unset _crabpl_vbase
+    unset _crabpl_vnumb
+
+
+
+crabPlotHistogramGaussianFit 05
+    # 
+    # $1 is vector
+    # $2 is lower limit
+    # $3 is upper limit
+    # $4 is interval
+    # $5 is fixed_width
+    # output gaussian_x, gaussian_y
+    # 
+    if($?1==0) {
+        print 'usage: crabPlotHistogramGaussianFit vector lower_limit upper_limit interval fixed_width\n' {} 
+        return
+    }
+    # 
+    if(!is_vector(histogram_x) || !is_vector(histogram_y)) {
+        if($?4) {
+            crabPlotHistogramCalculation $1 $2 $3 $4
+        } else {
+            if($?3) {
+                crabPlotHistogramCalculation $1 $2 $3
+            } else {
+                if($?2) {
+                    crabPlotHistogramCalculation $1 $2
+                } else {
+                    crabPlotHistogramCalculation $1
+                }
+            }
+        }
+    }
+    # <TODO> Here we only do overplot so unset xlimit ylimit
+    if(is_vector(crabPlotHistogram_xlimit)) {
+        unset crabPlotHistogram_xlimit
+    }
+    if(is_vector(crabPlotHistogram_ylimit)) {
+        unset crabPlotHistogram_ylimit
+    }
+    # 
+    load crabStat.sm
+    if($?5) {
+        fit_Histogram_with_GuassianFixedWidth histogram_x histogram_y gaussian_mean gaussian_sigma gaussian_norma
+    } else {
+        fit_Histogram_with_Guassian histogram_x histogram_y gaussian_mean gaussian_sigma gaussian_norma
+    }
+    set gaussian_x = _crabpl_min,_crabpl_max,_crabpl_itv
+    set gaussian_y = gauss(gaussian_x,$gaussian_mean,$gaussian_sigma) * $gaussian_norma * (SQRT(2*PI)*$gaussian_sigma)
+    set gaussian_ylog = (gaussian_y<=0) ? 1e-99 : gaussian_y
+    set gaussian_ylog = lg(gaussian_ylog)
+    if(is_vector(crabPlotHistogram_ticksize)) {
+        if(crabPlotHistogram_ticksize=='0 0 -1 10') {
+            connect gaussian_x gaussian_ylog
+            rel $(gaussian_x[int(dimen(gaussian_x)*0.56)]) $(gaussian_ylog[int(dimen(gaussian_x)*0.56)])
+        } else {
+            connect gaussian_x gaussian_y
+            rel $(gaussian_x[int(dimen(gaussian_x)*0.56)]) $(gaussian_y[int(dimen(gaussian_x)*0.56)])
+        }
+        unset crabPlotHistogram_ticksize
+    } else {
+        connect gaussian_x gaussian_y
+        rel $(gaussian_x[int(dimen(gaussian_x)*0.56)]) $(gaussian_y[int(dimen(gaussian_x)*0.56)])
+    }
+    if(is_vector(crabPlotHistogram_labelpos)) {
+        if(dimen(crabPlotHistogram_labelpos)==2) {
+            rel $($fx1+($fx2-$fx1)*(crabPlotHistogram_labelpos[0])) $($fy1+($fy2-$fy1)*(crabPlotHistogram_labelpos[1]))
+        }
+        unset crabPlotHistogram_labelpos
+    }
+    set gaussian_fwhm = 2*sqrt(2*ln(2))*$gaussian_sigma
+    putlabel 9 "   Gauss.\,width="$(sprintf('%0.1f',float($gaussian_sigma)))
+
+
+
+crabPlotHistogramCalculation 04
+    # 
+    # $1 is vector
+    # $2 is lower limit
+    # $3 is upper limit
+    # $4 is interval
+    # 
+    if($?1==0) {
+        print 'usage: crabPlotHistogramCalculation vector lower_limit upper_limit interval\n' {} 
+        return
+    } else {
+        set _crabpl_vec = $1
+    }
+    if($?2==0) {
+        define _crabpl_hist_verbose $verbose verbose 0
+        load vecStats.sm vecStats _crabpl_vec 
+        set _crabpl_min = _crabpl_vec_MIN_6SIGMA
+        set _crabpl_max = _crabpl_vec_MAX_6SIGMA
+        set _crabpl_itv = (_crabpl_max-_crabpl_min)/12.0
+        set _crabpl_min = _crabpl_min - 1.5*_crabpl_itv
+        set _crabpl_max = _crabpl_max + 1.5*_crabpl_itv
+        verbose $_crabpl_hist_verbose undef _crabpl_hist_verbose
+    }
+    if($?2) {set _crabpl_min = $2}
+    if($?3) {set _crabpl_max = $3}
+    if($?4) {set _crabpl_itv = $4}
+    get_hist _crabpl_vec _crabpl_vbase _crabpl_vnumb $(_crabpl_min) $(_crabpl_max) $(_crabpl_itv)
+    set histogram_x = _crabpl_vbase
+    set histogram_y = _crabpl_vnumb
+
+
+
+crabPlotHistogram_xy 03
+    # just do the plot
+    # histogram x y
+    # $1 is output_pdf   -- (1) ends with .pdf, open device and plot; (2) arbitary str, do overplot; (3) ==close, close device. 
+    # $2 is x (location array)
+    # $3 is y (histogram array)
+    if(!$?3) {
+        print 'Usage: crabPlotHistogram_xy output.pdf loc1 hist1\n' {}
+        print '       crabPlotHistogram_xy overplot loc2 hist2\n' {}
+        print '       crabPlotHistogram_xy close loc3 hist3\n' {}
+        print 'Optional: we can set these vectors:\n' {}
+        print '          set crabPlotHistogram_xlimit = {1 2}\n' {}
+        print '          set crabPlotHistogram_ylimit = {1 2}\n' {}
+        print '          set crabPlotHistogram_ticksize = \'-1 10 0 0\'\n' {}
+        return
+    } else {
+        echo "load"
+        load crabPlot.sm
+        set _crabpl_vbase = $2
+        set _crabpl_vnumb = $3
+        vecminmax _crabpl_vnumb _crabpl_vnumb_min _crabpl_vnumb_max
+        define _crabpl_vnumb_max $($_crabpl_vnumb_max*1.5) #<TODO># Plot limits YRange
+    }
+    if(index('$1','.pdf')>0 || index('$1','.eps')>0) {
+        if(index('$1','.pdf')>0) {device pdf $1}
+        if(index('$1','.eps')>0) {device postencap $1}
+        if(index('$1','.eps')>0) {set __crabPlot__PSFILE = {"}+'$1'+{"}}
+        define TeX_strings 1
+        xtcolours
+        if($gx1==3500 && $gx2==31000 && $gy1==3500 && $gy2==31000) {
+            location 5500 31500 5000 31500
+        }
+        if(is_vector(crabPlotHistogram_xlimit)) {
+            if(is_vector(crabPlotHistogram_ylimit)) {
+                limits crabPlotHistogram_xlimit crabPlotHistogram_ylimit
+                unset crabPlotHistogram_ylimit
+            } else {
+                limits crabPlotHistogram_xlimit 0 $_crabpl_vnumb_max # _crabpl_vnumb
+            }
+            unset crabPlotHistogram_xlimit
+        } else { 
+            if(is_vector(crabPlotHistogram_ylimit)) {
+                # echo $fx1 $fx2 $fy1 $fy2
+                # if($fx1==0 && $fx2==1 && $fy1==0 && $fy2==1) {
+                    limits _crabpl_vbase crabPlotHistogram_ylimit
+                # }
+                unset crabPlotHistogram_ylimit
+            } else {
+                # echo $fx1 $fx2 $fy1 $fy2
+                # if($fx1==0 && $fx2==1 && $fy1==0 && $fy2==1) {
+                    limits _crabpl_vbase 0 $_crabpl_vnumb_max # _crabpl_vnumb
+                # }
+            }
+        }
+        # usage: set crabPlotHistogram_ticksize = '-1 10 0 0'
+        if(is_vector(crabPlotHistogram_ticksize)) {
+            ticksize $(crabPlotHistogram_ticksize)
+            #unset crabPlotHistogram_ticksize
+        }
+        # plot box
+        crabPlotSavePen
+        crabPlotDefaultPenForBox
+        box
+        # plot dash line indicating the x=0
+        # plot dash line indicating the center of $(($fx1+$fx2)/2.0)
+        # plot dash line indicating the median
+        # ltype 1 relocate 0.0 $fy1 draw 0.0 $fy2
+        # ltype 1 relocate $(($fx1+$fx2)/2.0) $fy1 draw $(($fx1+$fx2)/2.0) $fy2
+        
+        ltype 0 expand 2.0
+        if(is_vector(crabPlotHistogram_xlabel)) {xlabel $(crabPlotHistogram_xlabel)} #else {xlabel $2}
+        if(is_vector(crabPlotHistogram_ylabel)) {ylabel $(crabPlotHistogram_ylabel)} else {ylabel N}
+        crabPlotRestorePen
+    }
+    # do histogram plot
+    if(is_vector(crabPlotHistogram_ticksize)) {
+        if(crabPlotHistogram_ticksize=='0 0 -1 10') {
+            set _crabpl_vnumb_ylog = (_crabpl_vnumb<=0.0) ? 1e-99 : _crabpl_vnumb
+            set _crabpl_vnumb_ylog = lg(_crabpl_vnumb_ylog)
+            histogram _crabpl_vbase _crabpl_vnumb_ylog
+        } else {
+            histogram _crabpl_vbase _crabpl_vnumb
+        }
+        unset crabPlotHistogram_ticksize
+    } else {
+        histogram _crabpl_vbase _crabpl_vnumb
+    }
+    crabPlotResetPen
+    # 
+    echo index
+    if(index('$1','close')==0) {
+        define crabPlotHistogram_KeepDevice 0
+    }
+    if(0==$?crabPlotHistogram_KeepDevice) {
+        if(!is_vector(crabPlotHistogram_KeepDevice)) {
+            device nodevice
+            echo "close"
+        } else {
+            if(crabPlotHistogram_KeepDevice<=0) {
+                device nodevice
+                echo "close"
+            }
+        }
+    } else {
+        if(0>=$crabPlotHistogram_KeepDevice) {
+            device nodevice
+            echo "close"
+        }
+    }
+    echo "return"
+    return
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

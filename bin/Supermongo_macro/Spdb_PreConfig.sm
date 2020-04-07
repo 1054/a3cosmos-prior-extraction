@@ -1,0 +1,145 @@
+SetDataInfo 04
+    #  
+    #  We provide a suite of tools for multi-wavelength pre-selective prior source fitting
+    #  
+    #  multi-wavelength: 24um, 16um, 100um, 160um, 250um, 350um, 500um, 1160um, 
+    #                    check astroPhot.sm first, only support the ones in astroPhot.sm
+    #  
+    #  pre-selective: we use SED predicted flux to pre-select sources to fit or to freeze
+    #                 check SED/SED_predictions_goodsn_100.txt
+    #  
+    #  prior fitting: we use galfit to model sources in the prior list 
+    #                 check Catalog/Initial_Catalog_goodsn_24.txt
+    #  
+    #  now we will set the data directory information
+    #  
+    #  usage:
+    #      
+    #      load Spdb_PreConfig.sm SetDataInfo goodsn 24 2016a
+    #  
+    #  history:
+    #     2016-01-01 introduced DirPathVector idea to handle long dir path string
+    #     2016-05-07 now use crabDir.sm
+    #     2016-07-14 renamed from AstroDepthSetDataInfo_v201605.sm
+    #  
+    ############################
+    ### Set Data Information ###
+    ############################
+    # note that the paths below should not be too long, 
+    # should not contain any white space, nor trailing slash
+    load crabDir.sm
+    set DataDir = GetDirPathVector()
+    set DataVer = '$3'
+    set boxBand = '$2'
+    set PfitBox = {"boxgalfit"}
+    set PsimBox = {"boxgalsim"}
+    set PfitCat = GetDirPathVector("Catalog/Cat_"$1"_"$2"_"$(DataVer)".dat")
+    set PsimCat = GetDirPathVector("Catalog/Sim_"$1"_"$2"_"$(DataVer)".dat")
+    set PfitCsv = GetDirPathVector("Photometry/Res_"$1"_"$2"_"$(DataVer)".txt")
+    set PfitOut = GetDirPathVector("Photometry/Res_"$1"_"$2"_"$(DataVer)) 
+    set PsimOut = GetDirPathVector("Simulation/Res_"$1"_"$2"_"$(DataVer))
+    set PfitDir = GetDirPathVector("Photometry/"$(DataVer)"/Galfit_Band"$(boxBand)"/"$(PfitBox))
+    set PsimDir = GetDirPathVector("Photometry/"$(DataVer)"/Galfit_Band"$(boxBand)"/"$(PsimBox))
+    # 
+    # make directories
+    !mkdir -p "Catalog" 2>/dev/null
+    !mkdir -p "Photometry" 2>/dev/null
+    #!mkdir -p "Simulation" 2>/dev/null
+    # 
+    # check Catalog
+    if(is_file("set_initial_catalog.sm")) {
+        macro read set_initial_catalog.sm
+        set_initial_catalog
+    } else {
+        print 'Error! Could not find \"set_initial_catalog.sm\"!\n' {}
+        return
+    }
+    if(!$?Catalog) {
+        print 'Error! Please define Catalog in \"set_initial_catalog.sm\"!\n' {} return
+    } else {
+        # echo $Catalog
+        !test -f $Catalog
+        if($exit_status!=0) {
+            print 'Error! Could not find the Catalog \"$Catalog\"!\n' {} return
+        }
+        set Catalog = GetDirPathVector('$Catalog')
+        CopyDirPathVectorFile Catalog PfitCat
+    }
+    # 
+    define print_noheader 1
+    # 
+    print '\n' {}
+    print '"########################################################"\n' {}
+    print '"################### Data Information ###################"\n' {}
+    print '"########################################################"\n' {}
+    print 'DataVer = %s' {DataVer}
+    print 'DataDir = ' {} PrintDirPathVector DataDir
+    print 'Catalog = ' {} PrintDirPathVector Catalog
+    print 'PfitCat = ' {} PrintDirPathVector PfitCat
+    print 'PsimCat = ' {} PrintDirPathVector PsimCat
+    print 'PfitOut = ' {} PrintDirPathVector PfitOut
+    print 'PsimOut = ' {} PrintDirPathVector PsimOut
+    print 'PfitDir = ' {} PrintDirPathVector PfitDir
+    print 'PsimDir = ' {} PrintDirPathVector PsimDir
+    #print 'boxBand = %s' {boxBand}
+    #print 'boxName = %s' {boxName}
+    #print 'boxRoot = %s' {boxRoot}
+    # 
+    ###################################
+    ### Check Software Dependencies ###
+    ###################################
+    print '\n' {}
+    print '"########################################################"\n' {}
+    print '"################# Software Dependencies ################"\n' {}
+    print '"########################################################"\n' {}
+    print 'we are using GNU tool "type" to check the softwares:\n' {}
+    set checksoftwares = {getpix sky2xy xy2sky cl CrabFitsImageCrop} # <TODO> galfit not working under cygwin
+    foreach checkso checksoftwares {
+        define checkvo $verbose verbose 0
+        !echo \$(type $checkso 2>&1) > ".CheckDataInfo."
+        !cat ".CheckDataInfo."
+        data ".CheckDataInfo." read <Software_$checkso 1.s>
+        !rm  ".CheckDataInfo."
+        verbose $checkvo
+    }
+    set checkvariables = {iraf}
+    foreach checkso checkvariables {
+        define checkvo $verbose verbose 0
+        !echo \$([ -z \$$checkso ] && echo "System variable \\\$"$checkso" does not exist!" || echo "cl" 2>&1) > ".CheckDataInfo."
+        !cat ".CheckDataInfo."
+        data ".CheckDataInfo." read <Software_$checkso 1.s>
+        !rm  ".CheckDataInfo."
+        verbose $checkvo
+    }
+    # 
+    foreach checkso checksoftwares {
+        if(Software_$checkso!='$checkso') {
+            define errorbreak 1
+            define errorbreak ? <Checking failed! Please check the info above, and press Ctrl+C to break!>
+            # TODO: make sure linux command "type" is working!
+        }
+    }
+    print '\n' {}
+    define print_noheader 0
+    # 
+    #################################
+    ### Load Photometry Constants ###
+    #################################
+    load astroGalbox.sm
+    load astroGalfit.sm
+    load astroPhot.sm
+    if(is_file("set_"$1"_photometry_constants.sm")) {
+        macro read "set_"$1"_photometry_constants.sm"
+    }
+    set_default_photometry_constants $(boxBand)
+    set_$1""_photometry_constants_$(boxBand)
+    # 
+    # 
+    define proceed 1
+    define proceed ? <Everything is prepared! Ready to proceed! (Or press Ctrl+C to break)>
+    # 
+    # 
+    echo ""
+    return
+
+

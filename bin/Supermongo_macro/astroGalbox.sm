@@ -1,0 +1,1103 @@
+astroGalbox 00
+    # 
+    # incl. macros for making box, mosaicing box
+    print '\n' {}
+    print 'astroGalbox::\n' {}
+    print '             ' {}
+    print 'astroGalbox_find_and_link SearchDir SearchPattern => will create a link under current directory\n' {}
+    print '             ' {}
+    print 'astroGalbox_find_and_copy SearchDir SearchPattern => will copy the file under current directory\n' {}
+    print '             ' {}
+    print 'astroGalbox_check_and_make DirPathVector => input a vector and mkdir\n' {}
+    print '             ' {}
+    print 'astroGalbox_which_box field band xpos ypos => find which box contains the point\n' {}
+    print '             ' {}
+    print 'astroGalbox_make_boxes map.fits xstep ystep xbuffer ybuffer => divide map.fits into boxes\n' {}
+    print '             ' {}
+    print 'astroGalbox_read_boxes map.fits xstep ystep xbuffer ybuffer => read each box and concat results\n' {}
+    print '\n' {}
+    # 
+    # fin
+
+
+astroGalbox_find_and_link 02
+    # find a file and link it
+    if($?1==0||$?2==0){print 'astroGalbox_find_and_link SearchDir SearchPattern \n' {} return}
+    !find $1 -name '$2' -print0 | xargs -0 -I % ls -1 %
+    !find $1 -name '$2' -print0 | xargs -0 -I % ln -sif %
+
+
+astroGalbox_find_and_copy 02
+    # find a file and link it
+    if($?1==0||$?2==0){print 'astroGalbox_find_and_link SearchDir SearchPattern \n' {} return}
+    !find $1 -name '$2' -print0 | xargs -0 -I % ls -1 %
+    #!find $1 -name '$2' -print0 | xargs -0 -I % cp --remove-destination % ./  ##<TODO>## does not support Mac
+    !find $1 -name '$2' -print0 | xargs -0 -I % cp -f % ./                     ##<TODO>## does not support Mac
+
+
+astroGalbox_check_and_make 01
+    # check a dir and make it if not exist
+    if($?1==0||$?2==0){
+        print 'astroGalbox_check_and_make DirPathVector [SetDoNotMakeDir]\n' {} return
+    }
+    if(!astroGalbox_is_vector($1)){
+        print 'astroGalbox_check_and_make: Error! Input is not a vector!\n' {} return
+    }
+    DEFINE exit_status DELETE !test -d $1
+    if($?2||0==$exit_status) {
+        if(substr($1,strlen($1)-1,1)=='\"') {
+            if(substr($1,strlen($1)-2,1)!='/') {
+                set $1 = {"} + <$($1)> + {/} + {"}
+            }
+        } else {
+            if(substr($1,strlen($1)-1,1)!='/') {
+                set $1 = {"} + <$($1)> + {/} + {"}
+            }
+        }
+        set $0 = 1 return
+    } else {
+        !mkdir $($1)
+        DEFINE exit_status DELETE !test -d $1
+        if(0==$exit_status) {
+            set $0 = 1 return
+        }
+    }
+    set $0 = 0 return
+
+
+astroGalbox_pwd 00
+    # return a vector
+    # usage: set _astroGalbox_pwd = astroGalbox_pwd()
+    # note: this method has a limitation on path string length, and white space problem.
+    !echo \\\\"\$PWD\\\\" > ".astroGalbox.current.dir.tmp"
+    data ".astroGalbox.current.dir.tmp"
+    astroGalboxOnMute
+    read astroGalbox_current_dir 1.s #<TODO># no white space!
+    set $0 = astroGalbox_current_dir
+    unset astroGalbox_current_dir
+    !rm ".astroGalbox.current.dir.tmp" 2>/dev/null
+    astroGalboxUnMute
+
+
+astroGalbox_pwd_split 00
+    # return a vector
+    # usage: set _astroGalbox_pwd = astroGalbox_pwd_split()
+    !pwd | sed -e 's@^/@\\\\"\\\\"@g' | sed -e 's@/@\\n@g' | sed -e '1s@^\\\\"\\\\"@/@g' > ".astroGalbox.current.dir.tmp"
+    data ".astroGalbox.current.dir.tmp" lines 2 0
+    astroGalboxOnMute
+    define _astroGalbox_pwdi 2
+    set _astroGalbox_pwdr = {"/"}
+    declare _astroGalbox_pwds 0.s
+    while { is_vector(_astroGalbox_pwdr) } {
+        unset _astroGalbox_pwdr
+        read row _astroGalbox_pwdr $_astroGalbox_pwdi.s
+        define _astroGalbox_pwdi $($_astroGalbox_pwdi+1)
+        if( is_vector(_astroGalbox_pwdr) ) {
+            if( strlen(_astroGalbox_pwdr)>=0 ) {
+                set _astroGalbox_pwdr = {"}+_astroGalbox_pwdr+{"}
+                if( dimen(_astroGalbox_pwds)==0 ) {
+                    set _astroGalbox_pwds = _astroGalbox_pwdr
+                } else {
+                    set _astroGalbox_pwds = _astroGalbox_pwds concat _astroGalbox_pwdr
+                }
+            }
+        }
+    }
+    astroGalboxUnMute
+    set $0 = _astroGalbox_pwds
+    unset _astroGalbox_pwds
+    !rm ".astroGalbox.current.dir.tmp" 2>/dev/null
+
+
+astroGalbox_cd 01
+    # input should be a vector
+    # usage: set _astroGalbox_pwd = astroGalbox_pwd()
+    #        astroGalbox_cd _astroGalbox_pwd
+    # note: this method has a limitation on path string length.
+    #       for long string path, use the following instead:
+    #       set _astroGalbox_pwd = astroGalbox_pwd_split()
+    #       astroGalbox_cd_split _astroGalbox_pwd
+    if($?1==0){
+        print 'astroGalbox_cd DirPathVector\n' {} return
+    }
+    if(!astroGalbox_is_vector($1)){
+        print 'astroGalbox_cd: Error! Input is not a vector!\n' {} return
+    }
+    # first check destination dir (mkdir if does not exist)
+    DEFINE exit_status DELETE !test -d $($1) >/dev/null
+    if(0!=$exit_status) {!mkdir -p $($1)}
+    # then backup current dir
+    set _astroGalbox_pwd = astroGalbox_pwd_split()
+    echo chdir $($1)
+    chdir $($1)
+
+
+astroGalbox_cd_split 01
+    # input should be a vector with multi elements, first must be "/"
+    # usage: set _astroGalbox_pwd = astroGalbox_pwd_split()
+    #        astroGalbox_cd_split _astroGalbox_pwd
+    if($?1==0){
+        print 'astroGalbox_cd_split DirPathVector\n' {} return
+    }
+    if(!astroGalbox_is_vector($1)){
+        print 'astroGalbox_cd_split: Error! Input is not a vector!\n' {} return
+    }
+    #if($1[0]!='"/"') {
+    #    print 'astroGalbox_cd_split: Error! Input vector first element must be \"/\"!\n' {} return
+    #}
+    # backup current dir
+    set _astroGalbox_cd_backup = astroGalbox_pwd_split()
+    # loop each path vector element
+    do _astroGalbox_pwdi = 0,dimen($1)-1 {
+        # current dir path element 
+        set _astroGalbox_pwdr = $1[$_astroGalbox_pwdi]
+        set _astroGalbox_pwdq = {"}+{"}
+        # append and prepend quotes
+        if(_astroGalbox_pwdr[0]!=_astroGalbox_pwdq[0]) {
+            set _astroGalbox_pwdr = {"}+_astroGalbox_pwdr+{"}
+        }
+        # check destination dir (mkdir if does not exist)
+        DEFINE exit_status DELETE !test -d $(_astroGalbox_pwdr) >/dev/null
+        if(0!=$exit_status) {print 'astroGalbox_cd_split: mkdir $(_astroGalbox_pwdr)\n' {} !mkdir -p $(_astroGalbox_pwdr)}
+        if(0!=$exit_status) {print 'astroGalbox_cd_split: Error! Could not find directory $(_astroGalbox_pwdr) and could not make it!\n' {} return}
+        # change dir
+        echo "astroGalbox_cd_split: chdir "$(_astroGalbox_pwdr)
+        if(index(_astroGalbox_pwdr,'/')<0) {
+            chdir "./"$(_astroGalbox_pwdr)
+        } else {
+            chdir $(_astroGalbox_pwdr)
+        }
+        #<note><20160101><dzliu># for some pure number directory, chdir failed, so must prepend "./", e.g. "./201512/"
+    }
+
+
+astroGalbox_cd_DirPathVector 01
+    astroGalbox_cd_split $1
+
+
+astroGalbox_is_dir 01
+        !test -d $1
+        #echo !test -d $1
+        if($exit_status==0){set $0=1}else{set $0=0} return
+
+
+
+astroGalbox_is_vector 01
+    # check whether $1 is a vector
+    #!echo \$(echo '$1')
+    #!echo \$(echo '$1' | grep -e '[^a-zA-Z1-9_]')
+    DEFINE exit_status DELETE !test x\$(echo \"$1\" | grep -e '[^a-zA-Z1-9_]') = x # "
+    # echo $(0==$exit_status)
+    if(0==$exit_status) {
+        if(is_vector($1)) {set $0 = 1 return}
+    }
+    set $0 = 0 return
+
+
+astroGalbox_which_box 07
+    if($?1==0||$?2==0||$?3==0||$?4==0) {
+        print 'astroGalbox_which_box field band xpos ypos\n' {} return
+        # astroGalbox_which_box goodsn 24 351.181 1016.000
+    }
+    # if($?1==0||$?2==0||$?3==0||$?4==0||$?5==0||$?6==0||$?7==0) {
+        # print 'astroGalbox_which_box map.fits xstep ystep xbuffer ybuffer xpos ypos\n' {} return
+        # astroGalbox_which_box $SciPhoto_24.fits $xStep_24 $yStep_24 $gBuff_24 $fBuff_24 351.181 1016.000
+    # }
+    load astroPhot.sm
+    load astroGalfit.sm
+    set boxBand = '$2'
+    set_$1""_photometry_constants_$(boxBand)
+    # check command (software dependency)
+    if(!$?astroGalbox_check_command_ok) {astroGalbox_check_command}
+    if(!$astroGalbox_check_command_ok) {return}
+    # prepare to divide input fits image into small boxes
+    if(!is_file($SciPhoto_$2.fits)){
+        echo astroGalbox_which_box: $DirPhoto_$(boxBand) $SciPhoto_$(boxBand).fits
+        astroGalbox_find_and_link $DirPhoto_$(boxBand) $SciPhoto_$(boxBand).fits
+        if(!is_file($SciPhoto_$2.fits)){
+            print 'astroGalbox_which_box: Error! Could not find $SciPhoto_$2.fits under current directory!\n' {}
+            return
+        }
+        get_image_size $SciPhoto_$(boxBand).fits # get Map NAXIS nAxis1 nAxis2
+        !\rm $SciPhoto_$(boxBand).fits
+    } else {
+        get_image_size $SciPhoto_$(boxBand).fits # get Map NAXIS nAxis1 nAxis2
+    }
+    set nBoxStep1 = $xStep_$(boxBand)
+    set nBoxStep2 = $yStep_$(boxBand)
+    set nBoxBuff1 = $gBuff_$(boxBand)
+    set nBoxBuff2 = $fBuff_$(boxBand)
+    set nBoxSize1 = float(nAxis1)/float(nBoxStep1)
+    set nBoxSize2 = float(nAxis2)/float(nBoxStep2)
+    if((nBoxSize1-int(nBoxSize1))>0.0) {set nBoxSize1=int(nBoxSize1)+1}
+    if((nBoxSize2-int(nBoxSize2))>0.0) {set nBoxSize2=int(nBoxSize2)+1}
+    set nBoxPosX0 = int( (($3)-1.0)/nBoxStep1+1 )
+    set nBoxPosY0 = int( (($4)-1.0)/nBoxStep2+1 )
+    set iBoxFound = int(nBoxPosY0-1)*int(nBoxSize1)+int(nBoxPosX0-1)+1 # iBoxId starts from 1
+    print 'astroGalbox_which_box: $3 $4 is inside box $(iBoxFound)\n' {}
+
+
+astroGalbox_make_boxes 05
+    if($?1==0||$?2==0||$?3==0||$?4==0||$?5==0) {
+        print 'astroGalbox_make_boxes map.fits xstep ystep xbuffer ybuffer\n' {} return
+    }
+    load astroPhot.sm
+    load astroGalfit.sm
+    # check command (software dependency)
+    if(!$?astroGalbox_check_command_ok) {astroGalbox_check_command}
+    if(!$astroGalbox_check_command_ok) {return}
+    # prepare to divide input fits image into small boxes
+    get_image_size $1 # get Map NAXIS nAxis1 nAxis2
+    set nBoxStep1 = $2
+    set nBoxStep2 = $3
+    set nBoxBuff1 = $4
+    set nBoxBuff2 = $5
+    set nBoxSize1 = float(nAxis1)/float($2)
+    set nBoxSize2 = float(nAxis2)/float($3)
+    if((nBoxSize1-int(nBoxSize1))>0.0) {set nBoxSize1=int(nBoxSize1)+1}
+    if((nBoxSize2-int(nBoxSize2))>0.0) {set nBoxSize2=int(nBoxSize2)+1}
+    declare nBoxVolume 0
+    declare astroGalbox_goodBox 0
+    declare astroGalbox_goodObj 0
+    ## print "showobj.ds9.reg" '\# \nimage\n' {} #<Added><20150223><DzLIU>#
+    do iBox=1,nBoxSize1*nBoxSize2 {
+        #if($iBox==117) { #<TODO># set the number to start from that iBox
+        #    set dimen(astroGalbox_goodBox) = 56
+        #    set dimen(astroGalbox_goodObj) = 56
+        #    set astroGalbox_goodObj[dimen(astroGalbox_goodObj)-1] = 1663
+        #}
+        if($iBox>=1) { #<TODO># set the number to start from that iBox
+            echo 
+            echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+            echo 
+            echo astroGalbox_make_box: $iBox
+            astroGalbox_make_box $iBox
+            if(nBoxVol>0) {
+                # write the box to a ds9 region file #<Added><20150223><DzLIU>#
+                if(sum(astroGalbox_goodObj)==0) { 
+                print "showbox.ds9.reg" '\# \nimage\n' {} #<Added><20150223><DzLIU># #<MovedHere><20150324><DzLIU>#
+                print "showbox.bash" '\# \nds9 -title ds9showbox -scale mode 99 $1 -region showbox.ds9.reg &\n' {} } #<Added><20150324><DzLIU>#
+                print +"showbox.ds9.reg" 'box($(nBoxPosXC),$(nBoxPosYC),$(nBoxStep1),$(nBoxStep2),0) \# text={$iBox}\n' {}
+                set astroGalbox_goodBox = astroGalbox_goodBox concat $iBox
+                set astroGalbox_goodObj = astroGalbox_goodObj concat nBoxVol
+            }
+            # echo 
+            echo dimen(astroGalbox_goodBox) = $(dimen(astroGalbox_goodBox))
+            # echo 
+            echo sum(astroGalbox_goodObj) = $(sum(astroGalbox_goodObj))
+        }
+    }
+    # now we prepared all good boxes and runbox*.sh
+    # start to make a do_qsub
+
+astroGalbox_make_box 07
+    # 
+    # aim: make a box inside a big fits image
+    # input 1: boxid
+    # input 2,3,4,5: boxrect i1,i2,j1,j2 (optional)
+    # input 6,7: boxbuffer nBoxBuff1, nBoxBuff2 (optional, you can also directly set nBoxBuff1 = 10 set nBoxBuff2 = 10)
+    # required vectors: idF pxF pyF pxG pyG
+    # idF is the id of prior sources
+    # pxF is the PosX of prior sources
+    # pyF is the PosY of prior sources
+    # pxG is the ParamFitPosX/ParamMinPosX/ParamMaxPosX of prior sources
+    # pyG is the ParamFitPosY/ParamMinPosY/ParamMaxPosY of prior sources
+    # 
+    if($?1==0) {
+        print 'Usage:\n    astroGalbox_make_box boxid [boxi1 boxi2 boxj1 boxj2 [buff1 buff2]]\n' {} return
+    }
+    ##if(is_vector(nBoxSize1)==0||is_vector(nBoxSize2)==0) {
+    ##    print 'astroGalbox_make_box map.fits boxid\n' {}
+    ##    print 'astroGalbox_make_box needs vectors: nBoxSize1 nBoxSize2 etc.\n' {}
+    ##    print 'please first run the following macro to intialize: \n' {}
+    ##    print 'astroGalbox_make_boxes map.fits xstep ystep xbuffer ybuffer\n' {}
+    ##    return
+    ##}
+    if(is_vector(pxF)==0||is_vector(pyF)==0) {
+        print 'astroGalbox_make_box boxid\n' {}
+        print 'astroGalbox_make_box needs vectors: pxF pyF etc.\n' {}
+        print 'and also these variables $SciPhoto_$(boxBand), $RmsPhoto_$(boxBand), $PsfPhoto_$(boxBand) <TODO>\n' {}
+        print 'please first read catalog then convert ra dec to pxF pyF.\n' {}
+        return
+    }
+    if(!$?SciPhoto_$(boxBand)){print 'astroGalbox_make_box: Error! SciPhoto_$(boxBand) not defined!\n'{} return}
+    if(!$?RmsPhoto_$(boxBand)){print 'astroGalbox_make_box: Error! RmsPhoto_$(boxBand) not defined!\n'{} return}
+    if(!$?PsfPhoto_$(boxBand)){print 'astroGalbox_make_box: Error! PsfPhoto_$(boxBand) not defined!\n'{} return}
+    set nBoxId = $1 # set pxF = $2 set pyF = $3
+    set nBoxDir = {"}+sprintf('box%0d',$1)+{"}
+    set nBoxVol = 0
+    # decide box rect
+    if(!$?2||!$?3||!$?4||!$?5) {
+        # decide box rect by dividing image into every small box
+        set nBoxPosY0 = int( int(nBoxId-1) / int(nBoxSize1) + 1 )
+        set nBoxPosX0 = int( int(nBoxId-1) % int(nBoxSize1) + 1 )
+        if(nBoxPosX0>nBoxSize1){print 'astroGalbox_make_box: Error! nBoxId=$(nBoxId) out of x range!\n'{} return}
+        if(nBoxPosY0>nBoxSize2){print 'astroGalbox_make_box: Error! nBoxId=$(nBoxId) out of y range!\n'{} return}
+        if(!is_vector(nBoxStep1)){print 'astroGalbox_make_box: Error! nBoxId=$(nBoxId) required vector nBoxStep1!\n'{} return}
+        if(!is_vector(nBoxStep2)){print 'astroGalbox_make_box: Error! nBoxId=$(nBoxId) required vector nBoxStep2!\n'{} return}
+        set nBoxPosI1 = (nBoxPosX0-1) * nBoxStep1
+        set nBoxPosJ1 = (nBoxPosY0-1) * nBoxStep2
+        set nBoxPosI2 = (nBoxPosX0+0) * nBoxStep1 - 1 + 1  #<corrected><20150223><dzliu># step is int, width should include fractional region between steps
+        set nBoxPosJ2 = (nBoxPosY0+0) * nBoxStep2 - 1 + 1  #<corrected><20150223><dzliu># step is int, width should include fractional region between steps
+        set nBoxPosXC = float(nBoxPosI1+1+nBoxPosI2+1)/2.0 #<corrected><20150223><dzliu># step is int, width should include fractional region between steps
+        set nBoxPosYC = float(nBoxPosJ1+1+nBoxPosJ2+1)/2.0 #<corrected><20150223><dzliu># step is int, width should include fractional region between steps
+        set nBoxWidth = float(nBoxStep1+1.0)               #<corrected><20150223><dzliu># step is int, width should include fractional region between steps
+        set nBoxHaute = float(nBoxStep2+1.0)               #<corrected><20150223><dzliu># step is int, width should include fractional region between steps
+    } else {
+        # directly input box rect <Added><20150218><DzLIU>
+        set nBoxPosI1 = $2
+        set nBoxPosI2 = $3
+        set nBoxPosJ1 = $4
+        set nBoxPosJ2 = $5
+    }
+    # decide box buffer
+    if($?6) {set nBoxBuff1 = $6}
+    if($?7) {set nBoxBuff2 = $7}
+    if(!is_vector(nBoxBuff1)) {set nBoxBuff1=30}
+    if(!is_vector(nBoxBuff2)) {set nBoxBuff2=30}
+    # check image size
+    # if(!is_vector(nAxis1)||!is_vector(nAxis2)) {
+    load astroPhot.sm
+    get_image_size $SciPhoto_$(boxBand)".fits" # }
+    # now we got the box rect i,j coordinate, start to select the buffer rect
+    set nBoxLi1 = nBoxPosI1 - nBoxBuff1
+    set nBoxLj1 = nBoxPosJ1 - nBoxBuff2
+    set nBoxLi2 = nBoxPosI2 + nBoxBuff1
+    set nBoxLj2 = nBoxPosJ2 + nBoxBuff2
+    set nBoxLi1 = nBoxLi1>=0 ? nBoxLi1 : 0                #<TODO># CrabFitsImageCrop should take care of cutting range overflow
+    set nBoxLj1 = nBoxLj1>=0 ? nBoxLj1 : 0                #<TODO># CrabFitsImageCrop should take care of cutting range overflow
+    set nBoxLi2 = nBoxLi2<=nAxis1-1 ? nBoxLi2 : nAxis1-1  #<TODO># CrabFitsImageCrop should take care of cutting range overflow
+    set nBoxLj2 = nBoxLj2<=nAxis2-1 ? nBoxLj2 : nAxis2-1  #<TODO># CrabFitsImageCrop should take care of cutting range overflow
+    # now we got the buffer rect, start to select objects inside box and buffer box
+    # requiring pxF pyF sciMap rmsMap psfMap
+    # outputing PosX PosY fit.param fit.input fit.limit
+    if(nBoxLi2==nAxis1-1 && nBoxLj2==nAxis2-1) { #<fixed><20150430><dzliu># now make sure no box core overlapped
+        set pcF = (pxF>=nBoxPosI1+1 && pxF<=nBoxPosI2+1 && pyF>=nBoxPosJ1+1 && pyF<=nBoxPosJ2+1) # obj in box
+        set pbF = (pxF>=nBoxLi1+1   && pxF<=nBoxLi2+1   && pyF>=nBoxLj1+1   && pyF<=nBoxLj2+1)   # obj in buffer box
+    }
+    if(nBoxLi2==nAxis1-1 && nBoxLj2!=nAxis2-1) { #<fixed><20150430><dzliu># now make sure no box core overlapped
+        set pcF = (pxF>=nBoxPosI1+1 && pxF<=nBoxPosI2+1 && pyF>=nBoxPosJ1+1 && pyF<nBoxPosJ2+1) # obj in box
+        set pbF = (pxF>=nBoxLi1+1   && pxF<=nBoxLi2+1   && pyF>=nBoxLj1+1   && pyF<nBoxLj2+1)   # obj in buffer box
+    }
+    if(nBoxLi2!=nAxis1-1 && nBoxLj2==nAxis2-1) { #<fixed><20150430><dzliu># now make sure no box core overlapped
+        set pcF = (pxF>=nBoxPosI1+1 && pxF<nBoxPosI2+1 && pyF>=nBoxPosJ1+1 && pyF<=nBoxPosJ2+1) # obj in box
+        set pbF = (pxF>=nBoxLi1+1   && pxF<nBoxLi2+1   && pyF>=nBoxLj1+1   && pyF<=nBoxLj2+1)   # obj in buffer box
+    }
+    if(nBoxLi2!=nAxis1-1 && nBoxLj2!=nAxis2-1) { #<fixed><20150430><dzliu># now make sure no box core overlapped
+        set pcF = (pxF>=nBoxPosI1+1 && pxF<nBoxPosI2+1 && pyF>=nBoxPosJ1+1 && pyF<nBoxPosJ2+1) # obj in box
+        set pbF = (pxF>=nBoxLi1+1   && pxF<nBoxLi2+1   && pyF>=nBoxLj1+1   && pyF<nBoxLj2+1)   # obj in buffer box
+    }
+    set nBoxVol = sum(pcF>0) # number of obj in box
+    if($verbose){print 'astroGalbox_make_box: nBoxId=$1 ' {}
+                 if(is_vector(nBoxSize1)&&is_vector(nBoxSize1)) {
+                 print '(starting from 1 up to ' {}
+                 print '$(nBoxSize1)x$(nBoxSize2)=$(nBoxSize1*nBoxSize2)) ' {} }
+                 print 'box=[$(nBoxPosI1):$(nBoxPosI2),$(nBoxPosJ1):$(nBoxPosJ2)] ' {}
+                 print 'buffer=[$(nBoxLi1):$(nBoxLi2),$(nBoxLj1):$(nBoxLj2)] ' {}
+                 print 'nobj=$(sum(pcF>0)) nfit=$(sum(pbF>0)) \n' {}
+                #print 'getBox: nBoxPosX0=$(nBoxPosX0) nBoxPosY0=$(nBoxPosY0)\n'{}
+    }
+    if(nBoxVol>0) {
+        # set PosX = pxF-nBoxLi1 if(pbF>0) set PosY = pyF-nBoxLj1 if(pbF>0)
+        # now we got the objects inside buffer box, start to cut buffer box fits image
+        astroGalbox_cd nBoxDir
+        !pwd
+   echo !CrabFitsImageCrop ../$SciPhoto_$(boxBand).fits -rec $(nBoxLi1) $(nBoxLj1) $(nBoxLi2) $(nBoxLj2) -out sci.fits > sci.fits.log
+        !CrabFitsImageCrop ../$SciPhoto_$(boxBand).fits -rec $(nBoxLi1) $(nBoxLj1) $(nBoxLi2) $(nBoxLj2) -out sci.fits > sci.fits.log
+   echo !CrabFitsImageCrop ../$RmsPhoto_$(boxBand).fits -rec $(nBoxLi1) $(nBoxLj1) $(nBoxLi2) $(nBoxLj2) -out rms.fits > rms.fits.log
+        !CrabFitsImageCrop ../$RmsPhoto_$(boxBand).fits -rec $(nBoxLi1) $(nBoxLj1) $(nBoxLi2) $(nBoxLj2) -out rms.fits > rms.fits.log
+        !ln -fs            ../$PsfPhoto_$(boxBand).fits psf.fits
+        # now we got all fits image ready, start to check the sci map (in case all nan)
+        verbose 0 !sumpix -n 12 sci.fits > ".sum.pix.tmp" # <fixed> use double
+        data ".sum.pix.tmp" read tempSumPix 1 !rm ".sum.pix.tmp"
+        verbose 1
+        if(tempSumPix!=0) {
+            # now we checked sci map ok, start to prepare galfit input file
+            astroGalbox_make_galfit
+            # now we extract obj_fit & obj_fix respectively (if there has any obj with pmG==0 and pbF>0)
+            ##echo dimen(pmG) = $(dimen(pmG))
+            ##echo dimen(pbF) = $(dimen(pbF))
+            ##echo dimen(pxF) = $(dimen(pxF))
+            ##echo dimen(pyF) = $(dimen(pyF))
+            if(sum(pmG==0 && pbF>0)>0) { # pmG is flagSubtract, pbF is flagObjInBox
+                set paF = (pmG==0)
+                astroGalbox_make_galfit "obj_fix"
+                set paF = (pmG>0)
+                astroGalbox_make_galfit "obj_fit"
+            }
+            # write galfit runbox script
+            print     "../runbox"$1".sh" '\#!/bin/bash\n' {}
+            print    +"../runbox"$1".sh" 'cd $(nBoxDir)/; pwd\n' {}
+            print    +"../runbox"$1".sh" 'rm fit.log galfit.* > /dev/null 2>&1\n' {}
+            print    +"../runbox"$1".sh" 'galfit fit.input > fit.out\n\n' {}
+            !chmod +x "../runbox"$1".sh"
+        } else {
+            # <added><20160101><dzliu> # if sci map pixels are all zeros
+            astroGalbox_make_galfit "map_null"
+            print     "../runbox"$1".sh" '\#!/bin/bash\n' {}
+            !chmod +x "../runbox"$1".sh"
+        }
+        # over and out
+        cd ..
+    } else {
+        if($verbose){print 'astroGalbox_make_box: Warning! No object in this box!\n' {}}
+    }
+    # done 
+
+astroGalbox_make_galfit 01
+    # make galfit input files in a box directory
+    # input $1 is the basename, optional, default is "fit"
+    # but the following vectors are required:
+    #   pxF pxG (PosX ParamFitPosX)
+    #   pyF pyG (PosY ParamFitPosY)
+    #   pmF pmG (Mags ParamFitMags)
+    #   paF pbF pcF (IsObjToFit IsObjInBuffer IsObjInBox)
+    #   nBoxLi1 nBoxLj1
+    #   idF
+    load astroGalfit.sm
+    astroGalfitOnMute
+    if(!is_vector(paF)) {set paF = pxF*0+1}
+    if(dimen(paF)!=dimen(pxF)) {set paF = pxF*0+1}
+    if(!is_vector(pbF)) {set pbF = pxF*0+1}
+    if(dimen(pbF)!=dimen(pxF)) {set pbF = pxF*0+1}
+    if(!is_vector(pcF)) {set pcF = pxF*0+1}
+    if(dimen(pcF)!=dimen(pxF)) {set pcF = pxF*0+1}
+    set PosX = pxF-nBoxLi1 if(paF>0 && pbF>0)
+    set PosY = pyF-nBoxLj1 if(paF>0 && pbF>0)
+    initGalfitParam PosX PosY
+    set Note = sprintf('%0.0f ',float(idF))
+    set Note = (pcF>0) ? Note : {"-1"} if(paF>0 && pbF>0)
+    ##set ParamLx2 = nBoxLi2-nBoxLi1+1 set ParamLx1 = 1
+    ##set ParamLy2 = nBoxLj2-nBoxLj1+1 set ParamLy1 = 1
+    ##set ParamFitMags = ParamFitMags*0+1
+    ##set ParamMinMags = ParamMinMags*0-10.0
+    ##set ParamMaxMags = ParamMaxMags*0+20.0
+    ##set Mags = Mags*0.0+5.0
+    if($?SkyValue_$(boxBand)) {
+        set SkyValue = $SkyValue_$(boxBand) #<added><20150718><dzliu># skyvalue
+    }
+    if($?SkyDoFit_$(boxBand)) {
+        set ParamFitSkyValue = $SkyDoFit_$(boxBand) #<added><20160530><dzliu># skyvalue
+    }
+    if($?ParamFitSkyValue_$(boxBand)) {
+        set ParamFitSkyValue = $ParamFitSkyValue_$(boxBand) #<added><20160530><dzliu># skyvalue
+    }
+    if(is_vector(pmF)){if(dimen(pmF)==dimen(pbF)){ #<added><20150429><dzliu># fix some objects
+        set Mags = pmF if(paF>0 && pbF>0)
+    }}
+    if(is_vector(pmG)){if(dimen(pmG)==dimen(pbF)){ #<added><20150429><dzliu># fix some objects
+        set ParamFitMags = pmG if(paF>0 && pbF>0)
+    }}
+    if(is_vector(pxG)){if(dimen(pxG)==dimen(pbF)){ #<added><20150430><dzliu># vary the position
+        set ParamFitPosX = (pxG>0) if(paF>0 && pbF>0)
+        set ParamMinPosX = (pxG>0) ? 0.0-pxG : 0 if(paF>0 && pbF>0)
+        set ParamMaxPosX = (pxG>0) ? 0.0+pxG : 0 if(paF>0 && pbF>0)
+    }}
+    if(is_vector(pyG)){if(dimen(pyG)==dimen(pbF)){ #<added><20150430><dzliu># vary the position
+        set ParamFitPosY = (pyG>0) if(paF>0 && pbF>0)
+        set ParamMinPosY = (pyG>0) ? 0.0-pyG : 0 if(paF>0 && pbF>0)
+        set ParamMaxPosY = (pyG>0) ? 0.0+pyG : 0 if(paF>0 && pbF>0)
+    }}
+    if($?1) {
+        if('$1'=='obj_fit') {
+            writeGalfitParam $1.param
+            writeGalfitLimit $1.limit
+            writeGalfitInput $1.input $1.fits fit.fits rms.fits psf.fits $1.limit
+            if($verbose) {
+                echo astroGalbox::writeGalfitInput: $1.input $1.fits fit.fits rms.fits psf.fits $1.limit
+            }
+        }
+        if('$1'=='obj_fix') {
+            set SkyValue = 0.0
+            writeGalfitParam $1.param
+            writeGalfitLimit $1.limit
+            writeGalfitInput $1.input sci.fits $1.fits rms.fits psf.fits $1.limit
+            if($verbose) {
+                echo astroGalbox::writeGalfitInput: $1.input sci.fits $1.fits rms.fits psf.fits $1.limit
+            }
+            !galfit $1.input > $1.out
+            #<added><20150719><dzliu># subtract faint sources then fit - <TODO> output fits obj_fit.fits
+            astroGalfitSubFits sci $1[2] obj_fit
+        }
+        if('$1'=='sim_model') {
+            set SkyValue = 0.0
+            writeGalfitParam $1.param
+            writeGalfitLimit $1.limit
+            writeGalfitInput $1.input sci.fits $1.fits rms.fits psf.fits $1.limit
+            if($verbose) {
+                echo astroGalbox::writeGalfitInput: $1.input sci.fits $1.fits rms.fits psf.fits $1.limit
+            }
+            !galfit $1.input > $1.out
+            #<added><20160530><dzliu># add simulated model source then fit - <TODO> output fits sim_coadd.fits
+            astroGalfitAddFits sci $1[2] sim_coadd
+        }
+        # <added><20160101><dzliu> # if sci map pixels are all zeros
+        if('$1'=='map_null') {
+            set ParamFitPosX = float(ParamFitPosX*0)
+            set ParamFitPosY = float(ParamFitPosY*0)
+            set ParamFitMags = float(ParamFitMags*0)
+            set Mags = float(Mags*0+99)
+            set SkyValue = 0.0
+            writeGalfitParam fit.param
+            writeGalfitLimit fit.limit
+            writeGalfitInput fit.input sci.fits fit.fits rms.fits psf.fits fit.limit
+            if($verbose) {
+                echo astroGalbox::writeGalfitInput: fit.input sci.fits fit.fits rms.fits psf.fits fit.limit (null map)
+            }
+            !galfit fit.input > fit.out
+            !grep -h "psf\ *:" fit.out > fit.log
+        }
+    } else {
+        writeGalfitParam fit.param
+        writeGalfitLimit fit.limit
+        writeGalfitInput fit.input
+    }
+    astroGalfitUnMute
+    # define aaa ?
+    # done 
+
+astroGalbox_read_boxes 05
+    if($?1==0||$?2==0||$?3==0||$?4==0||$?5==0) {
+        print 'astroGalbox_read_boxes map.fits xstep ystep xbuffer ybuffer\n' {} return
+    }
+    load astroPhot.sm
+    load astroGalfit.sm
+    # check command (software dependency)
+    if(!$?astroGalbox_check_command_ok) {astroGalbox_check_command}
+    if(!$astroGalbox_check_command_ok) {return}
+    # 
+    get_image_size $1 # get Map NAXIS nAxis1 nAxis2
+    set nBoxStep1 = $2
+    set nBoxStep2 = $3
+    set nBoxBuff1 = $4
+    set nBoxBuff2 = $5
+    set nBoxSize1 = float(nAxis1)/float($2)
+    set nBoxSize2 = float(nAxis2)/float($3)
+    if((nBoxSize1-int(nBoxSize1))>0.0) {set nBoxSize1=int(nBoxSize1)+1}
+    if((nBoxSize2-int(nBoxSize2))>0.0) {set nBoxSize2=int(nBoxSize2)+1}
+    set astroGalbox_countBox = 0
+    declare astroGalbox_goodBox 0
+    declare astroGalbox_ResultIObj 0
+    declare astroGalbox_ResultPosX 0
+    declare astroGalbox_ResultPosY 0
+    declare astroGalbox_ResultMags 0
+    declare astroGalbox_ResultMagsErr 0
+    declare astroGalbox_ResultRmsPix 0
+    declare astroGalbox_ResultResPix 0
+    declare astroGalbox_ResultCloDis 0
+    do iBox=1,nBoxSize1*nBoxSize2 { # 
+        if(astroGalbox_is_dir("box"$iBox)) {
+            if(is_file("box"$iBox"/fit.log")) {
+                echo 
+                echo "box"$iBox""
+                echo 
+                astroGalboxOnMute
+                astroGalbox_read_box $iBox
+                astroGalboxUnMute
+                if(sum(astroGalbox_goodObj)>0) {
+                set ResultNote = number(Note) # set ResultNote = ResultNote if(ResultNote>0) #<Corrected><20150222><DzLIU> check dimen of Note
+                set astroGalbox_ResultIObj = astroGalbox_ResultIObj concat ResultNote #<Corrected><20150124><DzLIU># use number() instead of float()
+                set astroGalbox_ResultPosX = astroGalbox_ResultPosX concat ResultPosX
+                set astroGalbox_ResultPosY = astroGalbox_ResultPosY concat ResultPosY
+                set astroGalbox_ResultMags = astroGalbox_ResultMags concat ResultMags
+                set astroGalbox_ResultMagsErr = astroGalbox_ResultMagsErr concat ResultMagsErr
+                set astroGalbox_ResultRmsPix  = astroGalbox_ResultRmsPix  concat ResultRmsPix
+                set astroGalbox_ResultResPix  = astroGalbox_ResultResPix  concat ResultResPix
+                set astroGalbox_ResultCloDis  = astroGalbox_ResultCloDis  concat ResultCloDis
+                set astroGalbox_countBox = astroGalbox_countBox + 1
+                #print '\n' {}
+                print 'astroGalbox_read_boxes: got $(dimen(ResultNote)) results from box$iBox\n' {}
+                # now we got the results for one box
+                # print {PosX PosY ResultRmsPix ResultMags ResultMagsErr Note}
+                # and concat the results into large arrays astroGalbox_Result***
+                } else {
+                #print '\n' {}
+                print 'astroGalbox_read_boxes: box$iBox contains no good object.\n' {}
+                }
+                # <DEBUG>
+                # if(astroGalbox_countBox>=10) {return} #<TODO><Debug>#
+            } else {
+                #print '\n' {}
+                print 'astroGalbox_read_boxes: Warning!\n' {}
+                print 'astroGalbox_read_boxes: Warning!\n' {}
+                print 'astroGalbox_read_boxes: Warning!\n' {}
+                print 'astroGalbox_read_boxes: Warning! "box"$iBox"/fit.log" not found!!\n\n' {}
+                #continue
+                #return
+            }
+        }
+    }
+    # sort final results by object id
+    sort{astroGalbox_ResultIObj astroGalbox_ResultPosX astroGalbox_ResultPosY \
+         astroGalbox_ResultMags astroGalbox_ResultMagsErr astroGalbox_ResultRmsPix astroGalbox_ResultResPix}
+    if($?verbose){if($verbose) {
+        print '\n' {}
+        print 'astroGalbox_read_boxes: read $(dimen(astroGalbox_ResultIObj)) results from boxes\n' {}
+        print 'astroGalbox_read_boxes: please check these vectors and their dimensions: \n' {}
+        print 'astroGalbox_read_boxes:     astroGalbox_ResultIObj    $(dimen(astroGalbox_ResultIObj))    \n' {}
+        print 'astroGalbox_read_boxes:     astroGalbox_ResultPosX    $(dimen(astroGalbox_ResultPosX))    \n' {}
+        print 'astroGalbox_read_boxes:     astroGalbox_ResultPosY    $(dimen(astroGalbox_ResultPosY))    \n' {}
+        print 'astroGalbox_read_boxes:     astroGalbox_ResultMags    $(dimen(astroGalbox_ResultMags))    \n' {}
+        print 'astroGalbox_read_boxes:     astroGalbox_ResultMagsErr $(dimen(astroGalbox_ResultMagsErr)) \n' {}
+        print 'astroGalbox_read_boxes:     astroGalbox_ResultRmsPix  $(dimen(astroGalbox_ResultRmsPix))  \n' {}
+        print 'astroGalbox_read_boxes:     astroGalbox_ResultResPix  $(dimen(astroGalbox_ResultResPix))  \n' {}       
+        print '\n' {}
+    }}
+
+astroGalbox_read_box 07
+    if($?1==0) {
+        print 'Usage: astroGalbox_read_box boxid [boxi1 boxi2 boxj1 boxj2 [buff1 buff2]]\n' {} return
+    }
+    # check command (software dependency)
+    if(!$?astroGalbox_check_command_ok) {astroGalbox_check_command}
+    if(!$astroGalbox_check_command_ok) {return}
+    # prepare to read one box results
+    set nBoxId = $1
+    set nBoxDir = {"}+sprintf('box%0d',$1)+{"}
+    # decide box rect
+    if(!$?2||!$?3||!$?4||!$?5) {
+        # decide box rect by dividing image into every small box
+        if(!is_vector(nBoxSize1)){print 'astroGalbox_read_box: Error! nBoxId=$(nBoxId) requires vector nBoxSize1!\n' {} return}
+        if(!is_vector(nBoxSize2)){print 'astroGalbox_read_box: Error! nBoxId=$(nBoxId) requires vector nBoxSize2!\n' {} return}
+        set nBoxPosY0 = int( int(nBoxId-1) / int(nBoxSize1) + 1 )
+        set nBoxPosX0 = int( int(nBoxId-1) % int(nBoxSize1) + 1 )
+        if(nBoxPosX0>nBoxSize1){print 'astroGalbox_read_box: Error! nBoxId=$(nBoxId) out of x range!\n'{} return}
+        if(nBoxPosY0>nBoxSize2){print 'astroGalbox_read_box: Error! nBoxId=$(nBoxId) out of y range!\n'{} return}
+        if(!is_vector(nBoxStep1)){print 'astroGalbox_read_box: Error! nBoxId=$(nBoxId) requires vector nBoxStep1!\n'{} return}
+        if(!is_vector(nBoxStep2)){print 'astroGalbox_read_box: Error! nBoxId=$(nBoxId) requires vector nBoxStep2!\n'{} return}
+        set nBoxPosI1 = (nBoxPosX0-1) * nBoxStep1
+        set nBoxPosJ1 = (nBoxPosY0-1) * nBoxStep2
+        set nBoxPosI2 = (nBoxPosX0+0) * nBoxStep1 - 1 + 1  #<corrected><20150223><dzliu># step is int, width should include fractional region between steps
+        set nBoxPosJ2 = (nBoxPosY0+0) * nBoxStep2 - 1 + 1  #<corrected><20150223><dzliu># step is int, width should include fractional region between steps
+        set nBoxPosXC = float(nBoxPosI1+1+nBoxPosI2+1)/2.0 #<corrected><20150223><dzliu># step is int, width should include fractional region between steps
+        set nBoxPosYC = float(nBoxPosJ1+1+nBoxPosJ2+1)/2.0 #<corrected><20150223><dzliu># step is int, width should include fractional region between steps
+        set nBoxWidth = float(nBoxStep1+1.0)               #<corrected><20150223><dzliu># step is int, width should include fractional region between steps
+        set nBoxHaute = float(nBoxStep2+1.0)               #<corrected><20150223><dzliu># step is int, width should include fractional region between steps
+    } else {
+        # directly input box rect <Added><20150218><DzLIU>
+        set nBoxPosI1 = $2
+        set nBoxPosI2 = $3
+        set nBoxPosJ1 = $4
+        set nBoxPosJ2 = $5
+    }
+    # decide box buffer
+    if($?6) {set nBoxBuff1 = $6}
+    if($?7) {set nBoxBuff2 = $7}
+    if(!is_vector(nBoxBuff1)) {set nBoxBuff1=0}
+    if(!is_vector(nBoxBuff2)) {set nBoxBuff2=0}
+    # now we got the box rect i,j coordinate, start to select the buffer rect
+    set nBoxLi1 = nBoxPosI1 - nBoxBuff1
+    set nBoxLj1 = nBoxPosJ1 - nBoxBuff2
+    set nBoxLi2 = nBoxPosI2 + nBoxBuff1
+    set nBoxLj2 = nBoxPosJ2 + nBoxBuff2
+    set nBoxLi1 = nBoxLi1>=0 ? nBoxLi1 : 0
+    set nBoxLj1 = nBoxLj1>=0 ? nBoxLj1 : 0
+    if(is_vector(nAxis1)&&is_vector(nAxis2)) {
+    set nBoxLi2 = nBoxLi2<=nAxis1-1 ? nBoxLi2 : nAxis1-1
+    set nBoxLj2 = nBoxLj2<=nAxis2-1 ? nBoxLj2 : nAxis2-1
+    }
+    # ok
+    # now read the fit.fits
+    # chdir BoxDir
+    chdir $(nBoxDir)
+    astroGalboxOnMute
+    readGalfitParam fit.param
+    readGalfitResult fit.fits
+    astroGalboxUnMute
+    set astroGalbox_goodObj = (ResultType!='sky')
+    foreach astroGalbox_goodVar {ResultType ResultPosX ResultPosXErr ResultPosY ResultPosYErr} {
+        if(dimen(astroGalbox_goodObj)!=dimen($astroGalbox_goodVar)) {
+            echo
+            echo "astroGalbox_read_box: Error!" $astroGalbox_goodVar has different dimension than astroGalbox_goodObj!
+            echo
+            define errorbreak ?
+        } else {
+            set $astroGalbox_goodVar = $astroGalbox_goodVar if(astroGalbox_goodObj)
+        }
+    }
+    foreach astroGalbox_goodVar {ResultMags ResultMagsErr} {
+        if(dimen(astroGalbox_goodObj)==dimen($astroGalbox_goodVar)) {
+            set $astroGalbox_goodVar = $astroGalbox_goodVar if(astroGalbox_goodObj)
+        }
+    }
+    # <TODO> we will only save objects which have Note == Id
+    set astroGalbox_goodObj = (number(Note)>0) #<Corrected><20150124><DzLIU># use number() instead of float()
+    foreach astroGalbox_goodVar {ResultType ResultPosX ResultPosXErr ResultPosY ResultPosYErr ResultMags ResultMagsErr} {
+        if(dimen(astroGalbox_goodObj)!=dimen($astroGalbox_goodVar)) {
+            echo
+            echo "astroGalbox_read_box: Error!" $astroGalbox_goodVar has different dimension than astroGalbox_goodObj!
+            echo
+            define errorbreak ?
+        } else {
+            set $astroGalbox_goodVar = $astroGalbox_goodVar if(astroGalbox_goodObj)
+        }
+    }
+    foreach astroGalbox_goodVar {ResultResPix ResultRmsPix} {
+        if(dimen(astroGalbox_goodObj)==dimen($astroGalbox_goodVar)) {
+            set $astroGalbox_goodVar = $astroGalbox_goodVar if(astroGalbox_goodObj)
+        }
+    }
+    foreach astroGalbox_goodVar {IObj PosX PosY Mags Rads Sers Elli Roti Type Note} {
+        if(dimen(astroGalbox_goodObj)!=dimen($astroGalbox_goodVar)) {
+            echo
+            echo "astroGalbox_read_box: Error!" $astroGalbox_goodVar has different dimension than astroGalbox_goodObj!
+            echo
+            define errorbreak ?
+        } else {
+            set $astroGalbox_goodVar = $astroGalbox_goodVar if(astroGalbox_goodObj)
+        }
+    }
+    if($verbose) {
+    # <TODO> we only read object inside box (rather than buffer box) (identified by positive Note number)
+    echo "astroGalbox_read_box: read "$(dimen(Type))" results from "$(nBoxDir)"/fit.param" 
+    echo "astroGalbox_read_box: read "$(dimen(ResultType))" results from "$(nBoxDir)"/fit.fits" 
+    ## echo "astroGalbox_read_box: print {PosX PosY Mags Type Note ResultPosX ResultPosY ResultMags ResultMagsErr}"}
+    # <Added><20150222><DzLIU> get noise, residual, crowdness, and sci map flux.
+    # 
+    # Mute
+    astroGalboxOnMute
+    # 
+    # -----------------------------------------------------------------------------------------------------------
+    # get noise from rms map
+    # <modified><20151221><dzliu> 
+    print "frms.aper" '%.5f  %.5f  2.0\n' {ResultPosX ResultPosY}
+    !CrabPhotAperPhot -header-no-comment rms.fits frms.ini "frms.aper" > "frms.flux"
+    !CrabTableReadColumn "frms.flux" "stddev_int" > "frms.txt" #<TODO># rms noise is stddev of rms image
+    data "frms.txt" lines 2 0 read astroGalbox_Result_frms 1
+    # 
+    # -----------------------------------------------------------------------------------------------------------
+    # get scimap flux within PSF beamsize (<TODO> use as a prior estimate of source brightness)
+    # <modified><20151221><dzliu> 
+    set psfwhm = ResultPosX*0.0 + $rBeam_$(boxBand)/$PixScale_$(boxBand)/2.0
+    print "fsci.aper" '%.5f  %.5f  %g\n' {ResultPosX ResultPosY psfwhm}
+    !CrabPhotAperPhot -header-no-comment fit.fits -ext 1 fsci.ini "fsci.aper" > "fsci.flux"
+    !CrabTableReadColumn "fsci.flux" "sum" > "fsci.txt"
+    data "fsci.txt" lines 2 0 read astroGalbox_Result_fsci 1
+    unset psfwhm
+    # 
+    # -----------------------------------------------------------------------------------------------------------
+    # get residual flux within PSF beamsize
+    # <modified><20151221><dzliu> 
+    # set psfwhm = ResultPosX*0.0 + $rBeam_$(boxBand)/$PixScale_$(boxBand)/2.0
+    # print "fres.aper" '%.5f  %.5f  %g\n' {ResultPosX ResultPosY psfwhm}
+    # !CrabPhotAperPhot -header-no-comment fit.fits -ext 3 fres.ini "fres.aper" > "fres.flux"
+    # !CrabTableReadColumn "fres.flux" "sum" > "fres.txt"
+    # data "fres.flux" lines 2 0 read astroGalbox_Result_fres 1
+    # unset psfwhm
+    load fresidual.sm
+    set astroGalbox_Result_fres = fresidual_inPixel("fit.fits[3]",ResultPosX,ResultPosY,$rBeam_$(boxBand)/$PixScale_$(boxBand)/2.0)
+    # 
+    # -----------------------------------------------------------------------------------------------------------
+    # get crowdiness i.e. gaussian weighting of all surrounding objects using PSF beamsize
+    # <modified><20151221><dzliu> 
+    load crowdiness.sm 
+    set astroGalbox_Result_fcwd = crowdiness_inPixel(ResultPosX,ResultPosY,$rBeam_$(boxBand)/$PixScale_$(boxBand),1.5)
+    # 
+    # UnMute
+    astroGalboxUnMute
+    # 
+    # <Added><20150501><dzliu> 
+    # <Added><20150501><dzliu> Add nBoxLi1,nBoxLj1 to the ResultPosX,ResultPosY
+    set ResultPosX = ResultPosX + nBoxLi1 # nBoxLi1 is the bigger box including buffer, while nBoxI1 is the box without buffer. 
+    set ResultPosY = ResultPosY + nBoxLj1 # nBoxLj1 is the bigger box including buffer, while nBoxI1 is the box without buffer. 
+    # 
+    # print what we have read
+    if($verbose) {
+        #echo ""
+        print 'astroGalbox_read_box: added $(dimen(ResultType)) results into ' {}
+        if(is_vector(astroGalbox_Result_frms)) {print 'astroGalbox_Result_frms ' {}}
+        if(is_vector(astroGalbox_Result_fres)) {print 'astroGalbox_Result_fres ' {}}
+        if(is_vector(astroGalbox_Result_fcwd)) {print 'astroGalbox_Result_fcwd ' {}}
+        if(is_vector(astroGalbox_Result_fsci)) {print 'astroGalbox_Result_fsci ' {}}
+        if(is_vector(astroGalbox_Result_frms)) {set ResultRmsPix = astroGalbox_Result_frms print 'ResultRmsPix ' {}}
+        if(is_vector(astroGalbox_Result_fres)) {set ResultResPix = astroGalbox_Result_fres print 'ResultResPix ' {}}
+        if(is_vector(astroGalbox_Result_fcwd)) {set ResultCloDis = astroGalbox_Result_fcwd print 'ResultCloDis ' {}}
+        print '\n' {}
+        #print '\n' {}
+    }
+    #
+    # cd back
+    cd ..
+    # print {PosX PosY Mags Type Note ResultPosX ResultPosY ResultMags ResultMagsErr}
+    # print {PosX PosY Mags Type Note ResultPosX ResultPosY ResultMags ResultMagsErr ResultResPix ResultRmsPix}
+    # define aaa ?
+
+astroGalbox_mosaic_boxes 05
+    if($?1==0||$?2==0||$?3==0||$?4==0||$?5==0) {
+        print 'astroGalbox_mosaic_boxes map.fits xstep ystep xbuffer ybuffer\n' {} return
+    }
+    load astroPhot.sm
+    load astroGalfit.sm
+    # check command (software dependency)
+    if(!$?astroGalbox_check_command_ok) {astroGalbox_check_command}
+    if(!$astroGalbox_check_command_ok) {return}
+    # 
+    if(!is_file($1)){
+    print '\n' {}
+    print 'astroGalbox_mosaic_boxes: Error! $1 not found under current directory! Give Ctrl+C to break!\n' {}
+    print '\n' {}
+    define errorbreak ?
+    } else {
+    if($verbose) {
+    print 'astroGalbox_mosaic_boxes: $1 $2 $3 $4 $5\n' {}
+    }
+    }
+    get_image_size $1 # get Map NAXIS nAxis1 nAxis2
+    set nBoxStep1 = $2
+    set nBoxStep2 = $3
+    set nBoxBuff1 = $4
+    set nBoxBuff2 = $5
+    set nBoxSize1 = float(nAxis1)/float($2)
+    set nBoxSize2 = float(nAxis2)/float($3)
+    if((nBoxSize1-float(int(nBoxSize1)))>0.0) {set nBoxSize1=int(nBoxSize1)+1}
+    if((nBoxSize2-float(int(nBoxSize2)))>0.0) {set nBoxSize2=int(nBoxSize2)+1}
+    # 
+    # create the iraf script "rebuild_mosaic_XXX.cl"
+    print  "rebuild_mosaic_model.cl"    'images\n\n' {}
+    print  "rebuild_mosaic_residual.cl" 'images\n\n' {}
+    print +"rebuild_mosaic_model.cl"    'imdelete rebuild_mosaic_model.fits\n' {}
+    print +"rebuild_mosaic_residual.cl" 'imdelete rebuild_mosaic_residual.fits\n' {}
+    print +"rebuild_mosaic_model.cl"    'imarith $1 * 0 rebuild_mosaic_model.fits\n' {}
+    print +"rebuild_mosaic_residual.cl" 'imarith $1 * 0 rebuild_mosaic_residual.fits\n' {}
+    print +"rebuild_mosaic_model.cl"    'print \"\"\n' {}
+    print +"rebuild_mosaic_residual.cl" 'print \"\"\n' {}
+    # 
+    do iBox=1,nBoxSize1*nBoxSize2 {
+        if(astroGalbox_is_dir("box"$iBox)) {
+            if(is_file("box"$iBox"/fit.fits")) {
+                echo 
+                echo "Mosaicing box"$iBox""
+                echo 
+                #astroGalboxOnMute
+                astroGalbox_mosaic_box $iBox
+                #astroGalboxUnMute
+            }
+        }
+    }
+    # 
+    # finish the iraf script "rebuild_mosaic_XXX.cl"
+    print +"rebuild_mosaic_model.cl"    'print \"\"\nlogout\n\n\n' {}
+    print +"rebuild_mosaic_residual.cl" 'print \"\"\nlogout\n\n\n' {}
+    print 'astroGalbox_mosaic_boxes: Successfully created IRAF script rebuild_mosaic_model.cl\n' {}
+    print 'astroGalbox_mosaic_boxes: Successfully created IRAF script rebuild_mosaic_residual.cl\n' {}
+    # 
+    # done
+
+astroGalbox_mosaic_box 05
+    # this macro will add current box geometry to "rebuild_mosaic_model.cl" IRAF script file, 
+    # so that after looping all boxes, we can run "rebuild_mosaic_model.cl" to create a final mosaic. 
+    if($?1==0) {
+        print 'Usage: astroGalbox_mosaic_box boxid [boxi1 boxi2 boxj1 boxj2 [buff1 buff2]]\n' {} return
+    }
+    # check command (software dependency)
+    if(!$?astroGalbox_check_command_ok) {astroGalbox_check_command}
+    if(!$astroGalbox_check_command_ok) {return}
+    # prepare to read one box results
+    set nBoxId = $1
+    set nBoxDir = {"}+sprintf('box%0d',$1)+{"}
+    # decide box rect <Note><20160714> same as astroGalbox_make_box
+    if(!$?2||!$?3||!$?4||!$?5) {
+        # decide box rect by dividing image into every small box
+        set nBoxPosY0 = int( int(nBoxId-1) / int(nBoxSize1) + 1 )
+        set nBoxPosX0 = int( int(nBoxId-1) % int(nBoxSize1) + 1 )
+        if(nBoxPosX0>nBoxSize1){print 'astroGalbox_make_box: Error! nBoxId=$(nBoxId) out of x range!\n'{} return}
+        if(nBoxPosY0>nBoxSize2){print 'astroGalbox_make_box: Error! nBoxId=$(nBoxId) out of y range!\n'{} return}
+        if(!is_vector(nBoxStep1)){print 'astroGalbox_make_box: Error! nBoxId=$(nBoxId) required vector nBoxStep1!\n'{} return}
+        if(!is_vector(nBoxStep2)){print 'astroGalbox_make_box: Error! nBoxId=$(nBoxId) required vector nBoxStep2!\n'{} return}
+        set nBoxPosI1 = (nBoxPosX0-1) * nBoxStep1
+        set nBoxPosJ1 = (nBoxPosY0-1) * nBoxStep2
+        set nBoxPosI2 = (nBoxPosX0+0) * nBoxStep1 - 1 + 1  #<corrected><20150223><dzliu># step is int, width should include fractional region between steps
+        set nBoxPosJ2 = (nBoxPosY0+0) * nBoxStep2 - 1 + 1  #<corrected><20150223><dzliu># step is int, width should include fractional region between steps
+        set nBoxPosXC = float(nBoxPosI1+1+nBoxPosI2+1)/2.0 #<corrected><20150223><dzliu># step is int, width should include fractional region between steps
+        set nBoxPosYC = float(nBoxPosJ1+1+nBoxPosJ2+1)/2.0 #<corrected><20150223><dzliu># step is int, width should include fractional region between steps
+        set nBoxWidth = float(nBoxStep1+1.0)               #<corrected><20150223><dzliu># step is int, width should include fractional region between steps
+        set nBoxHaute = float(nBoxStep2+1.0)               #<corrected><20150223><dzliu># step is int, width should include fractional region between steps
+    } else {
+        # directly input box rect <Added><20150218><DzLIU>
+        set nBoxPosI1 = $2
+        set nBoxPosI2 = $3
+        set nBoxPosJ1 = $4
+        set nBoxPosJ2 = $5
+    }
+    # decide box buffer <Note><20160714> same as astroGalbox_make_box
+    if($?6) {set nBoxBuff1 = $6}
+    if($?7) {set nBoxBuff2 = $7}
+    if(!is_vector(nBoxBuff1)) {set nBoxBuff1=30}
+    if(!is_vector(nBoxBuff2)) {set nBoxBuff2=30}
+    # check image size <Note><20160714> same as astroGalbox_make_box
+    # if(!is_vector(nAxis1)||!is_vector(nAxis2)) {
+    #load astroPhot.sm
+    #get_image_size $SciPhoto_$(boxBand)".fits" # }
+    # now we get the box rect i,j coordinate, which can convert box coordinate to original image coordinate
+    #set nBoxLi1 = nBoxPosI1 - nBoxBuff1
+    #set nBoxLj1 = nBoxPosJ1 - nBoxBuff2
+    #set nBoxLi2 = nBoxPosI2 + nBoxBuff1
+    #set nBoxLj2 = nBoxPosJ2 + nBoxBuff2
+    #set nBoxLi1 = nBoxLi1>=0 ? nBoxLi1 : 0                #<TODO># CrabFitsImageCrop should take care of cutting range overflow
+    #set nBoxLj1 = nBoxLj1>=0 ? nBoxLj1 : 0                #<TODO># CrabFitsImageCrop should take care of cutting range overflow
+    #set nBoxLi2 = nBoxLi2<=nAxis1-1 ? nBoxLi2 : nAxis1-1  #<TODO># CrabFitsImageCrop should take care of cutting range overflow
+    #set nBoxLj2 = nBoxLj2<=nAxis2-1 ? nBoxLj2 : nAxis2-1  #<TODO># CrabFitsImageCrop should take care of cutting range overflow
+    # #<20160130>#
+    # read box rect from sci.fits.log
+    chdir $(nBoxDir)
+    if(!is_file("sci.fits.log")) {print 'astroGalbox_mosaic_box: Error! \"sci.fits.log\" not found!\n' {} define errorbreak ?}
+    !cat "sci.fits.log" | grep 'rect(i0,j0,i1,j1)=' | sed -e 's/.*rect(i0,j0,i1,j1)=(//g' | sed -e 's/)//g' > "aaa_rect"
+    astroGalboxOnMute
+    data "aaa_rect" read {nBoxLi1 1 nBoxLj1 2 nBoxLi2 3 nBoxLj2 4}
+    !rm "aaa_rect"
+    astroGalboxUnMute
+    chdir ".."
+    # 
+    # deal with image edge pixel range problem <Added><20160714><dzliu>
+    set nBoxPosI2 = nBoxPosI2>nBoxLi2 ? nBoxLi2 : nBoxPosI2
+    set nBoxPosJ2 = nBoxPosJ2>nBoxLj2 ? nBoxLj2 : nBoxPosJ2
+    # ok
+    # now mosaic the fit.fits
+    set nBoxPosX1INN = nBoxPosI1-nBoxLi1+1 # +nBoxBuff1 # the inner cutout coordinate, iraf coordinate, starts from 1
+    set nBoxPosY1INN = nBoxPosJ1-nBoxLj1+1 # +nBoxBuff2 # the inner cutout coordinate, iraf coordinate, starts from 1
+    set nBoxPosX2INN = nBoxPosI2-nBoxLi1+1 # -nBoxBuff1 # the inner cutout coordinate, iraf coordinate, starts from 1
+    set nBoxPosY2INN = nBoxPosJ2-nBoxLj1+1 # -nBoxBuff2 # the inner cutout coordinate, iraf coordinate, starts from 1
+    set nBoxPosX1 = nBoxPosI1+1 # +nBoxBuff1 # the outer image coordinate, iraf coordinate, starts from 1
+    set nBoxPosY1 = nBoxPosJ1+1 # +nBoxBuff2 # the outer image coordinate, iraf coordinate, starts from 1
+    set nBoxPosX2 = nBoxPosI2+1 # -nBoxBuff1 # the outer image coordinate, iraf coordinate, starts from 1
+    set nBoxPosY2 = nBoxPosJ2+1 # -nBoxBuff2 # the outer image coordinate, iraf coordinate, starts from 1
+    print +"rebuild_mosaic_model.cl"    'imcopy $(nBoxDir)/fit.fits[2][$(nBoxPosX1INN):$(nBoxPosX2INN),$(nBoxPosY1INN):$(nBoxPosY2INN)] ' {}
+    print +"rebuild_mosaic_residual.cl" 'imcopy $(nBoxDir)/fit.fits[3][$(nBoxPosX1INN):$(nBoxPosX2INN),$(nBoxPosY1INN):$(nBoxPosY2INN)] ' {}
+    print +"rebuild_mosaic_model.cl"    'rebuild_mosaic_model.fits[$(nBoxPosX1):$(nBoxPosX2),$(nBoxPosY1):$(nBoxPosY2)]\n' {}
+    print +"rebuild_mosaic_residual.cl" 'rebuild_mosaic_residual.fits[$(nBoxPosX1):$(nBoxPosX2),$(nBoxPosY1):$(nBoxPosY2)]\n' {}
+    # 
+    # done
+
+
+astroGalbox_improve_box_by_vary_position 01
+    # we improve the galfit performance in a box by allowing the bright sources to vary
+    if($?1==0) {
+        print 'Usage: astroGalbox_improve_box_by_vary_position boxid\n' {} return
+    }
+    # check command (software dependency)
+    if(!$?astroGalbox_check_command_ok) {astroGalbox_check_command}
+    if(!$astroGalbox_check_command_ok) {return}
+    # prepare to read one box results
+    set nBoxId = $1
+    set nBoxDir = {"}+sprintf('box%0d',$1)+{"}
+    # cd into box
+    DEFINE exit_status DELETE !test -d $(nBoxDir)
+    if(0==$exit_status) {
+        chdir $(nBoxDir)
+        if(is_file("fit.fits") && is_file("fit.log") && is_file("fit.out") && is_file("fit.param") && is_file("fit.input") && is_file("fit.limit")) {
+            # backup
+            !echo -n "before_improve_fitting_" > "before_improve_fitting.txt"
+            !date +"%Y%m%d_%Hh%Mm%Ss" >> "before_improve_fitting.txt"
+            astroGalboxOnMute
+            data "before_improve_fitting.txt" read row sBoxBackup 1.s
+            !mv "before_improve_fitting.txt" $(sBoxBackup)".txt"
+            !echo "We improve the fitting by vary position!" >> $(sBoxBackup)".txt"
+            !mkdir $(sBoxBackup)
+            astroGalboxUnMute
+            cp "fit.fits"  $(sBoxBackup)/"fit.fits"
+            cp "fit.log"   $(sBoxBackup)/"fit.log"
+            cp "fit.out"   $(sBoxBackup)/"fit.out"
+            cp "fit.param" $(sBoxBackup)/"fit.param"
+            cp "fit.input" $(sBoxBackup)/"fit.input"
+            cp "fit.limit" $(sBoxBackup)/"fit.limit"
+            # read galfit result and see which sources are bright enough
+            readGalfitParam "fit.param"
+            readGalfitResult "fit.fits"
+            set iBoxIsSource = (ResultType!='sky')
+            foreach vBoxResult {ResultType ResultPosX ResultPosXErr ResultPosY ResultPosYErr ResultMags ResultMagsErr} {
+                set $vBoxResult = $vBoxResult if(iBoxIsSource)
+            }
+            # get residual flux
+            load fresidual.sm 
+            set iBoxfResidual = fresidual_inPixel("fit.fits[3]",ResultPosX,ResultPosY,5.0)
+            load vecStats.sm
+            vecStats iBoxfResidual
+            # get magnitude distribution
+            set iBoxfMagnitude = ResultMags if(ResultMags<20)
+            vecStats iBoxfMagnitude
+            # select bright sources with large residual flux 
+            set iBoxToVaryPosition = (ResultMags<iBoxfMagnitude_MEAN && iBoxfResidual>=iBoxfResidual_MAX_3SIGMA)
+            # write new galfit param, input and limit
+            set ParamFitPosX = (iBoxToVaryPosition) ?    1 : ParamFitPosX
+            set ParamMinPosX = (iBoxToVaryPosition) ? -1.0 : ParamMinPosX
+            set ParamMaxPosX = (iBoxToVaryPosition) ?  1.0 : ParamMaxPosX
+            set ParamFitPosY = (iBoxToVaryPosition) ?    1 : ParamFitPosY
+            set ParamMinPosY = (iBoxToVaryPosition) ? -1.0 : ParamMinPosY
+            set ParamMaxPosY = (iBoxToVaryPosition) ?  1.0 : ParamMaxPosY
+            !rm "fit.fits" "fit.log" "fit.out" 2>/dev/null
+            writeGalfitParam "fit.param"
+            writeGalfitInput "fit.input"
+            writeGalfitLimit "fit.limit"
+            print {IObj Note ResultType ResultPosX ResultPosY ResultMags ResultMagsErr iBoxfResidual iBoxToVaryPosition}
+        }
+        chdir ".."
+    }
+
+
+
+
+
+
+
+
+
+astroGalbox_check_command
+    # astroGalbox_check_command_ok
+    define astroGalbox_check_command_ok 0
+    # check CrabPhotAperPhot command
+    astroGalboxOnMute
+    if(1==1) {
+        !CrabPhotAperPhot 2>&1 | wc -l > "._.AstroGalbox._.Check._."
+        data "._.AstroGalbox._.Check._." read astroGalbox_check_command_va 1
+    }
+    if(astroGalbox_check_command_va==1) {
+        print 'astroGalbox_read_box: \n\nError! CrabPhotAperPhot not found! Please contact dzliu!\n\n\n' {} return
+    }
+    # check greadlink
+    #if(1==1) {
+    #    !greadlink --help 2>&1 | wc -l > "._.AstroGalbox._.Check._."
+    #    data "._.AstroGalbox._.Check._." read astroGalbox_check_command_va 1
+    #}
+    #if(astroGalbox_check_command_va==1) {
+    #    print 'astroGalbox_read_box: \n\nError! greadlink not found! Please install greadlink under mac, \n' {}
+    #    print 'astroGalbox_read_box:        or do ln under linux: sudo ln -s /usr/bin/readlink /usr/bin/greadlink \n\n\n' {} return
+    #}
+    astroGalboxUnMute
+    # check $rBeam_$(boxBand)
+    if($?rBeam_$(boxBand)==0) {
+        print 'astroGalbox_read_box: \n\nError! rBeam_$(boxBand) not defined! Please run astroPhot.sm set_photometry_constants!\n\n\n' {} return
+    }
+    # check $PixScale_$(boxBand)
+    if($?PixScale_$(boxBand)==0) {
+        print 'astroGalbox_read_box: \n\nError! PixScale_$(boxBand) not defined! Please run astroPhot.sm set_photometry_constants!\n\n\n' {} return
+    }
+    define astroGalbox_check_command_ok 1
+
+
+
+
+
+astroGalboxOnMute 00
+        # 
+        if($?print_noheader) { if($print_noheader!=1) {
+            define astroGalbox_pref_noheader $print_noheader
+            define print_noheader 1
+        } } else {
+            define astroGalbox_pref_noheader 0
+            define print_noheader 1
+        }
+        if($?verbose) { if($verbose!=0) {
+            define astroGalbox_pref_verbose $verbose
+            verbose 0
+        } }
+
+
+
+astroGalboxUnMute 00
+        # 
+        if($?astroGalbox_pref_noheader) { define print_noheader $astroGalbox_pref_noheader undef astroGalbox_pref_noheader }
+        if($?astroGalbox_pref_verbose) { verbose $astroGalbox_pref_verbose undef astroGalbox_pref_verbose }
+
+
+
+

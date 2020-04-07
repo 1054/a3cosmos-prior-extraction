@@ -217,7 +217,7 @@ for (( i=0; i<${#AstroDepth_INP_CATALOG[@]}; i++ )); do
             echo "Extracting ID RA Dec from the input catalog \"${AstroDepth_INP_CATALOG[i]}\""
             #cat "$AstroDepth_OutputDir/astrodepth_catalog_${i}_id_ra_dec_extraction.sm"
             cd "$AstroDepth_OutputDir"
-            echo "macro read astrodepth_catalog_${i}_id_ra_dec_extraction.sm go" | sm
+            echo "macro read astrodepth_catalog_${i}_id_ra_dec_extraction.sm go" | smdl
             cd "$AstroDepth_CurrentDir"
             
         fi
@@ -676,7 +676,7 @@ for (( j=0; j<${#AstroDepth_INP_IMAGE_SCI[@]}; j++ )); do
         if [[ ! -f "No_catalog_source_within_image" ]] || [[ " ${AstroDepth_INP_OVERWRITE[@]} " =~ " getpix " ]]; then
             if [[ ! -f "getpix.txt" ]] || [[ " ${AstroDepth_INP_OVERWRITE[@]} " =~ " getpix " ]]; then
                 echo "Running Supermongo script \"astrodepth_go_getpix.sm\" subroutine \"go_getpix\""
-                echo "macro read astrodepth_go_getpix.sm go_getpix" | sm > "astrodepth_go_getpix.log"
+                echo "macro read astrodepth_go_getpix.sm go_getpix" | smdl > "astrodepth_go_getpix.log"
                 # check output successful or not
                 if [[ ! -f "No_catalog_source_within_image" && ! -f "getpix.txt" ]]; then 
                     echo "Error! Failed to run Supermongo script \"astrodepth_go_getpix.sm\" subroutine go_getpix! Sorry!"
@@ -690,7 +690,7 @@ for (( j=0; j<${#AstroDepth_INP_IMAGE_SCI[@]}; j++ )); do
             # 
             if [[ ! -f "getpix.result" ]] || [[ " ${AstroDepth_INP_OVERWRITE[@]} " =~ " getpix " ]]; then
                 echo "Running Supermongo script \"astrodepth_go_getpix.sm\" subroutine \"print_result\""
-                echo "macro read astrodepth_go_getpix.sm print_result" | sm > "astrodepth_go_getpix_print_result.log"
+                echo "macro read astrodepth_go_getpix.sm print_result" | smdl > "astrodepth_go_getpix_print_result.log"
                 # check output successful or not
                 if [[ ! -f "No_catalog_source_within_image" && ! -f "getpix.result" ]]; then 
                     echo "Error! Failed to run Supermongo script \"astrodepth_go_getpix.sm\" subroutine \"print_result\"! Sorry!"
@@ -737,7 +737,7 @@ for (( j=0; j<${#AstroDepth_INP_IMAGE_SCI[@]}; j++ )); do
                     # 
                     if [[ ! -f "fit_0.fits" ]] || [[ " ${AstroDepth_INP_OVERWRITE[@]} " =~ " galfit " ]]; then
                         echo "Running Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"go_galfit_0\""
-                        echo "macro read astrodepth_go_galfit.sm go_galfit_0" | sm > "astrodepth_go_galfit_0.log"
+                        echo "macro read astrodepth_go_galfit.sm go_galfit_0" | smdl > "astrodepth_go_galfit_0.log"
                         # check output successful or not
                         if [[ ! -f "No_catalog_source_within_image" && ! -f "fit_0.fits" ]]; then 
                             echo "Error! Failed to run Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"go_galfit_0\"! Sorry!"
@@ -751,7 +751,7 @@ for (( j=0; j<${#AstroDepth_INP_IMAGE_SCI[@]}; j++ )); do
                     # 
                     if [[ ! -f "fit_1.fits" ]] || [[ " ${AstroDepth_INP_OVERWRITE[@]} " =~ " galfit " ]]; then
                         echo "Running Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"go_galfit_1\""
-                        echo "macro read astrodepth_go_galfit.sm go_galfit_1" | sm > "astrodepth_go_galfit_1.log"
+                        echo "macro read astrodepth_go_galfit.sm go_galfit_1" | smdl > "astrodepth_go_galfit_1.log"
                         # check output successful or not
                         if [[ ! -f "No_catalog_source_within_image" && ! -f "fit_1.fits" ]]; then 
                             echo "Error! Failed to run Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"go_galfit_1\"! Sorry!"
@@ -794,7 +794,7 @@ for (( j=0; j<${#AstroDepth_INP_IMAGE_SCI[@]}; j++ )); do
                     # 
                     if [[ ! -f "fit_2.fits" ]] || [[ " ${AstroDepth_INP_OVERWRITE[@]} " =~ " gaussian " ]]; then
                         echo "Running Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"go_galfit 2\""
-                        echo "macro read astrodepth_go_galfit.sm go_galfit 2" | sm > "astrodepth_go_galfit_2.log"
+                        echo "macro read astrodepth_go_galfit.sm go_galfit 2" | smdl > "astrodepth_go_galfit_2.log"
                         # check output successful or not
                         if [[ ! -f "fit_2.fits" ]]; then 
                             echo "Error! Failed to run Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"go_galfit_2\"! Sorry!"
@@ -836,7 +836,7 @@ for (( j=0; j<${#AstroDepth_INP_IMAGE_SCI[@]}; j++ )); do
                     # 
                     if [[ ! -f "fit_3.fits" ]] || [[ " ${AstroDepth_INP_OVERWRITE[@]} " =~ " sersic " ]]; then
                         echo "Running Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"go_galfit 3\""
-                        echo "macro read astrodepth_go_galfit.sm go_galfit 3" | sm > "astrodepth_go_galfit_3.log"
+                        echo "macro read astrodepth_go_galfit.sm go_galfit 3" | smdl > "astrodepth_go_galfit_3.log"
                         # check output successful or not
                         if [[ ! -f "fit_3.fits" ]]; then 
                             echo "Error! Failed to run Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"go_galfit_3\"! Sorry!"
@@ -892,7 +892,7 @@ for (( j=0; j<${#AstroDepth_INP_IMAGE_SCI[@]}; j++ )); do
                     # 
                     # 
                     echo "Running Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"print_result_final\""
-                    echo "macro read astrodepth_go_galfit.sm print_result_final" | sm > "astrodepth_go_galfit_print_result_final.log"
+                    echo "macro read astrodepth_go_galfit.sm print_result_final" | smdl > "astrodepth_go_galfit_print_result_final.log"
                     # check output successful or not
                     if [[ ! -f "final.result" ]]; then 
                         echo "Error! Failed to run Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"print_result_final\"! Sorry!"
@@ -931,7 +931,7 @@ for (( j=0; j<${#AstroDepth_INP_IMAGE_SCI[@]}; j++ )); do
                 # 
                 if [[ ! -f "getpix_on_negative_image.txt" ]] || [[ " ${AstroDepth_INP_OVERWRITE[@]} " =~ " negative " ]]; then
                     echo "Running Supermongo script \"astrodepth_go_getpix.sm\" subroutine \"go_getpix_on_negative_image\""
-                    echo "macro read astrodepth_go_getpix.sm go_getpix_on_negative_image" | sm > "astrodepth_go_getpix_on_negative_image.log"
+                    echo "macro read astrodepth_go_getpix.sm go_getpix_on_negative_image" | smdl > "astrodepth_go_getpix_on_negative_image.log"
                     # check output successful or not
                     if [[ ! -f "No_catalog_source_within_image" && ! -f "getpix_on_negative_image.txt" ]]; then 
                         echo "Error! Failed to run Supermongo script \"astrodepth_go_getpix.sm\" subroutine go_getpix_on_negative_image! Sorry!"
@@ -945,7 +945,7 @@ for (( j=0; j<${#AstroDepth_INP_IMAGE_SCI[@]}; j++ )); do
                 # 
                 if [[ ! -f "getpix_on_negative_image.result" ]] || [[ " ${AstroDepth_INP_OVERWRITE[@]} " =~ " negative " ]]; then
                     echo "Running Supermongo script \"astrodepth_go_getpix.sm\" subroutine \"print_result_on_negative_image\""
-                    echo "macro read astrodepth_go_getpix.sm print_result_on_negative_image" | sm > "astrodepth_go_getpix_print_result_on_negative_image.log"
+                    echo "macro read astrodepth_go_getpix.sm print_result_on_negative_image" | smdl > "astrodepth_go_getpix_print_result_on_negative_image.log"
                     # check output successful or not
                     if [[ ! -f "No_catalog_source_within_image" && ! -f "getpix_on_negative_image.result" ]]; then 
                         echo "Error! Failed to run Supermongo script \"astrodepth_go_getpix.sm\" subroutine \"print_result_on_negative_image\"! Sorry!"
@@ -968,7 +968,7 @@ for (( j=0; j<${#AstroDepth_INP_IMAGE_SCI[@]}; j++ )); do
                     # 
                     if [[ ! -f "fit_n0.fits" ]] || [[ " ${AstroDepth_INP_OVERWRITE[@]} " =~ " negative " ]]; then
                         echo "Running Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"go_galfit_n0\""
-                        echo "macro read astrodepth_go_galfit.sm go_galfit_n0" | sm > "astrodepth_go_galfit_n0.log"
+                        echo "macro read astrodepth_go_galfit.sm go_galfit_n0" | smdl > "astrodepth_go_galfit_n0.log"
                         # check output successful or not
                         if [[ ! -f "No_catalog_source_within_image" && ! -f "fit_n0.fits" ]]; then 
                             echo "Error! Failed to run Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"go_galfit_n0\"! Sorry!"
@@ -982,7 +982,7 @@ for (( j=0; j<${#AstroDepth_INP_IMAGE_SCI[@]}; j++ )); do
                     # 
                     if [[ ! -f "fit_n1.fits" ]] || [[ " ${AstroDepth_INP_OVERWRITE[@]} " =~ " negative " ]]; then
                         echo "Running Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"go_galfit_n1\""
-                        echo "macro read astrodepth_go_galfit.sm go_galfit_n1" | sm > "astrodepth_go_galfit_n1.log"
+                        echo "macro read astrodepth_go_galfit.sm go_galfit_n1" | smdl > "astrodepth_go_galfit_n1.log"
                         # check output successful or not
                         if [[ ! -f "No_catalog_source_within_image" && ! -f "fit_n1.fits" ]]; then 
                             echo "Error! Failed to run Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"go_galfit_n1\"! Sorry!"
@@ -996,7 +996,7 @@ for (( j=0; j<${#AstroDepth_INP_IMAGE_SCI[@]}; j++ )); do
                     # 
                     if [[ ! -f "fit_n2.fits" ]] || [[ " ${AstroDepth_INP_OVERWRITE[@]} " =~ " negative " ]]; then
                         echo "Running Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"go_galfit_n2\""
-                        echo "macro read astrodepth_go_galfit.sm go_galfit_n2" | sm > "astrodepth_go_galfit_n2.log"
+                        echo "macro read astrodepth_go_galfit.sm go_galfit_n2" | smdl > "astrodepth_go_galfit_n2.log"
                         # check output successful or not
                         if [[ ! -f "No_catalog_source_within_image" && ! -f "fit_n2.fits" ]]; then 
                             echo "Error! Failed to run Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"go_galfit_n2\"! Sorry!"
@@ -1010,7 +1010,7 @@ for (( j=0; j<${#AstroDepth_INP_IMAGE_SCI[@]}; j++ )); do
                     # 
                     if [[ ! -f "fit_n3.fits" ]] || [[ " ${AstroDepth_INP_OVERWRITE[@]} " =~ " negative " ]]; then
                         echo "Running Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"go_galfit_n3\""
-                        echo "macro read astrodepth_go_galfit.sm go_galfit_n3" | sm > "astrodepth_go_galfit_n3.log"
+                        echo "macro read astrodepth_go_galfit.sm go_galfit_n3" | smdl > "astrodepth_go_galfit_n3.log"
                         # check output successful or not
                         if [[ ! -f "No_catalog_source_within_image" && ! -f "fit_n3.fits" ]]; then 
                             echo "Error! Failed to run Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"go_galfit_n3\"! Sorry!"
@@ -1028,7 +1028,7 @@ for (( j=0; j<${#AstroDepth_INP_IMAGE_SCI[@]}; j++ )); do
                 if [[ ! -f "final_on_negative_image.result" ]] || [[ " ${AstroDepth_INP_OVERWRITE[@]} " =~ " negative " ]] || [[ " ${AstroDepth_INP_OVERWRITE[@]} " =~ " final " ]]; then
                     # 
                     echo "Running Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"print_result_final_on_negative_image\""
-                    echo "macro read astrodepth_go_galfit.sm print_result_final_on_negative_image" | sm > "astrodepth_go_galfit_print_result_final_on_negative_image.log"
+                    echo "macro read astrodepth_go_galfit.sm print_result_final_on_negative_image" | smdl > "astrodepth_go_galfit_print_result_final_on_negative_image.log"
                     # check output successful or not
                     if [[ ! -f "final_on_negative_image.result" ]]; then 
                         echo "Error! Failed to run Supermongo script \"astrodepth_go_galfit.sm\" subroutine \"print_result_final_on_negative_image\"! Sorry!"

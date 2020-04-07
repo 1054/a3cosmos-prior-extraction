@@ -1,0 +1,56 @@
+vecIntersec 02
+            # Input Vector1 and calc Intersection with Reference Vector2
+            # Output Boolean Vector the same dimension as Input Vector1
+            if($?1==0 || $?2==0) {
+                print 'vecIntersec: use input vector2 as the reference array, cross-match input vector1, \n' {}
+                print '             then output a boolean array the same dimen as input vector1, if item \n' {}
+                print '             vector1[i] is found in vector2, then output[i] == 1. \n' {}
+                return
+            }
+            if($?1 && $?2) {
+                set _vecintersec_u = $1
+                set _vecintersec_v = $2
+                set _vecintersec_w = _vecintersec_u*0
+                do _vecintersec_i=0,dimen(_vecintersec_u)-1 {
+                    set _vecintersec_d = _vecintersec_v - _vecintersec_u[$_vecintersec_i]
+                    set _vecintersec_w[$_vecintersec_i] = (sum(_vecintersec_d==0)>0)
+                    unset _vecintersec_d
+                }
+                set $0 = _vecintersec_w
+            }
+            return
+
+
+whereIntersec 02
+            # Input Vector1 and calc Intersection with Reference Vector2
+            # Output Index Vector the same dimension as Input Vector1
+            # Output Index Vector is the index in Vector2 if matched, 
+            # -1 if not match
+            if($?1==0 || $?2==0) {
+                print 'whereIntersec: use input vector2 as the reference array, cross-match input vector1, \n' {}
+                print '               then output an index array the same dimen as input vector1, if item \n' {}
+                print '               vector1[i] is found in vector2, then vector2[output[i]]==vector1[i]. \n' {}
+                return
+            }
+            if($?1 && $?2) {
+                set _vecintersec_u = $1
+                set _vecintersec_v = $2
+                set _vecintersec_w = _vecintersec_u*0-1
+                do _vecintersec_i=0,dimen(_vecintersec_u)-1 {
+                    set _vecintersec_d = _vecintersec_v - _vecintersec_u[$_vecintersec_i]
+                    if(sum(_vecintersec_d==0)>0) { 
+                        set _vecintersec_j = 0,dimen(_vecintersec_v)-1
+                        set _vecintersec_j = _vecintersec_j if(_vecintersec_d==0)
+                        set _vecintersec_w[$_vecintersec_i] = $(_vecintersec_j)
+                        unset _vecintersec_d
+                        unset _vecintersec_j
+                    }
+                }
+                set $0 = _vecintersec_w
+                unset _vecintersec_u
+                unset _vecintersec_v
+                unset _vecintersec_w
+            }
+            return
+
+

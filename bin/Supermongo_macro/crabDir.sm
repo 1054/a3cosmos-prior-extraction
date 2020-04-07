@@ -1,0 +1,515 @@
+crabDir
+    print 'We provide several useful functions for system dir operations.\n' {}
+    print 'for example: \n' {}
+    print 'set dir0 = GetCurrentPath()\n' {}
+    print 'set dir1 = GetDirPathVector("/abc/work/data/nowhitespace")\n' {}
+    print 'set dir1 = dir1 concat \'subdirectory\'\n' {}
+    print 'set dir1 = dir1 concat \'subsubdirectory\'\n' {}
+    print 'VisitDirPathVector dir1\n' {}
+    print '!pwd\n' {}
+    print 'VisitDirPathVector dir0\n' {}
+    print '!pwd\n' {}
+    print '\n' {}
+
+
+get_current_dir_paths
+    # return dir paths vector
+    # load crabDir.sm set dir_paths = get_current_dir_paths
+    !pwd | sed -e 's%/%\\n%g' > "temp_dir_path.txt"
+    define _cur_ver_b $verbose
+    verbose 0
+    set _cur_dir_path = {"//"}
+    define _cur_dir_i 2
+    while {$_cur_dir_i>0} {
+        declare temp_dir_path 0
+        data "temp_dir_path.txt" 
+        read row temp_dir_path $_cur_dir_i.s
+        if(dimen(temp_dir_path)>0) {
+            set temp_dir_path = {"}+temp_dir_path+{"}
+            set _cur_dir_path = _cur_dir_path concat temp_dir_path
+            define _cur_dir_i $($_cur_dir_i+1)
+        } else {
+            define _cur_dir_i 0
+        }
+    }
+    !rm "temp_dir_path.txt" 2>/dev/null
+    verbose $_cur_ver_b
+    undef _cur_ver_b
+    #print {_cur_dir_path}
+    set $0 = _cur_dir_path
+    return
+
+
+change_dir_to_paths 01
+    # 
+    if($?1) {
+        set _cur_dir_path = $1
+        do _cur_dir_i=0,dimen(_cur_dir_path)-1 {
+            chdir $(_cur_dir_path[$_cur_dir_i])
+        }
+    }
+
+
+GetCurrentPath 00
+    # return current dir paths vector
+    # usage:
+    #   load crabDir.sm 
+    #   set dir_paths = GetCurrentPath()
+    set $0 = GetDirPathVector()
+    return
+
+
+GetDirPathVector 01
+    # input a dir path string (if no input then is current pwd)
+    # we split a single dir path string into a DirPathVector
+    # return a vector
+    # usage: 
+    #  load AstroDepthSetDataInfo_v3.sm
+    #  set DirPath = GetDirPathVector("/home/abc/work/data/nowhitespace/")
+    #  load AstroDepthSetDataInfo_v3.sm
+    #  set DirPath = GetDirPathVector("data/nowhitespace/catalog")
+    #  load AstroDepthSetDataInfo_v3.sm
+    #  set PWDDirPath = GetDirPathVector()
+    #  print {PWDDirPath}
+    if($?1) {
+        if('$1'=='__GetDirPathVector_arg1') {
+            #<20161212><dzliu># -- for Mac
+            #<20161212><dzliu># !echo $(__GetDirPathVector_arg1) | sed -e 's@^/@\\\\"\\\\"@g' | sed -e 's@/@\\n@g' | sed -e '1s@^\\\\"\\\\"@/@g' > ".GetDirPathVector.tmp"
+            !echo $(__GetDirPathVector_arg1) | sed -e 's@^/@\\\\"\\\\"@g' | perl -p -e 's@/@\\n@g' | sed -e '1s@^\\\\"\\\\"@/@g' > ".GetDirPathVector.tmp"
+        } else {
+            #<20161212><dzliu># -- for Mac
+            #<20161212><dzliu># !echo $1 | sed -e 's@^/@\\\\"\\\\"@g' | sed -e 's@/@\\n@g' | sed -e '1s@^\\\\"\\\\"@/@g' > ".GetDirPathVector.tmp"
+            !echo $1 | sed -e 's@^/@\\\\"\\\\"@g' | perl -p -e 's@/@\\n@g' | sed -e '1s@^\\\\"\\\\"@/@g' > ".GetDirPathVector.tmp"
+        }
+        
+    } else {
+        #<20161212><dzliu># -- !pwd | sed -e 's@^/@\\\\"\\\\"@g'
+        #<20161212><dzliu># -- !pwd | sed -e 's@^/@\\\\"\\\\"@g' | perl -p -e 's@/@\\n@g'
+        #<20161212><dzliu># -- !pwd | sed -e 's@^/@\\\\"\\\\"@g' | perl -p -e 's@/@\\n@g' | sed -e '1s@^\\\\"\\\\"@/@g'
+        #<20161212><dzliu># -- for Mac
+        #<20161212><dzliu># !pwd | sed -e 's@^/@\\\\"\\\\"@g' | sed -e 's@/@\\n@g' | sed -e '1s@^\\\\"\\\\"@/@g' > ".GetDirPathVector.tmp"
+        !pwd | sed -e 's@^/@\\\\"\\\\"@g' | perl -p -e 's@/@\\n@g' | sed -e '1s@^\\\\"\\\\"@/@g' > ".GetDirPathVector.tmp"
+    }
+    #!cat ".GetDirPathVector.tmp"
+    data ".GetDirPathVector.tmp"
+    verbose 0
+    define _DirPathInd 1
+    set _DirPathRow = {"/"}
+    declare _DirPathVec 0.s
+    while { is_vector(_DirPathRow) } {
+        unset _DirPathRow # must unset it before reading it
+        read row _DirPathRow $_DirPathInd.s
+        define _DirPathInd $($_DirPathInd+1)
+        if( is_vector(_DirPathRow) ) {
+            if( strlen(_DirPathRow)>=0 ) {
+                set _DirPathRow = {"}+_DirPathRow+{"}
+                if( dimen(_DirPathVec)==0 ) {
+                    set _DirPathVec = _DirPathRow
+                } else {
+                    set _DirPathVec = _DirPathVec concat _DirPathRow
+                }
+            }
+        }
+    }
+    verbose 1
+    set $0 = _DirPathVec
+    unset _DirPathVec
+    #!rm ".GetDirPathVector.tmp" 2>/dev/null
+    return
+
+
+VisitDirPathVector 01
+    # input DirPathVector and change dirs 
+    # usage: 
+    #  load AstroDepthSetDataInfo_v3.sm
+    #  set PfitDir = GetDirPathVector("abc/work/data/nowhitespace")
+    #  VisitDirPathVector PfitDir
+    # note:
+    #  if you want to get back to old dir path, run this immediately after
+    #  VisitDirPathVector OldDirPathVector
+    #  
+    # check input
+    if($?1==0) {print 'VisitDirPathVector: No input DirPathVector!\n' {} return}
+    set _DirPathPwd = GetDirPathVector()  # note this overriding _DirPathVec
+    set _DirPathVec = $1
+    #  
+    # backup current pwd and visit DirPathVector
+    set OldDirPathVector = _DirPathPwd
+    set NewDirPathVector = _DirPathVec
+    print 'VisitDirPathVector: ' {} PrintDirPathVector OldDirPathVector
+    print 'VisitDirPathVector: ' {} PrintDirPathVector NewDirPathVector
+    do _DirPathInd = 0,dimen(_DirPathVec)-1 {
+        # current dir path element 
+        set _DirPathRow = _DirPathVec[$_DirPathInd]
+        # append and prepend quotes
+        if(index(_DirPathRow,'\"')!=0) {
+            set _DirPathRow = {"}+_DirPathRow+{"}
+        }
+        # check destination dir
+        DEFINE exit_status DELETE !test -f $(_DirPathRow) >/dev/null
+        set _DirPathIsF = (0==$exit_status)
+        if(1==_DirPathIsF) {
+            return
+        } # if it is a file not a dir, then return
+        DEFINE exit_status DELETE !test -d $(_DirPathRow) >/dev/null
+        set _DirPathIsD = (0==$exit_status)
+        if(0==_DirPathIsD) {
+            if(0==_DirPathIsF) {
+                # if is not dir nor file, then report error.
+                print 'VisitDirPathVector: Error! Directory $(_DirPathRow) does not exist!\n' {}
+                !pwd
+                !ls
+                RaiseErrorBreak
+            }
+            return
+        }
+        # change dir
+        echo "VisitDirPathVector: chdir "$(_DirPathRow)
+        if(index(_DirPathRow,'/')<0) {
+            chdir "./"$(_DirPathRow)
+        } else {
+            chdir $(_DirPathRow)
+        }
+        #<note><20160101><dzliu># for some pure number directory, chdir failed, so must prepend "./", e.g. "./201512/"
+    }
+
+
+VisitDirPathVectorFile 01
+    # input DirPathVector and change dirs and open the file 
+    # usage: 
+    #  load AstroDepthSetDataInfo_v3.sm
+    #  set Catalog = GetDirPathVector("abc/work/data/nowhitespace/myfile.dat")
+    #  VisitDirPathVectorFile Catalog
+    #  
+    # check input
+    if($?1==0) {print 'VisitDirPathVectorFile: No input DirPathVector!\n' {} return}
+    set _DirPathPwd = GetDirPathVector()  # note this overriding _DirPathVec
+    set _DirPathVec = $1
+    #  
+    # backup current pwd and visit data file DirPathVector
+    set OldDirPathVector = _DirPathPwd
+    set NewDirPathVector = _DirPathVec
+    print 'VisitDirPathVector: ' {} PrintDirPathVector OldDirPathVector
+    print 'VisitDirPathVector: ' {} PrintDirPathVector NewDirPathVector
+    do _DirPathInd = 0,dimen(_DirPathVec)-1 {
+        # current dir path element 
+        set _DirPathRow = _DirPathVec[$_DirPathInd]
+        # append and prepend quotes
+        if(index(_DirPathRow,'\"')!=0) {
+            set _DirPathRow = {"}+_DirPathRow+{"}
+        }
+        # check destination dir
+        if($_DirPathInd!=dimen(_DirPathVec)-1) {
+            DEFINE exit_status DELETE !test -d $(_DirPathRow) >/dev/null
+            if(0!=$exit_status) {
+                print 'VisitDirPathVectorFile: Error! Directory $(_DirPathRow) does not exist!\n' {} 
+                RaiseErrorBreak
+                return
+            }
+        }
+        # change dir
+        if($_DirPathInd!=dimen(_DirPathVec)-1) {
+            echo "VisitDirPathVectorFile: chdir "$(_DirPathRow)
+            chdir $(_DirPathRow)
+        } else {
+            # open file to read
+            if(is_file($(_DirPathRow))) {
+                echo "VisitDirPathVectorFile: opening "$(_DirPathRow)
+                data $(_DirPathRow)
+            } else {
+                print 'VisitDirPathVectorFile: Error! File $(_DirPathRow) does not exist!\n' {} 
+                RaiseErrorBreak
+                return
+            }
+        }
+    }
+
+
+TouchDirPathVectorFile 02
+    # input DirPathVector, which is a path to a file
+    # we will touch the file and create it
+    # Input the second argument to assign a file suffix. 
+    # usage: 
+    #  load AstroDepthSetDataInfo_v3.sm
+    #  set Catalog = GetDirPathVector("abc/work/data/nowhitespace/myfile.dat")
+    #  VisitDirPathVectorFile Catalog
+    #  
+    # check input
+    if($?1==0) {print 'TouchDirPathVectorFile: No input DirPathVector!\n' {} return}
+    set _DirPathPwd = GetDirPathVector()  # note this overriding _DirPathVec
+    set _DirPathVec = $1
+    # 
+    # add suffix <added><20160714><dzliu>
+    if($?2) {
+        !echo $2 > ".crabDir.TempFileSfx.txt"
+        if($?verbose) {define _CrabDirVerbose $verbose} else {define _CrabDirVerbose 1}
+        verbose 0 data ".crabDir.TempFileSfx.txt" read row _TmpFileSfx 1.s
+        set _DirPathVec[dimen(_DirPathVec)-1] = _DirPathVec[dimen(_DirPathVec)-1]+_TmpFileSfx
+        !rm ".crabDir.TempFileSfx.txt" 2>/dev/null
+        verbose $_CrabDirVerbose undef _CrabDirVerbose
+    }
+    #  
+    # backup current pwd and visit data file DirPathVector
+    set OldDirPathVector = _DirPathPwd
+    set NewDirPathVector = _DirPathVec
+    print 'TouchDirPathVectorFile: ' {} PrintDirPathVector OldDirPathVector
+    print 'TouchDirPathVectorFile: ' {} PrintDirPathVector NewDirPathVector
+    do _DirPathInd = 0,dimen(_DirPathVec)-1 {
+        # current dir path element 
+        set _DirPathRow = _DirPathVec[$_DirPathInd]
+        # append and prepend quotes
+        if(index(_DirPathRow,'\"')!=0) {
+            set _DirPathRow = {"}+_DirPathRow+{"}
+        }
+        # check destination dir
+        if($_DirPathInd!=dimen(_DirPathVec)-1) {
+            DEFINE exit_status DELETE !test -d $(_DirPathRow) >/dev/null
+            if(0!=$exit_status) {
+                print 'TouchDirPathVectorFile: Error! Directory $(_DirPathRow) does not exist!\n' {}
+                RaiseErrorBreak
+                return
+            }
+        }
+        # change dir
+        if($_DirPathInd!=dimen(_DirPathVec)-1) {
+            echo "TouchDirPathVectorFile: chdir "$(_DirPathRow)
+            chdir $(_DirPathRow)
+        } else {
+            # open file to read
+            echo "TouchDirPathVectorFile: touched "$(_DirPathRow)
+            !touch $(_DirPathRow)
+        }
+    }
+
+
+RaiseErrorBreak 02
+    # usage:
+    #   RaiseErrorBreak "WhichProcedure" "What Reason"
+    if($?2) {
+        print '$1: Error! $2! Please give Ctrl+C to break!\n' {}
+    } else {
+        if($?1) {
+            print '$1: Error! Please give Ctrl+C to break!\n' {}
+        } else {
+            print 'RaiseErrorBreak: Error! Please give Ctrl+C to break!\n' {} 
+        }
+    }
+    define _RaiseErrorBreak 1
+    while {'$_RaiseErrorBreak'!='continue'} {
+        define _RaiseErrorBreak ?
+    }
+    return
+
+
+PrintDirPathVectorToFile 04
+    # input DirPathVector and print it to file by using "/" concating each element
+    # usage: 
+    #  load AstroDepthSetDataInfo_v3.sm
+    #  set DirPath = GetDirPathVector("abc/work/data/nowhitespace/")
+    #  set DirPathString = PrintDirPathVectorAsString(DirPath,"tmp_path.txt",append,noending)
+    #  
+    # check input
+    if($?1==0) {print 'PrintDirPathVectorAsString: No input DirPathVector!\n' {} return}
+    set _DirPathVec = $1
+    set _DirPathRoo = {"/"}
+    if($?3) {
+        print +$2 '\"' {}
+    } else {
+        print $2 '\"' {}
+    }
+    # 
+    # print all concated string to file
+    do _DirPathInd=0,dimen(_DirPathVec)-1 {
+        set _DirPathRow = _DirPathVec[$_DirPathInd]
+        if($_DirPathInd==0 && _DirPathRow==_DirPathRoo) {
+            print +$2 '/' {}
+        } else {
+            if($_DirPathInd!=dimen(_DirPathVec)-1) {
+                print +$2 '$(_DirPathRow)/' {}
+            } else {
+                print +$2 '$(_DirPathRow)' {}
+            }
+        }
+    }
+    if(!$?4) {
+        print +$2 '\"\n' {}
+    } else {
+        print +$2 '\"' {}
+        #if('$4'!='noending') {
+        #    print +$2 '\"$4' {}
+        #}
+    }
+    return
+
+
+PrintDirPathVector 02
+    # input DirPathVector and print it by using "/" concating each element
+    # input the second argument to add suffix string
+    # usage: 
+    #  load AstroDepthSetDataInfo_v3.sm
+    #  set DirPath = GetDirPathVector("abc/work/data/nowhitespace/")
+    #  PrintDirPathVector DirPath
+    #  
+    # check input
+    if($?1==0) {print 'PrintDirPathVector: No input DirPathVector!\n' {} return}
+    set _DirPathVec = $1
+    set _DirPathRoo = {"/"}
+    # 
+    # add suffix <added><20160714><dzliu>
+    if($?2) {
+        !echo $2 > ".crabDir.TempFileSfx.txt"
+        if($?verbose) {define _CrabDirVerbose $verbose} else {define _CrabDirVerbose 1}
+        verbose 0 data ".crabDir.TempFileSfx.txt" read row _TmpFileSfx 1.s
+        set _DirPathVec[dimen(_DirPathVec)-1] = _DirPathVec[dimen(_DirPathVec)-1]+_TmpFileSfx
+        !rm ".crabDir.TempFileSfx.txt" 2>/dev/null
+        verbose $_CrabDirVerbose undef _CrabDirVerbose
+    }
+    # 
+    # print all concated string
+    #<TODO>print '$1 = \"' {} #<TODO># print the vector name or not?
+    print '\"' {}
+    do _DirPathInd=0,dimen(_DirPathVec)-1 {
+        set _DirPathRow = _DirPathVec[$_DirPathInd]
+        if($_DirPathInd==0 && (_DirPathRow==_DirPathRoo || _DirPathRow=='/')) {
+            print '/' {}
+        } else {
+            if($_DirPathInd!=dimen(_DirPathVec)-1) {
+                print '$(_DirPathRow)/' {}
+            } else {
+                print '$(_DirPathRow)' {}
+            }
+        }
+    }
+    print '\"\n' {}
+    return
+
+
+CopyDirPathVectorFile 02
+    # input file 1
+    # input file 2
+    # then we will copy file 1 to file 2
+    # usage: 
+    #  load crabDir.sm
+    #  set File1 = GetDirPathVector("aaa_bbb_1.txt")
+    #  set File2 = GetDirPathVector("aaa_bbb_2.txt")
+    #  CopyDirPathVectorFile File1 File2
+    print ".CopyDirPathVectorFile.tmp" 'cp ' {}
+    PrintDirPathVectorToFile $1 ".CopyDirPathVectorFile.tmp" append noending
+    print +".CopyDirPathVectorFile.tmp" ' ' {}
+    PrintDirPathVectorToFile $2 ".CopyDirPathVectorFile.tmp" append noending
+    print +".CopyDirPathVectorFile.tmp" '\n' {}
+    !chmod +x ".CopyDirPathVectorFile.tmp"
+    !./".CopyDirPathVectorFile.tmp"
+    if($exit_status!=0) {
+        print 'CopyDirPathVectorFile: Error! Input file $1 does not exist!\n' {} 
+        RaiseErrorBreak
+        return
+    }
+    #!rm ".CopyDirPathVectorFile.tmp"
+    #!while read line; do echo \$line; done < ".CopyDirPathVectorFile.tmp" > ".CopyDirPathVectorFile.tmp"
+    #!tr \'\\\\n\' ' ' < ".CopyDirPathVectorFile.tmp" > ".CopyDirPathVectorFile.tmp"
+    
+
+ReadDirPathVectorFromFile 01
+    # input a file path, read it and store as a DirPath Vector. 
+    # each line of the input file is one directory, except that the last one is a file or directory. 
+    # usage: 
+    #  load crabDir.sm
+    #  !echo "/tmp/" > "dirpath.txt"
+    #  !echo "asdf/" >> "dirpath.txt"
+    #  !echo "aa bb cc dd" >> "dirpath.txt"
+    #  !echo "aaa.dat" >> "dirpath.txt"
+    #  set DirPath = ReadDirPathVectorFromFile("dirpath.txt")
+    #  PrintDirPathVector DirPath
+    #  
+    if($?1==0) {print 'ReadDirPathVectorFromFile: No input DirPath file!\n' {} return}
+    declare _CrabDirReadVector 0.s
+    if($?verbose) {define _CrabDirVerbose $verbose} else {define _CrabDirVerbose 1}
+    verbose 0 data $1
+    define _CrabDirReadLineNumber 1
+    while { $_CrabDirReadLineNumber>0 } {
+        if(is_vector(_CrabDirTempVector)) {unset _CrabDirTempVector}
+        read row _CrabDirTempVector $_CrabDirReadLineNumber.s
+        if(is_vector(_CrabDirTempVector)) {
+            if(dimen(_CrabDirTempVector)>0) {
+                #echo dimen(_CrabDirTempVector) = $(dimen(_CrabDirTempVector)), $(_CrabDirTempVector) #<DEBUG>#
+                if(dimen(_CrabDirTempVector)>1) {
+                    do _CrabDirReadColumnNumber=1,dimen(_CrabDirTempVector)-1 {
+                        set _CrabDirTempVector[0] = _CrabDirTempVector[0] + ' ' + _CrabDirTempVector[$_CrabDirReadColumnNumber]
+                    }
+                }
+                # check root '/', must be the first character of the first line, otherwise prepend current directory DirPath. 
+                if($_CrabDirReadLineNumber==1) {
+                    #echo index($(_CrabDirTempVector[0]),'/') = $(index(_CrabDirTempVector[0],'/')) #<DEBUG>#
+                    if(index(_CrabDirTempVector[0],'/')!=0) {
+                        set _CrabDirReadVector = GetDirPathVector()
+                    }
+                }
+                # skip single '/'
+                if(_CrabDirTempVector[0]!='/') {
+                    # check no leading '/' if it is not the first line
+                    #echo index($(_CrabDirTempVector[0]),'/') = $(index(_CrabDirTempVector[0],'/')) #<DEBUG>#
+                    if(index(_CrabDirTempVector[0],'/')==0) {
+                        set _CrabDirTempVector[0] = substr(_CrabDirTempVector[0],1,0)
+                    }
+                    # check no trailing '/'
+                    #echo index($(_CrabDirTempVector[0]),'/') = $(index(_CrabDirTempVector[0],'/')) #<DEBUG>#
+                    if(index(_CrabDirTempVector[0],'/')==strlen(_CrabDirTempVector[0])-1) {
+                        set _CrabDirTempVector[0] = substr(_CrabDirTempVector[0],0,strlen(_CrabDirTempVector[0])-1)
+                    }
+                    set _CrabDirReadVector = _CrabDirReadVector concat _CrabDirTempVector[0]
+                }
+                define _CrabDirReadLineNumber $($_CrabDirReadLineNumber+1)
+            } else {
+                define _CrabDirReadLineNumber -1
+            }
+        } else {
+            define _CrabDirReadLineNumber -1
+        }
+    }
+    verbose $_CrabDirVerbose undef _CrabDirVerbose
+    # check root '/', must be the first character of the first line, if not then prepend
+    if(dimen(_CrabDirReadVector)>0) {
+        if(index(_CrabDirReadVector[0],'/')!=0) {
+            set _CrabDirReadVector[0] = '/' + _CrabDirReadVector[0]
+        }
+    }
+    set $0 = _CrabDirReadVector
+    #print  {_CrabDirReadVector}
+    return
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

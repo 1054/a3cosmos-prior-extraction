@@ -1,0 +1,244 @@
+solveTwoVarLinearRegression 01
+        # 
+        # Latest update: 
+        #     2014-07-17 in frederic2component.sm dl
+        # 
+        # 
+        # f0 = a1*f1 + a2*f2
+        # 
+        # Input: f0, f1, f2, df
+        # 
+        # Refer: http://www.physicsforums.com/showthread.php?t=194616
+        # 
+        # 
+        # read obs data and model data
+        # set f0 = ObsFlux             # observed line fluxes array
+        # set df = ObsFErr             # observed line flux errors array
+        # set f1 = fredericSimf1[js-1] # model component 1 line fluxes array
+        # set f2 = fredericSimf2[js-1] # model component 2 line fluxes array
+        # 
+        # 
+        # monte-cairo
+        if($?1) {
+            set mcN = $1
+            gasdev $(mcN*dimen(df)) epfE
+            # vecminmax epfE epfEMin epfEMax
+            # get_hist epfE histX histY $epfEMin $epfEMax $(($epfEMax-$epfEMin)/20)
+            # device x11
+            # limits histX histY
+            # erase expand 1.1 box
+            # histogram histX histY
+            set mcc0 = 1,mcN
+            set mca1 = mcc0*0.0+0.1
+            set mca2 = mcc0*0.0+0.1
+            set mcChi2 = mcc0*0.0+0.1
+        } else {
+            set mcN = 1
+            set epfE = df*0.0
+            set mcc0 = 1,mcN
+            set mca1 = mcc0*0.0+0.1
+            set mca2 = mcc0*0.0+0.1
+            set mcChi2 = mcc0*0.0+0.1
+        }
+        # 
+        # loop each sim case
+        do mci=0,mcN-1 {
+            # 
+            # 
+            set epfi = dimen(df)*$mci,dimen(df)*($mci+1)-1
+            set epf0 = epfE[epfi]*df
+            # echo 
+            # print {f0 df epf0 f1 f2}
+            # define aaa ?
+            # 
+            # 
+            set rdf0 = (f0+epf0)/df      # reduced
+            set rdf1 = f1/df             # reduced
+            set rdf2 = f2/df             # reduced
+            # 
+            # check if f1<0 and f2<0
+            if(sum((f1<=0 && f2<=0))>0) {
+                # this situation means that at some J f1 and f2 are both negative
+                set a1 = 0.0
+                set a2 = 0.0
+                set chi2 = sum(((a1*f1+a2*f2-f0)**2)/(df**2))
+                # break #<TODO># NO BREAK! KEEP FULL PARAMETER SPACE!!!
+            } else {
+                # 
+                # find a best fit of the combination of the two components
+                # -- 1 -- http://luna.cas.usf.edu/~mbrannic/files/regression/Reg2IV.html
+                # -- 3 -- EDADDI
+                set cf1u = sum(rdf0*rdf1)*sum(rdf2**2) - sum(rdf0*rdf2)*sum(rdf2*rdf1) #   MA*BB-MB*BA
+                set cf1b = sum(rdf1*rdf1)*sum(rdf2**2) - sum(rdf1*rdf2)*sum(rdf2*rdf1) # / AA*BB-BA*BA
+                set cf2u = sum(rdf0*rdf2)*sum(rdf1**2) - sum(rdf0*rdf1)*sum(rdf1*rdf2) #   MB*AA-MA*AB
+                set cf2b = sum(rdf2*rdf2)*sum(rdf1**2) - sum(rdf1*rdf2)*sum(rdf1*rdf2) # / BB*AA-AB*AB
+                # 
+                # 
+                if(cf1b==0||cf2b==0) { 
+                    # This situation means that f1 and f2 are identical at certain float precision. 
+                    # break #<TODO># NO BREAK! KEEP FULL PARAMETER SPACE!!!
+                    # -- 4 -- when f1==f2
+                    if(sum(rdf1<=0)<=0 && sum(rdf2<=0)<=0) {
+                        set cf1u = sum(rdf0*rdf2)
+                        set cf1b = sum(rdf1*rdf1) + sum(rdf1*rdf2)
+                        set cf2u = sum(rdf0*rdf1)
+                        set cf2b = sum(rdf2*rdf2) + sum(rdf2*rdf1)
+                        set cf1 = cf1u/cf1b
+                        set cf2 = cf2u/cf2b
+                        set a1 = cf1
+                        set a2 = cf2
+                        set chi2 = sum(((a1*f1+a2*f2-f0)**2)/(df**2))
+                    } else {
+                        set a1 = 0.0
+                        set a2 = 0.0
+                        set chi2 = sum(((a1*f1+a2*f2-f0)**2)/(df**2))
+                    }
+                    # 
+                    # print {f0 f1 f2 a1 a2 cf1 cf2}
+                    # define aaa ?
+                } else {
+                    # -- 1 -- 
+                    # -- 3 -- 
+                    set cf1 = cf1u/cf1b
+                    set cf2 = cf2u/cf2b
+                    # 
+                    set a1 = cf1
+                    set a2 = cf2
+                    set chi2 = sum(((a1*f1+a2*f2-f0)**2)/(df**2))
+                    # print {f0 f1 f2 a1 a2 cf1 cf2}
+                    # define aaa ?
+                }
+            }
+            # 
+            # 
+            # <TODO> how to prevent from negative a1 a2 ?? -- calc min chi2 a1 a2 by ourselves
+            if(a1<0||a2<0) {
+                # 
+                # This situation is because solution of linear equation has negative values, which is non-physical!!!
+                # 
+                # just set to zero
+                if(a1<0.0) {set a1=0.0}
+                if(a2<0.0) {set a2=0.0}
+                set chi2 = sum(((a1*f1+a2*f2-f0)**2)/(df**2))
+                # 
+                # one stupid solution is to find a1 a2 by looping a1 a2 parameter space! <very-time-consuming>
+                set tempcount = 100 set tempchi2=1,tempcount*tempcount set tempchi2=tempchi2*0 set iia1=tempchi2*0 set iia2=tempchi2*0 set iia0=tempchi2*0
+                set tempratio = f0/f1 vecminmax tempratio tempmin tempmax set iimax1=$tempmin set iistep1=(iimax1-0)/(tempcount-1) set iimax1=iimax1>0?iimax1:0.
+                set tempratio = f0/f2 vecminmax tempratio tempmin tempmax set iimax2=$tempmin set iistep2=(iimax2-0)/(tempcount-1) set iimax2=iimax2>0?iimax2:0.
+                # print {iimax1 iimax2 iistep1 iistep2}
+                define ia0 0
+                do ia1=0.,iimax1,$(iistep1) {
+                    do ia2=0.,iimax2,$(iistep2) {
+                        set tempchi2[$ia0] = sum((f0-$ia1*f1-$ia2*f2)**2/df**2)
+                        set iia1[$ia0] = $ia1 set iia2[$ia0] = $ia2 set iia0[$ia0] = $ia0
+                        # echo $ia0 $ia1 $ia2
+                        define ia0 $($ia0+1) ###<CORRECTED><20140622><DZLIU>###[IMPORTANT]###
+                        # if(!is_vector(tempchi2)) {set tempchi2=tempchisq} else {set tempchi2=tempchi2 concat tempchisq}
+                        # if(!is_vector(iia1)) {set iia1=$ia1} else {set iia1=iia1 concat $ia1}
+                        # if(!is_vector(iia2)) {set iia2=$ia2} else {set iia2=iia2 concat $ia2}
+                    }
+                }
+                set tempuuid=0,dimen(tempchi2)-1 sort {tempchi2 tempuuid} define tempminid $(tempuuid[0]) sort {tempuuid tempchi2}
+                # 
+                if(1==0 && iimax1>0 && iimax2>0) {
+                    echo minimum id=$tempminid a1=$(iia1[$tempminid]) a2=$(iia2[$tempminid]) chi2=$(tempchi2[$tempminid]) looped a1=[0:$(iimax1[0])] a2=[0:$(iimax2[0])]
+                    print tempchi2.csv '%10.3f %10.3f %10.3f %12.5g\n' {iia0 iia1 iia2 tempchi2} #<TODO><DEBUG><OUTPUT>#
+                    print +tempchi2.csv '\n\# minimum id=$tempminid a1=$(iia1[$tempminid]) a2=$(iia2[$tempminid]) chi2=$(tempchi2[$tempminid])\n' {}
+                    # define ccc ?
+                }
+                set a1 = iia1[$tempminid]
+                set a2 = iia2[$tempminid]
+                set chi2 = tempchi2[$tempminid]
+                unset iistep1 unset iistep2 undef tempmin undef tempmax undef tempminid
+                unset iia1 unset iia2 unset iia0 unset tempchi2 unset tempchisq unset tempuuid unset tempratio
+            }
+            # define aaa ?
+            # 
+            # 
+            # 
+            # set a1 = 0.3
+            # set a2 = 0.3
+            echo sim=mci a1=$(a1) a2=$(a2) chi2=$(chi2)
+            set mca1[$mci] = a1
+            set mca2[$mci] = a2
+            set mcChi2[$mci] = chi2
+            # 
+            # 
+            # 
+        }
+        # 
+        # 
+        # print {mca1 mca2}
+        if(dimen(mca1)>1 && dimen(mca2)>1) {
+            stats mca1 mca1Mean mca1Sigma mca1Kurt
+            stats mca2 mca2Mean mca2Sigma mca2Kurt
+            stats_med mca1 mca1Median mca1SIQR
+            stats_med mca2 mca2Median mca2SIQR
+            vecminmax mca1 mca1Min mca1Max define mca1Step $(($mca1Max-$mca1Min)/300)
+            vecminmax mca2 mca2Min mca2Max define mca2Step $(($mca2Max-$mca2Min)/300)
+            get_hist mca1 mca1v mca1h $mca1Min $mca1Max $mca1Step
+            get_hist mca2 mca2v mca2h $mca2Min $mca2Max $mca2Step
+            sort {mca1h mca1v} set mca1h=reverse(mca1h) set mca1v=reverse(mca1v) define mca1Poss $(mca1v[0])
+            sort {mca2h mca2v} set mca2h=reverse(mca2h) set mca2v=reverse(mca2v) define mca2Poss $(mca2v[0])
+            echo poss(a1)=$mca1Poss median(a1)=$mca1Median mean(a1)=$mca1Mean sigma(a1)=$mca1Sigma
+            echo poss(a2)=$mca2Poss median(a2)=$mca2Median mean(a2)=$mca2Mean sigma(a2)=$mca2Sigma
+            set a1 = $mca1Poss
+            set a2 = $mca2Poss
+            set chi2 = sum(((a1*f1+a2*f2-f0)**2)/(df**2))
+        }
+        # 
+        # 
+        # end
+
+
+
+
+
+
+
+gasdev 2 #
+    # SM implementation of algorithm used by Press et al. for deriving 
+    # random numbers with gaussian distribution from random numbers with
+    # uniform distribution, here the SM built-in function.  - bjw, December 2004
+    # Copyright 2004, Benjamin Weiner, licensed under GPL.
+    # 
+    # returns a vector of N randoms with rms=1.
+    # 
+    # http://www.design.caltech.edu/erik/Misc/Gaussian.html
+    # Box-Muller (1958) transformation
+    # transform uniformly distributed random variables, 
+    # to a new set of random variables with a Gaussian (or Normal) distribution. 
+    # 
+    # Usage: 
+    #     gasdev <dimen> <random vector>
+    # 
+    set dimen($2) = $1
+    set _v1 = 2*random($1)-1
+    set _v2 = 2*random($1)-1
+    set _rsq = _v1**2 + _v2**2
+    set _ifgood = (_rsq<1 && _rsq>0) ? 1 : 0
+    set _fac = (_ifgood==1) ? (-2*ln(_rsq)/_rsq) : 0
+    set _fac = sqrt(_fac)
+    set _g1 = _v1 * _fac
+    set _g2 = _v2 * _fac
+    # try to fill up with good numbers from the two random vectors
+    # if the entry wasn't good, we get a number from the second vector.
+    # because more than half of the numbers fall in the unit circle,
+    # this should work for any reasonably large N.
+    define _j 0
+    do _i = 0, $1-1 {
+        if ( _ifgood[$_i]==1 ) { 
+            set $2[$_i] = _g1[$_i]
+        } else { 
+            while { _ifgood[$_j]==0 } {define _j ($_j+1) }
+            set $2[$_i] = _g2[$_j] 
+            define _j ($_j+1)
+        }
+    }
+
+
+
+
+
+
+

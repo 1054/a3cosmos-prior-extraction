@@ -1,0 +1,280 @@
+crabPlotColorbar 00
+    # 
+    # 
+    # 
+    print '\ncrabPlotColorbar example:\n\n' {}
+    print '    set xArray yArray dataArray\n' {}
+    print '    plotColorBar 0 0 0 0 dataArray\n' {}
+    print '    plotColorBar 0 0 0 0 dataArray dataMin dataMax TitleString\n' {}
+    print '    do i=0,dimen(dataArray)-1 {\n' {}
+    print '      ctype \$(dataArray_Colors[\$i])\n' {}
+    print '      points (\$(xArray[\$i])) (\$(yArray[\$i]))\n' {}
+    print '      ctype default\n' {}
+    print '    }\n' {}
+    print '\n\n' {}
+
+
+
+plotColorBar_demo 00
+    # 
+    #     load crabPlotColorbar.sm plotColorBar_demo
+    # 
+    #     crabPlotColorbar is a quick macro to plot colorbar and set color array according to the input data array
+    # 
+    #     the input parameters are: DevicePosX DevicePosY DeviceWidth DeviceHeight DataArray DataMin DataMax
+    # 
+    #     see demo for how to use
+    # 
+    #     bewi
+    # 
+    device x11
+    erase
+    plotColorBar_gdefault
+    set dataArray = random(50)*2.5+7.0
+    set dataPosit = random(50)*3.0+5.0
+    limits dataPosit dataArray
+    box
+    # now plot color bar
+    plotColorBar 0 0 0 0 dataArray
+    # now plot data points
+    do pcbg_i = 0,dimen(dataArray)-1 {
+        ctype $(dataArray_Colors[$pcbg_i]) expand 2.0 ptype 12 3
+        # echo ($(dataPosit[$pcbg_i])) ($(dataArray[$pcbg_i]))
+        points ($(dataPosit[$pcbg_i])) ($(dataArray[$pcbg_i]))
+    }
+    plotColorBar_gdefault
+    expand 3.0 ptype 4 0 ctype white points dataPosit dataArray
+    plotColorBar_gdefault
+
+plotColorBar_init 07
+    # 
+    #  Setup initial parameters here
+    # 
+    if($?1) {if($1>0){set plotColorBarX = $1}}
+    if($?2) {if($2>0){set plotColorBarY = $2}}
+    if($?3) {if($3>0){set plotColorBarW = $3}}
+    if($?4) {if($4>0){set plotColorBarH = $4}}
+    #if($?5) {if($5!=0){set plotColorBarTickets = $5}}
+    if($?5) {if(1==1){set plotColorBarTickets = $5}}
+    if($?6) {if($6!=0){set plotColorBarTickSize = $6}}
+    if($?7) {if($7!=0){set plotColorBarTickFormat = $7}}
+    if(!is_vector(plotColorBarX))          {set plotColorBarX = 19000}
+    if(!is_vector(plotColorBarY))          {set plotColorBarY = 7000 }
+    if(!is_vector(plotColorBarW))          {set plotColorBarW = 9000 }
+    if(!is_vector(plotColorBarH))          {set plotColorBarH = 2000 }
+    if(!is_vector(plotColorBarTickets))    {set plotColorBarTickets = 0,16-1,1  }
+    if(!is_vector(plotColorBarTickSize))   {set plotColorBarTickSize = 0.95     }
+    if(!is_vector(plotColorBarTickFormat)) {set plotColorBarTickFormat = {%0.1f}}
+    if(plotColorBarX<=1.0) {set plotColorBarX = $(plotColorBarX*32000)}
+    if(plotColorBarY<=1.0) {set plotColorBarY = $(plotColorBarY*32000)}
+    if(plotColorBarW<=1.0) {set plotColorBarW = $(plotColorBarW*32000)}
+    if(plotColorBarH<=1.0) {set plotColorBarH = $(plotColorBarH*32000)}
+
+plotColorBar 08
+    # 
+    #     macro read plotColorBar.sm plotColorBar
+    # 
+    if(!$?5) {print 'plotColorBar: Error! No input data!\n' {} 
+              print '       usage: plotColorBar DevicePosX DevicePosY DeviceWidth DeviceHeight DataArray DataMin DataMax TitleString\n' {}
+              print '       set 0 for DevicePosX DevicePosY DeviceWidth DeviceHeight will force the macro ' {}
+              print 'to use default values 19000 7000 9000 2000\n' {}
+              print '       additionally we can set these vectors:\n' {} 
+              print '              set plotColorBarTickSize = 0.95\n' {} 
+              print '              set plotColorBarTickFormat = {%0.2f}\n' {}
+              print '              set plotColorBarDataMin = 0.0\n' {}
+              print '              set plotColorBarDataMax = 0.0\n' {}
+              return}
+    if($?6) {set plotColorBarDataMin=$6} else {unset plotColorBarDataMin}
+    if($?7) {set plotColorBarDataMax=$7} else {unset plotColorBarDataMax}
+    if(is_vector(plotColorBarDataMin) && is_vector(plotColorBarDataMax)) {
+        if(plotColorBarDataMax==plotColorBarDataMin) {
+            unset plotColorBarDataMin
+            unset plotColorBarDataMax
+        }
+    }
+    plotColorBar_value2tickets $5 set $5""_Indexes = pcbg_index set $5""_Colors = pcbg_colors set $5""_Values = $5
+    plotColorBar_init $1 $2 $3 $4 pcbg_tickets
+    plotColorBar_gcolours
+    plotColorBar_gsave
+    set plotColorBarCenX = plotColorBarX+plotColorBarW*0.5
+    set plotColorBarCenY = plotColorBarY+plotColorBarH*0.5
+    do pcbg_i = 0,16 {
+        set pcbg_x1 = plotColorBarX+plotColorBarW/16.0*($pcbg_i)
+        set pcbg_x2 = plotColorBarX+plotColorBarW/16.0*($pcbg_i+1)
+        set pcbg_y1 = plotColorBarY
+        set pcbg_y2 = plotColorBarY+plotColorBarH
+        # echo location $(int(pcbg_x1)) $(int(pcbg_x2)) $(int(pcbg_y1)) $(int(pcbg_y2))
+        location $(int(pcbg_x1)) $(int(pcbg_x2)) $(int(pcbg_y1)) $(int(pcbg_y2))
+        limits 0 1 0 1
+        if($pcbg_i<=16) {ctype pcbg_$pcbg_i} else {ctype default}
+        expand 5.0 ptype 4 3 points (0.5) (0.5)
+        # ctype white expand 1.5 ptype 4 1 box 3 3 3 3
+        # ctype default 
+        # now plot colorbar tickets
+        if($pcbg_i<=16 && $pcbg_i%3==0) {
+            set pcbg_tx = plotColorBarTickSize
+            set pcbg_tf = plotColorBarTickFormat
+            set pcbg_tk = plotColorBarTickets[$pcbg_i]
+            expand $(pcbg_tx) lweight 3.5 relocate 0.4 0.0 putlabel 2 $(sprintf('$(pcbg_tf)',float(pcbg_tk)))
+        }
+    }
+    if($?8) {
+        relocate ($(plotColorBarCenX) $(plotColorBarCenY-plotColorBarH*1.2))
+        expand 1.2 lweight 3.5 ctype default putlabel 5 $8
+    }
+    plotColorBar_grestore
+    plotColorBar_gdefault
+    
+plotColorBar_gdefault 00
+    expand 1.5 lweight 3.0 ctype default ptype 4 1 angle 0
+
+plotColorBar_gsave
+    set pcbg_gx1 = $gx1
+    set pcbg_gx2 = $gx2
+    set pcbg_gy1 = $gy1
+    set pcbg_gy2 = $gy2
+    set pcbg_fx1 = $fx1
+    set pcbg_fx2 = $fx2
+    set pcbg_fy1 = $fy1
+    set pcbg_fy2 = $fy2
+    if($verbose) {
+        echo plotColorBar_gsave: location $gx1 $gx2 $gy1 $gy2
+        echo plotColorBar_gsave: limits $fx1 $fx2 $fy1 $fy2
+    }
+
+plotColorBar_grestore
+    #define gx1 $(pcbg_gx1) #<BUG><20170724># can not directly operate on gx
+    #define gx2 $(pcbg_gx2) #<BUG><20170724># can not directly operate on gx
+    #define gy1 $(pcbg_gy1) #<BUG><20170724># can not directly operate on gx
+    #define gy2 $(pcbg_gy2) #<BUG><20170724># can not directly operate on gx
+    #define fx1 $(pcbg_fx1) #<BUG><20170724># can not directly operate on gx
+    #define fx2 $(pcbg_fx2) #<BUG><20170724># can not directly operate on gx
+    #define fy1 $(pcbg_fy1) #<BUG><20170724># can not directly operate on gx
+    #define fy2 $(pcbg_fy2) #<BUG><20170724># can not directly operate on gx
+    location $(pcbg_gx1) $(pcbg_gx2) $(pcbg_gy1) $(pcbg_gy2)
+    limits $(pcbg_fx1) $(pcbg_fx2) $(pcbg_fy1) $(pcbg_fy2)
+    if($verbose) {
+        echo plotColorBar_grestore: location $gx1 $gx2 $gy1 $gy2
+        echo plotColorBar_grestore: limits $fx1 $fx2 $fy1 $fy2
+    }
+
+plotColorBar_gcolours 00
+    # 16 colors res
+    add_ctype pcbg_16 255 255 255 # this is additional color background color
+    add_ctype pcbg_15 238 017 000
+    add_ctype pcbg_14 255 051 017
+    add_ctype pcbg_13 255 068 034
+    add_ctype pcbg_12 255 102 068
+    add_ctype pcbg_11 255 153 051
+    add_ctype pcbg_10 254 174 045
+    add_ctype pcbg_9  204 187 051
+    add_ctype pcbg_8  208 195 016
+    add_ctype pcbg_7  170 204 034
+    add_ctype pcbg_6  105 208 037
+    add_ctype pcbg_5  034 204 170
+    add_ctype pcbg_4  018 189 185
+    add_ctype pcbg_3  017 170 187
+    add_ctype pcbg_2  068 068 221
+    add_ctype pcbg_1  051 017 187
+    add_ctype pcbg_0  068 034 153
+    #add_ctype pcbg_0  238 017 000
+    #add_ctype pcbg_1  255 051 017
+    #add_ctype pcbg_2  255 068 034
+    #add_ctype pcbg_3  255 102 068
+    #add_ctype pcbg_4  255 153 051
+    #add_ctype pcbg_5  254 174 045
+    #add_ctype pcbg_6  204 187 051
+    #add_ctype pcbg_7  208 195 016
+    #add_ctype pcbg_8  170 204 034
+    #add_ctype pcbg_9  105 208 037
+    #add_ctype pcbg_10 034 204 170
+    #add_ctype pcbg_11 018 189 185
+    #add_ctype pcbg_12 017 170 187
+    #add_ctype pcbg_13 068 068 221
+    #add_ctype pcbg_14 051 017 187
+    #add_ctype pcbg_15 068 034 153
+    #add_ctype pcbg_16 000 000 000 # this is additional color background color
+
+plotColorBar_roundvalue_demo
+    #   macro read plotColorBar.sm plotColorBar_roundvalue_demo
+    set pcbg_rdval_demo1 = 0,5,0.32
+    set pcbg_rdval_demo2 = plotColorBar_roundvalue(pcbg_rdval_demo1)
+    print {pcbg_rdval_demo1 pcbg_rdval_demo2}
+
+plotColorBar_roundvalue 01
+    set pcbg_inval = $1
+    set pcbg_rdval = pcbg_inval*0.0
+    set pcbg_rdind = 0,dimen(pcbg_inval)-1
+    set pcbg_rdinx = pcbg_rdind
+    set pcbg_rdval = float((pcbg_inval>0)*2-1) * float(abs(pcbg_inval)+0.5)
+    set pcbg_rdval = int(pcbg_rdval)
+    set pcbg_rdval = float(pcbg_rdval)
+    set $0 = pcbg_rdval
+
+plotColorBar_value2color 01
+    # this function is used to convert value to color after plotColorBar_init
+    if($?1) {
+        if(is_vector(pcbg_indexes) && is_vector(pcbg_values) && is_vector(pcbg_colors)) {
+            set pcbg_value_input = float($1)
+            spline pcbg_values pcbg_indexes pcbg_value_input pcbg_index_output
+            set pcbg_index_output = (pcbg_index_output<0) ? 0 : pcbg_index_output #<BUG><FIXED><20171212><DZLIU># 
+            set pcbg_color_output = 'pcbg_'+sprintf('%.0f',pcbg_index_output)
+            ctype $(pcbg_color_output)
+            set $0 = pcbg_color_output
+        }
+    }
+    return
+
+plotColorBar_value2index_demo
+    #   macro read plotColorBar.sm plotColorBar_value2index_demo
+    set pcbg_value_demo1 = 7.9,9.3,0.25
+    set pcbg_value_demo2 = plotColorBar_value2index(pcbg_value_demo1)
+    print {pcbg_value_demo1 pcbg_value_demo2}
+
+plotColorBar_value2index 01
+    set pcbg_value = $1
+    if(dimen(pcbg_value)>0) {
+        vecminmax pcbg_value pcbg_vMIN pcbg_vMAX
+        if($verbose) {echo "plotColorBar_value2tickets: MIN MAX "$pcbg_vMIN" "$pcbg_vMAX}
+        if(is_vector(plotColorBarDataMin)){define pcbg_vMIN $(plotColorBarDataMin)}
+        if(is_vector(plotColorBarDataMax)){define pcbg_vMAX $(plotColorBarDataMax)}
+        if($verbose) {echo "plotColorBar_value2tickets: MIN MAX "$pcbg_vMIN" "$pcbg_vMAX}
+        set pcbg_index = float(pcbg_value-$pcbg_vMIN)/float($pcbg_vMAX-$pcbg_vMIN)*(16.0-1.0) # 16 colors res -- index 0 to 15
+        set pcbg_index = plotColorBar_roundvalue(pcbg_index)
+        set $0 = pcbg_index
+    } else {set $0 = 16}
+
+plotColorBar_value2tickets 01
+    set pcbg_value = $1
+    if(dimen(pcbg_value)>0) {
+        vecminmax pcbg_value pcbg_vMIN pcbg_vMAX
+        if($verbose) {echo "plotColorBar_value2tickets: MIN MAX "$pcbg_vMIN" "$pcbg_vMAX}
+        if(is_vector(plotColorBarDataMin)){define pcbg_vMIN $(plotColorBarDataMin)}
+        if(is_vector(plotColorBarDataMax)){define pcbg_vMAX $(plotColorBarDataMax)}
+        if($verbose) {echo "plotColorBar_value2tickets: MIN MAX "$pcbg_vMIN" "$pcbg_vMAX}
+        set pcbg_tickets = $pcbg_vMIN,$pcbg_vMAX,$(float($pcbg_vMAX-$pcbg_vMIN)/(16.0-1.0))
+        set pcbg_index = float(pcbg_value-$pcbg_vMIN)/float($pcbg_vMAX-$pcbg_vMIN)*(16.0-1.0) # 16 colors res -- index 0 to 15
+        # safty check
+        #<20170823><dzliu># if(sum(pcbg_index<0)>0) {
+        #<20170823><dzliu>#     set pcbg_index_checkid = 0,dimen(pcbg_index)-1 
+        #<20170823><dzliu>#     set pcbg_index_checkid = pcbg_index_checkid if(pcbg_index<0)
+        #<20170823><dzliu>#     set pcbg_index[pcbg_index_checkid] = 16
+        #<20170823><dzliu># }
+        set pcbg_index = plotColorBar_roundvalue(pcbg_index)
+        set pcbg_index = pcbg_index>=0  ? pcbg_index : 0  #<fixed><20170823><dzliu>#
+        set pcbg_index = pcbg_index<=15 ? pcbg_index : 15 #<fixed><20150421><dzliu>#
+        set pcbg_colors = 'pcbg_'+sprintf('%.0f',pcbg_index)
+        set pcbg_values = $pcbg_vMIN,$pcbg_vMAX,$(float($pcbg_vMAX-$pcbg_vMIN)/(16.0-1.0)) # == pcbg_tickets
+        set pcbg_indexes = 0,15,1
+    }
+
+plotColorBar_fin 00
+    if(is_vector(plotColorBarX))          {unset plotColorBarX}
+    if(is_vector(plotColorBarY))          {unset plotColorBarY}
+    if(is_vector(plotColorBarW))          {unset plotColorBarW}
+    if(is_vector(plotColorBarH))          {unset plotColorBarH}
+    if(is_vector(plotColorBarTickets))    {unset plotColorBarTickets}
+    if(is_vector(plotColorBarTickSize))   {unset plotColorBarTickSize}
+    if(is_vector(plotColorBarTickFormat)) {unset plotColorBarTickFormat}
+
+

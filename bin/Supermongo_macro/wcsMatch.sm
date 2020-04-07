@@ -1,0 +1,217 @@
+wcsMatch 00
+                print 'Usage: \n' {}
+                print '       macro read wcsMatch.sm matchCatalogRADec\n' {}
+                print '       -- input: \$1 "_matchCatalog_input_1.txt" (columns: id ra dec)\n' {}
+                print '                 \$2 "_matchCatalog_input_2.txt" (columns: id ra dec)\n' {}
+                print '                 \$3  1.0   (arcsec)\n' {}
+                print '       -- outputs: "_matchCatalog_output_NonMatch_1.txt"\n' {}
+                print '                   "_matchCatalog_output_NonMatch_2.txt"\n' {}
+                print '                   "_matchCatalog_output_Matched.txt"\n' {}
+                print '\n' {}
+
+
+matchCatalogRADec 03
+                # 
+                # Usage: 
+                #     macro read wcsMatch.sm matchCatalogRADec "catalog_1.txt" "catalog_2.txt" 1.0
+                # 
+                # Note:
+                #     note that the output matched list can have duplicated id_1 but no duplicated id_2
+                #     this is because we loop id_2 to locate the nearest id_1 within a diff_limit, 
+                #     if there are two id_1 within one id_2, then both id_1 and id_2 are single matched, 
+                #     but if there are two id_2 within one id_1, then id_1 is duplicated to both id_2. 
+                # 
+                set _match_diff_limit = 1.0 # arcsec
+                set _matchCatalog_1 = {"_matchCatalog_input_1.txt"}
+                set _matchCatalog_2 = {"_matchCatalog_input_2.txt"}
+                if($?1) { set _matchCatalog_1 = {$1} }
+                if($?2) { set _matchCatalog_2 = {$2} }
+                if($?3) { set _match_diff_limit = $3 }
+                set _matchCatalog_oN1 = {"_matchCatalog_output_NonMatch_1.txt"}
+                set _matchCatalog_oN2 = {"_matchCatalog_output_NonMatch_2.txt"}
+                set _matchCatalog_oMc = {"_matchCatalog_output_Matched.txt"}
+                set _matchCatalog_oMs = {"_matchCatalog_output_Matched_Sorted.txt"}
+                set _matchCatalog_o12 = {"_matchCatalog_output_Match_1_to_2.txt"} # 2 as refer, output has same dimen as 1.
+                if(!is_file($(_matchCatalog_1))) {print 'File $(_matchCatalog_1) not found!\n' {} return}
+                if(!is_file($(_matchCatalog_2))) {print 'File $(_matchCatalog_2) not found!\n' {} return}
+                data $(_matchCatalog_1) read {_match_id_1 1 _match_ra_1 2 _match_de_1 3}
+                data $(_matchCatalog_2) read {_match_id_2 1 _match_ra_2 2 _match_de_2 3}
+                set _match_uid_1 = 0, dimen(_match_id_1)-1
+                set _match_uid_2 = 0, dimen(_match_id_2)-1
+                unset _match_sid_oN1
+                unset _match_sid_oN2
+                unset _match_sid_oM1
+                unset _match_sid_oM2
+                unset _match_sid_oMD
+                while { sum(_match_id_2+1) > 0 } {
+                    set _match_sid_2 = _match_uid_2 if(_match_id_2>=0)
+                    set _match_sid_2 = _match_sid_2[0]
+                    # <TODO> Match by ID
+                    ##set _match_diff = _match_id_1[_match_uid_1] - $(_match_id_2[_match_sid_2])
+                    ##set _match_flag = sum(_match_diff==0)
+                    # <TODO> Match by RA Dec
+                    set _match_diff_ra = (_match_ra_1[_match_uid_1]-$(_match_ra_2[_match_sid_2])) * 3600.0 # arcsec
+                    set _match_diff_de = (_match_de_1[_match_uid_1]-$(_match_de_2[_match_sid_2])) * 3600.0 # arcsec
+                    set _match_mean_de = (_match_de_1[_match_uid_1]+$(_match_de_2[_match_sid_2]))/2.0/180.0*pi # arcdegree rather than degree
+                    set _match_diff = sqrt( (_match_diff_ra*COS(_match_mean_de))**2 + (_match_diff_de)**2 )
+                    set _match_flag = (_match_diff<=_match_diff_limit) # matching with a spatial distance limit of 0.5 arcsec <TODO> 
+                    # 
+                    if( sum(_match_flag)>0 ) { # we got a matched id pair !
+                        set _match_sid_1 = _match_uid_1 if(_match_flag==1)
+                        set _match_sdiff = _match_diff  if(_match_flag==1)
+                        sort {_match_sdiff _match_sid_1} # find the nearest matched obj
+                        ###if(dimen(_match_sid_1)>2){define aaa ?}
+                        set _match_sid_1 = _match_sid_1[0]
+                        set _match_sdiff = _match_sdiff[0]
+                        if(!is_vector(_match_sid_oM1)) {
+                            set _match_sid_oM1 = _match_sid_1
+                            set _match_sid_oM2 = _match_sid_2
+                            set _match_sid_oMD = _match_sdiff
+                        } else {
+                            if(sum((_match_sid_oM1-_match_sid_1)==0)==0) {
+                                set _match_sid_oM1 = _match_sid_oM1 concat _match_sid_1
+                                set _match_sid_oM2 = _match_sid_oM2 concat _match_sid_2
+                                set _match_sid_oMD = _match_sid_oMD concat _match_sdiff
+                            } else {
+                                #<added><20150623><dzliu># fix problem nearest obj
+                                # now while looping id2, we will check the matched id1, 
+                                # if there already has an id1 that matched to other id2, 
+                                # we will check whether this new matching has shorter distance
+                                # or not, if the new matching is better, we will assign this
+                                # id1 to the new id2 instead of the old matched id2. 
+                                set _temp_sid = 0,dimen(_match_sid_oM1)-1
+                                set _temp_sid = _temp_sid if(_match_sid_oM1==_match_sid_1)
+                                if(_match_sid_oMD[_temp_sid]>_match_sdiff) {
+                                    set _match_sid_oM1[_temp_sid] = _match_sid_1
+                                    set _match_sid_oM2[_temp_sid] = _match_sid_2
+                                    set _match_sid_oMD[_temp_sid] = _match_sdiff
+                                }
+                            }
+                        }
+                        #if(!is_vector(_match_sid_oM2)) {set _match_sid_oM2 = _match_sid_2} else {set _match_sid_oM2 = _match_sid_oM2 concat _match_sid_2}
+                        #if(!is_vector(_match_sid_oMD)) {set _match_sid_oMD = _match_sdiff} else {set _match_sid_oMD = _match_sid_oMD concat _match_sdiff}
+                        if($verbose==1){echo We got a pos-match in ID1 for ID2 = $(_match_id_2[_match_sid_2]) / $(_match_id_2[dimen(_match_id_2)-1])}
+                        set _match_id_1[_match_sid_1] = -1 # _match_id_1[_match_sid_1]>=0 ? -1 : _match_id_1[_match_sid_1]-1
+                        set _match_id_2[_match_sid_2] = -1 # _match_id_2[_match_sid_2]>=0 ? -1 : _match_id_2[_match_sid_2]-1
+                        unset _match_sid_1 unset _match_sdiff
+                    } else {
+                        if(!is_vector(_match_sid_oN2)) {set _match_sid_oN2 = _match_sid_2} else {set _match_sid_oN2 = _match_sid_oN2 concat _match_sid_2}
+                        if($verbose==1){echo We got a non-match in ID1 for ID2 = $(_match_id_2[_match_sid_2]) / $(_match_id_2[dimen(_match_id_2)-1])}
+                        set _match_id_2[_match_sid_2] = -1
+                    }
+                }
+                set _match_sid_oN1 = _match_uid_1 if(_match_id_1>=0)
+                # 
+                # output
+                if(is_vector(_matchCatalog_oN1)||is_vector(_matchCatalog_oN2)||is_vector(_matchCatalog_oMc)) {
+                data $(_matchCatalog_1) read {_match_id_1 1 _match_ra_1 2 _match_de_1 3}
+                data $(_matchCatalog_2) read {_match_id_2 1 _match_ra_2 2 _match_de_2 3}
+                }
+                if(is_vector(id_1)) {set backup_id_1 = id_1} else {if(is_vector(backup_id_1)) {unset backup_id_1}}
+                if(is_vector(ra_1)) {set backup_ra_1 = ra_1} else {if(is_vector(backup_ra_1)) {unset backup_ra_1}}
+                if(is_vector(de_1)) {set backup_de_1 = de_1} else {if(is_vector(backup_de_1)) {unset backup_de_1}}
+                if(is_vector(id_2)) {set backup_id_2 = id_2} else {if(is_vector(backup_id_2)) {unset backup_id_2}}
+                if(is_vector(ra_2)) {set backup_ra_2 = ra_2} else {if(is_vector(backup_ra_2)) {unset backup_ra_2}}
+                if(is_vector(de_2)) {set backup_de_2 = de_2} else {if(is_vector(backup_de_2)) {unset backup_de_2}}
+                if(is_vector(_matchCatalog_oMc)) {
+                set id_1 = _match_id_1[_match_sid_oM1]
+                set ra_1 = _match_ra_1[_match_sid_oM1]
+                set de_1 = _match_de_1[_match_sid_oM1]
+                set id_2 = _match_id_2[_match_sid_oM2]
+                set ra_2 = _match_ra_2[_match_sid_oM2]
+                set de_2 = _match_de_2[_match_sid_oM2]
+                set DiFF = _match_sid_oMD
+                if(1==1){echo Write data 1 to $(dimen(_match_sid_oM1)) to $(_matchCatalog_oMc)}
+                print $(_matchCatalog_oMc) '%10.0f %15.7f %15.7f %10.0f %15.7f %15.7f %15g\n' {id_1 ra_1 de_1 id_2 ra_2 de_2 DiFF}
+                sort {id_1 ra_1 de_1 id_2 ra_2 de_2 DiFF}
+                print $(_matchCatalog_oMs) '%10.0f %15.7f %15.7f %10.0f %15.7f %15.7f %15g\n' {id_1 ra_1 de_1 id_2 ra_2 de_2 DiFF}
+                }
+                if(is_vector(_matchCatalog_oN1)) {
+                set id_1 = _match_id_1[_match_sid_oN1]
+                set ra_1 = _match_ra_1[_match_sid_oN1]
+                set de_1 = _match_de_1[_match_sid_oN1]
+                if(1==1){echo Write data 1 to $(dimen(_match_sid_oN1)) to $(_matchCatalog_oN1)}
+                print $(_matchCatalog_oN1) '%10.0f %15.7f %15.7f\n' {id_1 ra_1 de_1}
+                }
+                if(is_vector(_matchCatalog_oN2)) {
+                set id_2 = _match_id_2[_match_sid_oN2]
+                set ra_2 = _match_ra_2[_match_sid_oN2]
+                set de_2 = _match_de_2[_match_sid_oN2]
+                if(1==1){echo Write data 1 to $(dimen(_match_sid_oN2)) to $(_matchCatalog_oN2)}
+                print $(_matchCatalog_oN2) '%10.0f %15.7f %15.7f\n' {id_2 ra_2 de_2}
+                }
+                if(is_vector(_matchCatalog_o12)) {
+                set id_1 = _match_id_1
+                set id_2 = _match_id_1*0.0-99
+                set ra_2 = _match_ra_1*0.0-99
+                set de_2 = _match_de_1*0.0-99
+                set id_2[_match_sid_oM1] = _match_id_2[_match_sid_oM2]
+                set ra_2[_match_sid_oM1] = _match_ra_2[_match_sid_oM2]
+                set de_2[_match_sid_oM1] = _match_de_2[_match_sid_oM2]
+                set diff12 = _match_id_1*0.0-99
+                set diff12[_match_sid_oM1] = _match_sid_oMD
+                if(1==1){echo Write data 1 to $(dimen(id_1)) to $(_matchCatalog_o12)}
+                print $(_matchCatalog_o12) '%10.0f %10.0f %15.7f %15.7f %15g\n' {id_1 id_2 ra_2 de_2 diff12}
+                }
+                if(is_vector(backup_id_1)) {set id_1 = backup_id_1}
+                if(is_vector(backup_ra_1)) {set ra_1 = backup_ra_1}
+                if(is_vector(backup_de_1)) {set de_1 = backup_de_1}
+                if(is_vector(backup_id_2)) {set id_2 = backup_id_2}
+                if(is_vector(backup_ra_2)) {set ra_2 = backup_ra_2}
+                if(is_vector(backup_de_2)) {set de_2 = backup_de_2}
+
+
+intersecCatalogRADec 00
+                # 
+                # Usage: 
+                #     macro read wcsMatch.sm intersecCatalogRADec
+                # 
+                set _matchCatalog_1 = {"_matchCatalog_input_1.txt"} # shorter list 
+                set _matchCatalog_2 = {"_matchCatalog_input_2.txt"} # longer refer list
+                set _matchCatalog_o = {"_matchCatalog_output_Intersected.txt"}
+                if(!is_file($(_matchCatalog_1))) {print 'File $(_matchCatalog_1) not found!\n' {} return}
+                if(!is_file($(_matchCatalog_2))) {print 'File $(_matchCatalog_2) not found!\n' {} return}
+                data $(_matchCatalog_1) read {_match_id_1 1 _match_ra_1 2 _match_de_1 3}
+                data $(_matchCatalog_2) read {_match_id_2 1 _match_ra_2 2 _match_de_2 3}
+                set _match_uid_1 = 0, dimen(_match_id_1)-1
+                set _match_uid_2 = 0, dimen(_match_id_2)-1
+                unset _match_sid_oM1
+                unset _match_sid_oM2
+                unset _match_sid_oDf
+                do _match_sid = 0,dimen(_match_id_1)-1 {
+                    set _match_sid_1 = $_match_sid
+                    set _match_diff_ra = (_match_ra_1[_match_sid_1]-_match_ra_2) * 3600.0 # arcsec
+                    set _match_diff_de = (_match_de_1[_match_sid_1]-_match_de_2) * 3600.0 # arcsec
+                    set _match_mean_de = (_match_de_1[_match_sid_1])/180.0*pi # arcdegree rather than degree
+                    set _match_diff = sqrt( (_match_diff_ra*COS(_match_mean_de))**2 + (_match_diff_de)**2 )
+                    set _match_uid_2 = 0,dimen(_match_id_2)-1 sort {_match_diff _match_uid_2}
+                    set _match_sid_2 = _match_uid_2[0]
+                    set _match_sdiff = _match_diff[0]
+                    if(!is_vector(_match_sid_oM1)) {set _match_sid_oM1 = _match_sid_1} else {set _match_sid_oM1 = _match_sid_oM1 concat _match_sid_1}
+                    if(!is_vector(_match_sid_oM2)) {set _match_sid_oM2 = _match_sid_2} else {set _match_sid_oM2 = _match_sid_oM2 concat _match_sid_2}
+                    if(!is_vector(_match_sid_oDf)) {set _match_sid_oDf = _match_sdiff} else {set _match_sid_oDf = _match_sid_oDf concat _match_sdiff}
+                }
+                if(is_vector(id_1)) {set backup_id_1 = id_1} else {if(is_vector(backup_id_1)) {unset backup_id_1}}
+                if(is_vector(ra_1)) {set backup_ra_1 = ra_1} else {if(is_vector(backup_ra_1)) {unset backup_ra_1}}
+                if(is_vector(de_1)) {set backup_de_1 = de_1} else {if(is_vector(backup_de_1)) {unset backup_de_1}}
+                if(is_vector(id_2)) {set backup_id_2 = id_2} else {if(is_vector(backup_id_2)) {unset backup_id_2}}
+                if(is_vector(ra_2)) {set backup_ra_2 = ra_2} else {if(is_vector(backup_ra_2)) {unset backup_ra_2}}
+                if(is_vector(de_2)) {set backup_de_2 = de_2} else {if(is_vector(backup_de_2)) {unset backup_de_2}}
+                set id_1 = _match_id_1[_match_sid_oM1]
+                set ra_1 = _match_ra_1[_match_sid_oM1]
+                set de_1 = _match_de_1[_match_sid_oM1]
+                set id_2 = _match_id_2[_match_sid_oM2]
+                set ra_2 = _match_ra_2[_match_sid_oM2]
+                set de_2 = _match_de_2[_match_sid_oM2]
+                set diff = _match_sid_oDf[_match_sid_oM1]
+                echo Write data 1 to $(dimen(_match_sid_oM1)) to $(_matchCatalog_o)
+                print $(_matchCatalog_o) '%10.0f %15.7f %15.7f %10.0f %15.7f %15.7f %15g\n' {id_1 ra_1 de_1 id_2 ra_2 de_2 diff}
+                # 
+                if(is_vector(backup_id_1)) {set id_1 = backup_id_1}
+                if(is_vector(backup_ra_1)) {set ra_1 = backup_ra_1}
+                if(is_vector(backup_de_1)) {set de_1 = backup_de_1}
+                if(is_vector(backup_id_2)) {set id_2 = backup_id_2}
+                if(is_vector(backup_ra_2)) {set ra_2 = backup_ra_2}
+                if(is_vector(backup_de_2)) {set de_2 = backup_de_2}
+
+

@@ -1,0 +1,93 @@
+vecSNR 03
+    # calculate the vectors signal-to-noise ratio
+    # example: 
+    #   load vecSNR.sm 
+    #   set snratio = vecSNR(flux,error)
+    # 20170629: 
+    #   the 3rd input argument is the blank value, in default is -99
+    # 
+    if($?1==0||$?2==0){print 'usage: vecSNR fluxvector errorvector\n' {} return}
+    set vecSNR_inf = $1
+    set vecSNR_ine = $2
+    declare vecSNR_snr 0
+    if(dimen(vecSNR_inf)!=dimen(vecSNR_ine)) {
+    print 'vecSNR: Error! flux vector and error vector have different dimension!\n' {} 
+    return }
+    set vecSNR_fid = 0,dimen(vecSNR_inf)-1
+    set vecSNR_snr = vecSNR_fid*0
+    if(sum(vecSNR_inf>0&&vecSNR_ine>0)>0) {
+      set vecSNR_sid = vecSNR_fid if(vecSNR_inf>0&&vecSNR_ine>0)
+      set vecSNR_snr[vecSNR_sid] = vecSNR_inf[vecSNR_sid] / vecSNR_ine[vecSNR_sid]
+    }
+    #<20170629># if(sum(vecSNR_inf==-99)) {
+    #<20170629>#   set vecSNR_sid = vecSNR_fid if(vecSNR_inf==-99)
+    #<20170629>#   set vecSNR_snr[vecSNR_sid] = -99
+    #<20170629># }
+    if($?3) {set vecSNR_bad = $3} else {set vecSNR_bad = -99}
+    if(sum(vecSNR_inf<0||vecSNR_ine<0)) {
+      set vecSNR_sid = vecSNR_fid if(vecSNR_inf<0||vecSNR_ine<0)
+      set vecSNR_snr[vecSNR_sid] = vecSNR_bad
+    }
+    set $0 = vecSNR_snr
+    return
+
+
+vecSNR_square 02
+    # calculate the squared signal-to-noise ratio
+    # example: load vecSNR.sm set snratio = vecSNR(flux,error)
+    if($?1==0||$?2==0){print 'usage: vecSNR_square fluxvector errorvector\n' {} return}
+    set vecSNR_inf = $1
+    set vecSNR_ine = $2
+    declare vecSNR_snr_square 0
+    if(dimen(vecSNR_inf)!=dimen(vecSNR_ine)) {
+    print 'vecSNR: Error! flux vector and error vector have different dimension!\n' {} 
+    return }
+    set vecSNR_fid = 0,dimen(vecSNR_inf)-1
+    set vecSNR_snr_square = vecSNR_fid*0
+    if(sum(vecSNR_inf>0&&vecSNR_ine>0)>0) {
+        set vecSNR_sid = vecSNR_fid if(vecSNR_inf>0&&vecSNR_ine>0)
+        set vecSNR_snr_square[vecSNR_sid] = (vecSNR_inf[vecSNR_sid] / vecSNR_ine[vecSNR_sid])**2
+    }
+    if(sum(vecSNR_inf==-99)>0) {
+        set vecSNR_sid = vecSNR_fid if(vecSNR_inf==-99)
+        set vecSNR_snr_square[vecSNR_sid] = -99
+    }
+    set $0 = vecSNR_snr_square
+    return
+
+
+vecSNR_conjunct 02
+    # calculate the vectors signal-to-noise ratio, conjunct with square root
+    # example: set fluxvs = {flux1 flux2 flux3} 
+    #          set errorvs = {error1 error2 error3}
+    #          load vecSNR.sm 
+    #          set snratio = vecSNR_conjunct(fluxvs,errorvs)
+    # <TODO> what about -99
+    if($?1==0||$?2==0){print 'usage: vecSNR_conjunct fluxvectors errorvectors\n' {} return}
+    set vecSNR_infs = $1
+    set vecSNR_ines = $2
+    declare vecSNR_snr_conjunct 0
+    declare vecSNR_snr_conjunct_square 0
+    if(dimen(vecSNR_infs)!=dimen(vecSNR_ines)) {
+    print 'vecSNR_conjunct: Error! flux vectors and error vectors have different dimension!\n' {} 
+    return }
+    do vecSNR_i=0,dimen(vecSNR_infs)-1 {
+      set vecSNR_infi = $(vecSNR_infs[$vecSNR_i])
+      set vecSNR_inei = $(vecSNR_ines[$vecSNR_i])
+      set vecSNR_snri = vecSNR_square(vecSNR_infi,vecSNR_inei) # each band SNR
+      set vecSNR_snri = (vecSNR_snri==-99) ? 0.0 : vecSNR_snri
+      if(dimen(vecSNR_snri)>0){
+        if($vecSNR_i==0){set vecSNR_snr_conjunct_square = vecSNR_snri}else{
+        set vecSNR_snr_conjunct_square = (vecSNR_snri==-99)? vecSNR_snr_conjunct_square : vecSNR_snr_conjunct_square+vecSNR_snri}
+      }
+    }
+    if(dimen(vecSNR_snr_conjunct_square)>0){
+      set vecSNR_fid = 0,dimen(vecSNR_snr_conjunct_square)-1
+      set vecSNR_sid = vecSNR_fid if(vecSNR_snr_conjunct_square>=0)
+      set vecSNR_snr_conjunct = (vecSNR_snr_conjunct_square==-99) ? float(-99) : float(0)
+      set vecSNR_snr_conjunct[vecSNR_sid] = sqrt(vecSNR_snr_conjunct_square[vecSNR_sid])
+      set $0 = vecSNR_snr_conjunct
+    }
+    return
+
+

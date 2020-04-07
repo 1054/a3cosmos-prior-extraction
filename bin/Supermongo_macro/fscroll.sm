@@ -1,0 +1,18 @@
+fscroll 
+    # 
+    # scroll saving
+    # 
+    set fbegin = 79000.0
+    set frate = 5.0
+    set tstep = 0.01 # month
+    set tend = 12.0 # month
+    set fvalue = fbegin
+    do i=0,tend,tstep {
+        if(($i/tstep)%(1.0/tstep)==0) {
+            echo month $(sprintf('%.0f',float($i))) f $(sprintf('%.2f',fvalue)) +f +$(sprintf('%.2f',fvalue-fbegin))
+        }
+        set fscroll = fvalue * frate/100. / 365.
+        set fvalue = fvalue + fscroll*tstep*30.
+    }
+    echo month $(sprintf('%.0f',tend)) if no scroll +f +$(sprintf('%.2f', fbegin * frate/100. / 365. * tend * 30.))
+

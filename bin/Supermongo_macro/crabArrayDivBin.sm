@@ -1,0 +1,63 @@
+crabArrayDivBin 00
+    # 
+    # 
+    # 
+    print 'crabArrayDivBin provides these functions: \n' {}
+    print '    crabArrayDivBinBySize \n' {}
+
+
+crabArrayDivBinBySize 03
+    # inputs: BinArray BinSize 
+    # output: OutputVarList # each item of OutputVarList is a vector name, which contains BinArray index within each bin. 
+    # example: set z = { 0.0 0.2 0.7 0.9 0.6 0.3 0.2 0.3 0.7 0.8 0.9}
+    #          crabArrayDivBinBySize z 0.35 zBin
+    #          zBin == { zBin_1 zBin_2 zBin_3 ... }
+    #          zBin_1 == { 0 1 5 6 7 }
+    #          zBin_2 == { 4 }
+    #          zBin_3 == { 2 3 8 9 10 }
+    #          --> so we can get number count in bin 1 = dimen($(zBin[1])) = dimen(zBin_1)
+    #          --> we can also easily play with other arrays e.g. SFR same dimen as z: 
+    #          -->     set zBin_1_SFR = SFR[$(zBin[1])] = SFR[zBin_1]
+    #          -->     stats zBin_1_SFR zBin_1_MeanSFR zBin_1_SigmaSFR zBin_1_KurtSFR
+    #          -->     echo the mean SFR in z bin 1 is $zBin_1_MeanSFR !
+    if($?1==0||$?2==0||$?3==0) {print 'Usage: crabArrayDivBinBySize BinArray BinSize OutputVarList\n' {} return}
+    set crabArrayBinArray = $1
+    set crabArrayBinSizes = $2
+    set crabArrayBinIndex = 0,dimen(crabArrayBinArray)-1
+    vecminmax crabArrayBinArray crabArrayBinVMIN crabArrayBinVMAX
+    echo crabArrayDivBinBySize: vecminmax crabArrayBinArray $crabArrayBinVMIN $crabArrayBinVMAX
+    set crabArrayBinCurt = $crabArrayBinVMIN
+    set crabArrayBinNext = $crabArrayBinVMIN+crabArrayBinSizes[0]
+    set crabArrayBinCount = 0
+    set crabArrayBinEdges = $crabArrayBinVMIN
+    declare crabArrayBinCents 0
+    declare crabArrayBinVects 0 set crabArrayBinVects = <$3"_"0>
+    while { crabArrayBinNext <= $crabArrayBinVMAX } {
+        # now we save BinNext as a BinEdge
+        set crabArrayBinCount = crabArrayBinCount + 1
+        set crabArrayBinVect = <$3"_"$(crabArrayBinCount)>         declare $(crabArrayBinVect) 0    echo $(crabArrayBinVect)
+        set crabArrayBinVects = crabArrayBinVects concat                     crabArrayBinVect
+        set crabArrayBinEdges = crabArrayBinEdges concat                     crabArrayBinNext
+        set crabArrayBinCents = crabArrayBinCents concat $((crabArrayBinCurt+crabArrayBinNext)/2.0)
+        # now we grab the index array 
+        set crabArrayBinFlag = (crabArrayBinArray>=crabArrayBinCurt && crabArrayBinArray<crabArrayBinNext)
+        if(crabArrayBinNext==$crabArrayBinVMAX){set crabArrayBinFlag=(crabArrayBinFlag||crabArrayBinArray==$crabArrayBinVMAX)}
+        set $(crabArrayBinVect) = crabArrayBinIndex if(crabArrayBinFlag)
+        # now we go to next BinNext
+        if(crabArrayBinCount<dimen(crabArrayBinSizes)) {
+            set crabArrayBinCurt = crabArrayBinNext
+            set crabArrayBinNext = crabArrayBinNext + crabArrayBinSizes[crabArrayBinCount]
+        } else {
+            set crabArrayBinCurt = crabArrayBinNext
+            set crabArrayBinNext = crabArrayBinNext + crabArrayBinSizes[dimen(crabArrayBinSizes)-1]
+        }
+        if(crabArrayBinNext>$crabArrayBinVMAX) {set crabArrayBinNext = $crabArrayBinVMAX}
+        if(crabArrayBinCurt>=$crabArrayBinVMAX) {break}
+    }
+    set $(crabArrayBinVects[0]) = crabArrayBinCents
+    set $3 = crabArrayBinVects
+    print 'crabArrayDivBinBySize: successfully output vector $3\n' {}
+    # print {crabArrayBinEdges crabArrayBinCents crabArrayBinVects}
+    return
+
+

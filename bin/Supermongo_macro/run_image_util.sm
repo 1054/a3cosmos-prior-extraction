@@ -1,0 +1,584 @@
+getpix_rd 03
+    
+    # Usage: 
+    #     macro read run_image_util.sm getpix_rd fitsfile ra dec
+    # 
+    # Output:
+    #     pix_values
+    # 
+    # check
+    if( $?1==0 || is_vector($2)==0 || is_vector($3)==0 ) {
+        echo Usage: macro read run_image_util.sm getpix_rd fitsfile ra dec
+        exit
+    }
+    # inputs
+    define t_getpix_rd_fitsfile <$1>
+    set t_getpix_rd_ra = $2
+    set t_getpix_rd_dec = $3
+    # sky2xy
+    !\rm aaa_getpix_rd_sky2xy_input >> /dev/null 2>&1
+    !\rm aaa_getpix_rd_sky2xy_output >> /dev/null 2>&1
+    if($?print_noheader==1) {define prev_noheader $print_noheader} else {define prev_noheader 0} define print_noheader 1 
+    print  aaa_getpix_rd_sky2xy_input '%17.7f %17.7f\n' { t_getpix_rd_ra t_getpix_rd_dec }
+    !sky2xy -j $t_getpix_rd_fitsfile @aaa_getpix_rd_sky2xy_input > aaa_getpix_rd_sky2xy_output
+    data aaa_getpix_rd_sky2xy_output read { t_getpix_rd_xx 5 t_getpix_rd_yy 6 }
+    if($?prev_noheader==1) {define print_noheader $prev_noheader}
+    # getpix
+    if($?print_noheader==1) {define prev_noheader $print_noheader} else {define prev_noheader 0} define print_noheader 1
+    print aaa_getpix_rd_getpix_input '%15.5f %15.5f\n' {t_getpix_rd_xx t_getpix_rd_yy}
+    !getpix -n 1 -s $t_getpix_rd_fitsfile @aaa_getpix_rd_getpix_input > aaa_getpix_rd_getpix_output
+    data aaa_getpix_rd_getpix_output read { t_getpix_rd_pixvalues 1 }
+    if($?prev_noheader==1) {define print_noheader $prev_noheader}
+    # output
+    set pixvalues = t_getpix_rd_pixvalues
+
+
+
+getpix_xy 03
+    
+    # Usage: 
+    #     macro read run_image_util.sm getpix_xy fitsfile x y
+    # 
+    # Output:
+    #     pix_values
+    # 
+    # check
+    if( $?1==0 || is_vector($2)==0 || is_vector($3)==0 ) {
+        echo Usage: macro read run_image_util.sm getpix_xy fitsfile ra dec
+        exit
+    }
+    # inputs
+    define t_getpix_xy_fitsfile <$1>
+    set t_getpix_xy_xx = $2
+    set t_getpix_xy_yy = $3
+    # getpix
+    if($?print_noheader==1) {define prev_noheader $print_noheader} else {define prev_noheader 0} define print_noheader 1
+    print aaa_getpix_xy_getpix_input '%15.5f %15.5f\n' {t_getpix_xy_xx t_getpix_xy_yy}
+    !getpix -n 1 -s $t_getpix_xy_fitsfile @aaa_getpix_xy_getpix_input > aaa_getpix_xy_getpix_output
+    data aaa_getpix_xy_getpix_output read { t_getpix_xy_pixvalues 1 }
+    if($?prev_noheader==1) {define print_noheader $prev_noheader}
+    
+    # output
+    set pix_values = t_getpix_xy_pixvalues
+
+
+
+
+
+
+
+
+
+
+
+pix_close_pack 04
+    
+    # Usage:
+    #     macro read run_image_util.sm pix_close_pack fitsfile x y normalize_radius
+    #     normalize_radius should be the FWHM of PSF main peak
+    # 
+    # Output:
+    #     close_pack_factors
+    # 
+    # check
+    if( $?1==0 || is_vector($2)==0 || is_vector($3)==0 || $?4==0  ) {
+        echo Usage: macro read run_image_util.sm pix_close_pack fitsfile x y normalize_radius
+        exit
+    }
+    # inputs
+    define t_pix_close_pack_fitsfile $1
+    set    t_pix_close_pack_x = $2
+    set    t_pix_close_pack_y = $3
+    define t_pix_close_pack_fwhm $4
+    define t_pix_close_pack_sigma $($4/2.35482)
+    # getpix
+    if(is_vector(pix_values)==1) {set prev_pvalue=pix_values} else {unset prev_pvalue}
+    getpix_xy $t_pix_close_pack_fitsfile t_pix_close_pack_x t_pix_close_pack_y
+    set t_pix_close_pack_pvalue = pix_values>0 ? pix_values : 0.0
+    if(is_vector(prev_pvalue)==1) {set pix_values=prev_pvalue}
+    # array
+    set t_pix_close_pack_factor = t_pix_close_pack_x*0.0
+    set t_pix_close_pack_fvalue = t_pix_close_pack_x*0.0
+    # matrix
+    mdeclare t_pix_close_pack_MTX dimen(t_pix_close_pack_x)
+    # dr = sqrt(dx^2 + dy^2)
+    do  t_pix_close_pack_i=0,dimen(t_pix_close_pack_x)-1 {
+        set t_pix_close_pack_dx = t_pix_close_pack_x - t_pix_close_pack_x[$t_pix_close_pack_i]
+        set t_pix_close_pack_dy = t_pix_close_pack_y - t_pix_close_pack_y[$t_pix_close_pack_i]
+        set t_pix_close_pack_dr = sqrt(t_pix_close_pack_dx**2 + t_pix_close_pack_dy**2) / $t_pix_close_pack_sigma
+        # 
+        set t_pix_close_pack_exp = exp(-t_pix_close_pack_dr**2)
+        set t_pix_close_pack_MTX_$t_pix_close_pack_i = t_pix_close_pack_exp
+        # 
+        # set t_pix_close_pack_gaussian = t_pix_close_pack_pvalue[$t_pix_close_pack_i] * exp(-t_pix_close_pack_dr**2)
+        # set t_pix_close_pack_sumpack = sum(t_pix_close_pack_gaussian)
+        # if(t_pix_close_pack_sumpack>0) { 
+        #     set t_pix_close_pack_factor[$t_pix_close_pack_i] = t_pix_close_pack_pvalue[$t_pix_close_pack_i]/t_pix_close_pack_sumpack
+        #     set t_pix_close_pack_fvalue[$t_pix_close_pack_i] = t_pix_close_pack_pvalue[$t_pix_close_pack_i]*t_pix_close_pack_factor[$t_pix_close_pack_i]
+        # }
+    }
+    # matrix inverse
+    minv t_pix_close_pack_MTX
+    mmult_v t_pix_close_pack_fvalue t_pix_close_pack_MTX t_pix_close_pack_pvalue
+    if($?verbose==1) {define prev_verbose $verbose} else {define prev_verbose 1} verbose 0
+    set t_pix_close_pack_factor = t_pix_close_pack_fvalue/t_pix_close_pack_pvalue
+    if($?prev_verbose==1) {verbose $prev_verbose}
+    # output
+    if($?print_noheader==1) {define prev_noheader $print_noheader} else {define prev_noheader 0} define print_noheader 0
+    print aaa_pix_close_pack_factors '%15.5f %15.5f %15.5g %15.5g %15.5g\n' {t_pix_close_pack_x t_pix_close_pack_y t_pix_close_pack_pvalue t_pix_close_pack_factor t_pix_close_pack_fvalue}
+    if($?prev_noheader==1) {define print_noheader $prev_noheader}
+    set close_pack_factors = t_pix_close_pack_factor
+    set pix_values = t_pix_close_pack_fvalue
+
+
+
+pix_close_pack_rd 04
+    
+    # Usage:
+    #     macro read run_image_util.sm pix_close_pack_rd fitsfile ra dec normalize_radius
+    #     normalize_radius should be the FWHM of PSF main peak
+    # 
+    # Output:
+    #     close_pack_factors
+    # 
+    # check
+    if( $?1==0 || is_vector($2)==0 || is_vector($3)==0 || $?4==0  ) {
+        echo Usage: macro read run_image_util.sm pix_close_pack_rd fitsfile ra dec normalize_radius
+        exit
+    }
+    # inputs
+    define t_pix_close_pack_fitsfile $1
+    set    t_pix_close_pack_ra = $2
+    set    t_pix_close_pack_dec = $3
+    define t_pix_close_pack_fwhm $4
+    define t_pix_close_pack_sigma $($4/2.35482)
+    # sky2xy
+    !\rm aaa_pix_close_pack_sky2xy_input >> /dev/null 2>&1
+    !\rm aaa_pix_close_pack_sky2xy_output >> /dev/null 2>&1
+    if($?print_noheader==1) {define prev_noheader $print_noheader} else {define prev_noheader 0} define print_noheader 1 
+    print  aaa_pix_close_pack_sky2xy_input '%17.7f %17.7f\n' { t_pix_close_pack_ra t_pix_close_pack_dec }
+    !sky2xy -j $t_pix_close_pack_fitsfile @aaa_pix_close_pack_sky2xy_input > aaa_pix_close_pack_sky2xy_output
+    data aaa_pix_close_pack_sky2xy_output read { t_pix_close_pack_x 5 t_pix_close_pack_y 6 }
+    if($?prev_noheader==1) {define print_noheader $prev_noheader}
+    # getpix
+    if(is_vector(pix_values)==1) {set prev_pvalue=pix_values} else {unset prev_pvalue}
+    getpix_xy $t_pix_close_pack_fitsfile t_pix_close_pack_x t_pix_close_pack_y
+    set t_pix_close_pack_pvalue = pix_values>0 ? pix_values : 0.0
+    if(is_vector(prev_pvalue)==1) {set pix_values=prev_pvalue}
+    # array
+    set t_pix_close_pack_factor = t_pix_close_pack_x*0.0
+    set t_pix_close_pack_fvalue = t_pix_close_pack_x*0.0
+    # matrix
+    mdeclare t_pix_close_pack_MTX dimen(t_pix_close_pack_x)
+    # dr = sqrt(dx^2 + dy^2)
+    do  t_pix_close_pack_i=0,dimen(t_pix_close_pack_x)-1 {
+        set t_pix_close_pack_dx = t_pix_close_pack_x - t_pix_close_pack_x[$t_pix_close_pack_i]
+        set t_pix_close_pack_dy = t_pix_close_pack_y - t_pix_close_pack_y[$t_pix_close_pack_i]
+        set t_pix_close_pack_dr = sqrt(t_pix_close_pack_dx**2 + t_pix_close_pack_dy**2) / $t_pix_close_pack_sigma
+        # 
+        set t_pix_close_pack_exp = exp(-t_pix_close_pack_dr**2)
+        set t_pix_close_pack_MTX_$t_pix_close_pack_i = t_pix_close_pack_exp
+        # 
+        # set t_pix_close_pack_gaussian = t_pix_close_pack_pvalue[$t_pix_close_pack_i] * exp(-t_pix_close_pack_dr**2)
+        # set t_pix_close_pack_sumpack = sum(t_pix_close_pack_gaussian)
+        # if(t_pix_close_pack_sumpack>0) { 
+        #     set t_pix_close_pack_factor[$t_pix_close_pack_i] = t_pix_close_pack_pvalue[$t_pix_close_pack_i]/t_pix_close_pack_sumpack
+        #     set t_pix_close_pack_fvalue[$t_pix_close_pack_i] = t_pix_close_pack_pvalue[$t_pix_close_pack_i]*t_pix_close_pack_factor[$t_pix_close_pack_i]
+        # }
+        # 
+        # if(t_pix_close_pack_x[$t_pix_close_pack_i]==409.729) {
+        #     sort {t_pix_close_pack_gaussian}
+        #     set t_pix_close_pack_gaussian = reverse(t_pix_close_pack_gaussian)
+        #     print {t_pix_close_pack_gaussian}
+        #     echo $(t_pix_close_pack_fvalue[$t_pix_close_pack_i])
+        # }
+    }
+    # matrix inverse
+    minv t_pix_close_pack_MTX
+    mmult_v t_pix_close_pack_fvalue t_pix_close_pack_MTX t_pix_close_pack_pvalue
+    if($?verbose==1) {define prev_verbose $verbose} else {define prev_verbose 1} verbose 0
+    set t_pix_close_pack_factor = t_pix_close_pack_fvalue/t_pix_close_pack_pvalue
+    if($?prev_verbose==1) {verbose $prev_verbose}
+    # output
+    if($?print_noheader==1) {define prev_noheader $print_noheader} else {define prev_noheader 0} define print_noheader 0
+    print aaa_pix_close_pack_factors '%15.5f %15.5f %15.5g %15.5g %15.5g\n' {t_pix_close_pack_x t_pix_close_pack_y t_pix_close_pack_pvalue t_pix_close_pack_factor t_pix_close_pack_fvalue}
+    if($?prev_noheader==1) {define print_noheader $prev_noheader}
+    set close_pack_factors = t_pix_close_pack_factor
+    set pix_values = t_pix_close_pack_fvalue
+
+
+
+pix_close_pack_xy 03
+    
+    # Usage:
+    #     macro read run_image_util.sm pix_close_pack_xy x y normalize_radius
+    #     normalize_radius should be the FWHM of PSF main peak
+    # 
+    # Output:
+    #     close_pack_factors
+    #
+    # check
+    if( is_vector($1)==0 || is_vector($2)==0 || $?3==0  ) {
+        echo Usage: macro read run_image_util.sm pix_close_pack_xy x y normalize_radius
+        exit
+    }
+    #  
+    pix_close_pack $1 $2 $3
+
+
+
+
+
+
+
+
+
+
+
+
+getRmsPixStats 03
+    # Usage:
+    #     macro read run_image_util.sm getRmsPixStats image xc yc
+    # 
+    define RmsPixStats_IMG $1
+    define RmsPixStats_PSF 1 # use a radius 1 to calc rms pix stats
+    set RmsPixStats_IMG = {"}+<'$1'>+{"}
+    set RmsPixStats_XPC = $2
+    set RmsPixStats_YPC = $3
+    set RmsPixStats_PSF = 1 # use a radius 1 to calc rms pix stats
+    # echo 
+    if($verbose) { 
+    echo run_image_util::getRmsPixStats: RmsPixStats_IMG = $(RmsPixStats_IMG)
+    echo run_image_util::getRmsPixStats: RmsPixStats_PSF = $(RmsPixStats_PSF)
+    }
+    # open image
+    define file_type fits      # must define file_type fits so as to read fits file
+    print 'run_image_util::getRmsPixStats: ' {}
+    data non_exist_file      # clear any data in buffer otherwise can not open fits
+    image $(RmsPixStats_IMG)     # macro "image" can read one fits file
+    define BITPIX image
+    if($BITPIX==(-64)) { # patch for double type fits #<NOte># same as getResPixStats
+        echo Illegal? No worry, we have fixed it now. 
+        set RmsPixStats_64S = RmsPixStats_IMG
+        set RmsPixStats_64S = substr(RmsPixStats_64S,0,strlen(RmsPixStats_64S)-6) # suffix .fits"
+        set RmsPixStats_32S = RmsPixStats_64S+{_float"}
+        set RmsPixStats_64S = RmsPixStats_64S+{"}
+        ### print {RmsPixStats_64S}
+        ### print {RmsPixStats_32S}
+        if(!is_file($(RmsPixStats_32S).fits)) { # 
+            !\rm do.cl 2>/dev/null
+            print  do.cl 'images\ndataio\n' {}
+            print +do.cl 'rfits $(RmsPixStats_64S).fits 0 $(RmsPixStats_64S)_IRAF.fits\n' {}
+            print +do.cl 'imdel $(RmsPixStats_32S).fits\n' {}
+            print +do.cl 'wfits $(RmsPixStats_64S)_IRAF.fits $(RmsPixStats_32S).fits bitpix=-32\n' {}
+            print +do.cl 'imdel $(RmsPixStats_64S)_IRAF.fits\n' {}
+            print +do.cl 'logout\n\n' {}
+            !cl -old < do.cl >> /dev/null 2>&1
+        }
+        #### !cat do.cl
+        if($verbose) { echo run_image_util::getRmsPixStats: image $(RmsPixStats_32S).fits }
+        image $(RmsPixStats_32S).fits
+    }
+    define NAXIS1 image
+    define NAXIS2 image
+    # we use IRAF imstats to calculate the rms pix stats
+    set RmsPixStats_XP1 = (RmsPixStats_XPC-RmsPixStats_PSF)>=1       ? (RmsPixStats_XPC-RmsPixStats_PSF) : 1
+    set RmsPixStats_XP2 = (RmsPixStats_XPC+RmsPixStats_PSF)<=$NAXIS1 ? (RmsPixStats_XPC+RmsPixStats_PSF) : $NAXIS1
+    set RmsPixStats_YP1 = (RmsPixStats_YPC-RmsPixStats_PSF)>=1       ? (RmsPixStats_YPC-RmsPixStats_PSF) : 1
+    set RmsPixStats_YP2 = (RmsPixStats_YPC+RmsPixStats_PSF)<=$NAXIS2 ? (RmsPixStats_YPC+RmsPixStats_PSF) : $NAXIS2
+    if($?print_noheader) { if($print_noheader==0) {
+        define getRmsPixStats_noheader 0
+        define print_noheader 1 }
+    } else {
+        define getRmsPixStats_noheader 0
+        define print_noheader 1 ###<Added><DZLIU>###
+    }
+    !\rm "aaa_noise" 2>/dev/null
+    print  do.cl 'images\n' {}
+    print +do.cl 'imstat $1[%.0f:%.0f,%.0f:%.0f] nclip=0 >> aaa_noise \n' \
+                  {RmsPixStats_XP1 RmsPixStats_XP2 RmsPixStats_YP1 RmsPixStats_YP2}
+    print +do.cl 'logout\n\n' {}
+    !cl -old < do.cl >> /dev/null 2>&1   ###<Modified><DZLIU>### stdout to null
+    # 
+    if($?getRmsPixStats_noheader) {
+        define print_noheader $getRmsPixStats_noheader
+        undef getRmsPixStats_noheader
+    }
+    # verbose 0
+    if($?verbose) { if($verbose==1) {
+        define getRmsPixStats_verbose 1
+        verbose 0 }
+    } else {
+        define getRmsPixStats_verbose 1
+        verbose 0 ###<Added><DZLIU>###
+    }
+    # read noise (rms)
+    data "aaa_noise" read RmsPixStats_RMS 4
+    # verbose
+    if($?getRmsPixStats_verbose) {
+        verbose $getRmsPixStats_verbose
+        undef getRmsPixStats_verbose
+    }
+    # save rms values into vector
+    set RmsPixStats_RMS = (RmsPixStats_XP1==1 || RmsPixStats_YP1==1 || RmsPixStats_XP2==$NAXIS1 || RmsPixStats_YP2==$NAXIS2) ? 1e10 : RmsPixStats_RMS
+    set RmsPixStats_RMS = RmsPixStats_RMS>0 ? RmsPixStats_RMS : 1e10
+    # 
+    # print {RmsPixStats_XPC RmsPixStats_YPC RmsPixStats_SUM RmsPixStats_ABS RmsPixStats_SIG}
+    print "getRmsPixStats.csv" '%15.5g %15.5g %15g\n' {RmsPixStats_XPC RmsPixStats_YPC RmsPixStats_RMS}
+    # end
+
+
+
+
+
+
+
+getResPixStats 04
+    # Usage:
+    #     macro read run_image_util.sm getResPixStats image xc yc psf
+    # 
+    define ResPixStats_IMG $1
+    define ResPixStats_PSF $4
+    set ResPixStats_IMG = {"}+<'$1'>+{"}
+    set ResPixStats_XPC = $2
+    set ResPixStats_YPC = $3
+    set ResPixStats_PSF = {"}+<'$4'>+{"}
+    # We use PSF image to select object radius
+    define file_type fits      # must define file_type fits so as to read fits file
+    print 'run_image_util::getResPixStats: ' {}
+    data non_exist_file      # clear any data in buffer otherwise can not open fits
+    #<Corrected><20140909><DzLIU>
+    !touch "aaa_getpix" #<Corrected><20140909><DzLIU>
+    define fver $verbose verbose 0 data "aaa_getpix" verbose $fver #<Corrected><20140909><DzLIU>
+    # ---- this is a bug of supermongo, must do this before second image $ResPixStats_PSF
+    # echo 
+    if($verbose) { 
+    echo run_image_util::getResPixStats: ResPixStats_IMG = $ResPixStats_IMG
+    echo run_image_util::getResPixStats: ResPixStats_PSF = $ResPixStats_PSF
+    }
+    ##### echo getResPixStats: image $ResPixStats_PSF
+    print 'run_image_util::getResPixStats: ' {}
+    image $(ResPixStats_PSF)     # macro "image" can read one fits file
+    define BITPIX image
+    if($BITPIX==(-64)) { # patch for double type fits
+        echo Illegal? No worry, we have fixed it now. 
+        set ResPixStats_64S = ResPixStats_PSF # '$ResPixStats_PSF'
+        set ResPixStats_64S = substr(ResPixStats_64S,0,strlen(ResPixStats_64S)-6) # $ResPixStats_PSF  -5)
+        set ResPixStats_32S = ResPixStats_64S+{_float"}
+        set ResPixStats_64S = ResPixStats_64S+{"}
+        ### print {ResPixStats_64S}
+        ### print {ResPixStats_32S}
+        if(!is_file($(ResPixStats_32S).fits)) { # 
+            !\rm do.cl 2>/dev/null
+            print  do.cl 'images\ndataio\n' {}
+            print +do.cl 'rfits $(ResPixStats_64S).fits 0 $(ResPixStats_64S)_IRAF.fits\n' {}
+            print +do.cl 'imdel $(ResPixStats_32S).fits\n' {}
+            print +do.cl 'wfits $(ResPixStats_64S)_IRAF.fits $(ResPixStats_32S).fits bitpix=-32\n' {}
+            print +do.cl 'imdel $(ResPixStats_64S)_IRAF.fits\n' {}
+            print +do.cl 'logout\n\n' {}
+            !cl -old < do.cl >> /dev/null 2>&1
+        }
+        #### !cat do.cl
+        if($verbose) { print 'run_image_util::getResPixStats: image $(ResPixStats_32S).fits\n' {} }
+        print 'run_image_util::getResPixStats: ' {}
+        image $(ResPixStats_32S).fits
+    }
+    define NAXIS1 image
+    define NAXIS2 image
+    limits 0 $NAXIS1 0 $NAXIS2 # must set limits so as to analyze the whole image
+    minmax image_min image_max
+    define image_med $(0.5*$image_max) #<TODO># 0.5*$image_max
+    #echo $image_min $image_max $image_med
+    set image_pix = image[*,*]
+    set image_isc = 0,($NAXIS1*$NAXIS2-1)
+    set image_xsc =    (image_isc%$NAXIS2)
+    set image_ysc = int(image_isc/$NAXIS2)
+    set image_coo = image_pix>=$image_med
+    set imobj_xsc = image_xsc if(image_coo)
+    set imobj_ysc = image_ysc if(image_coo)
+    # 
+    set ResPixStats_SUM = ResPixStats_XPC*0.0
+    set ResPixStats_ABS = ResPixStats_XPC*0.0
+    set ResPixStats_SIG = ResPixStats_XPC*0.0
+    set ResPixStats_RMS = ResPixStats_XPC*0.0
+    # image $ResPixStats_IMG     # macro "image" can read one fits file
+    # define image_xns image
+    # define image_yns image
+    # set imobj_xsc = imobj_xsc - (($NAXIS1-1)/2) + (($image_xns-1)/2) + 1 # for getpix, these are sky position rather than image index
+    # set imobj_ysc = imobj_ysc - (($NAXIS2-1)/2) + (($image_yns-1)/2) + 1 # for getpix, these are sky position rather than image index
+    # 
+    # close image
+    image delete
+    define file_type C
+    # set ResPixStats_ABS = 0 return #<TODO><DEBUG>#
+    # 
+    # loop
+    do iResPixStats=0,dimen(ResPixStats_XPC)-1 {
+        define xResPixStats $(ResPixStats_XPC[$iResPixStats])
+        define yResPixStats $(ResPixStats_YPC[$iResPixStats])
+        set imres_xsc = imobj_xsc - (($NAXIS1-1)/2) + $xResPixStats # for getpix, these are sky position rather than image index
+        set imres_ysc = imobj_ysc - (($NAXIS2-1)/2) + $yResPixStats # for getpix, these are sky position rather than image index
+        # We use getpix to get object residual pixels
+        define  print_noheader 1
+        print  "aaa_getpix_resmap_input" '%15.0f %15.0f\n' {imres_xsc imres_ysc}                                 #<Modified><20140820><DzLIU># %0.3f->%0.0f
+        print  "aaa_getpix_resmap_input.ds9.reg" '\# Region file format: DS9 version 4.1\n' {}
+        print +"aaa_getpix_resmap_input.ds9.reg" 'global dashlist=8 3 width=1 select=1 edit=1 move=0 delete=1\n' {}
+        print +"aaa_getpix_resmap_input.ds9.reg" 'image\n' {}
+        print +"aaa_getpix_resmap_input.ds9.reg" 'point(%0.0f,%0.0f) \# point=circle\n' {imres_xsc imres_ysc}    #<Modified><20140820><DzLIU># %0.3f->%0.0f
+        print +"aaa_getpix_resmap_input.ds9.reg" '\n' {}
+        define  print_noheader 0
+        # echo !getpix -n 1 %15.5g $ResPixStats_IMG @"aaa_getpix_resmap_input" > "aaa_getpix_resmap_output"
+        !getpix -n 1 %15.5g $ResPixStats_IMG @"aaa_getpix_resmap_input" > "aaa_getpix_resmap_output"
+        ##### echo getResPixStats: $($iResPixStats+1)/$(dimen(ResPixStats_XPC))
+        declare imres_pix 0
+        define fver $verbose verbose 0 data "aaa_getpix_resmap_output" read {imres_pix 1} verbose $fver
+        # <TODO><BUG> can not image x.fits -- data read -- image xx.fits !!
+        # define file_type fits image sci.2.fits data aaa_getpix_resmap_output read xxx 1 image sci.2.fits
+        # define file_type fits image sci.2.fits data aaa_getpix_resmap_output read xxx 1 data non_exist_file image sci.2.fits
+        # Check imres_pix
+        ## if(dimen(imres_pix)>1) { if(sum(imres_pix!=0)==0) { set imres_pix={0} } } #<Modified><20141012><DzLIU>#
+        # Calc sum of object residual pixels
+        if(dimen(imres_pix)>1) { # DO NOT USE && sum(imres_pix)>0 #<Corrected><20140707><DZLIU>#
+        if(sum(imres_pix!=0)==0) { #<Modified><20141012><DzLIU>#
+        define imres_sig 0.0
+        } else {
+        stats  imres_pix imres_mean imres_sig imres_ku 
+        } #<Modified><20141012><DzLIU>#
+        ##<DEBUG><20140820>## echo dimen(imres_pix)=$(dimen(imres_pix)) x=$xResPixStats y=$yResPixStats
+        ##<DEBUG><20140820>## print {imres_pix}
+        ##<DEBUG><20140820>## !sleep 3.0
+        define imres_sum $(sum(imres_pix))
+        define imres_abs $(abs(sum(imres_pix)))
+        define imres_rms $(sqrt(sum(imres_pix**2)/dimen(imres_pix)))
+        if($verbose) { 
+        echo getResPixStats: ResPixStats_ABS = $imres_abs
+        }
+        set ResPixStats_SUM[$iResPixStats] = $imres_sum
+        set ResPixStats_ABS[$iResPixStats] = $imres_abs
+        set ResPixStats_SIG[$iResPixStats] = $imres_sig
+        set ResPixStats_RMS[$iResPixStats] = $imres_rms
+        } else {
+        define imres_sum -99 # out of image #<Corrected><20140707><DZLIU>#
+        define imres_abs -99 # out of image #<Corrected><20140707><DZLIU>#
+        define imres_rms -99 # out of image #<Corrected><20140707><DZLIU>#
+        define imres_sig -99 # out of image #<Corrected><20140707><DZLIU>#
+        set ResPixStats_SUM[$iResPixStats] = -99 # out of image #<Corrected><20140704><DZLIU>#
+        set ResPixStats_ABS[$iResPixStats] = -99 # out of image
+        set ResPixStats_SIG[$iResPixStats] = -99 # out of image
+        set ResPixStats_RMS[$iResPixStats] = -99 # out of image
+        }
+        # !sleep 300
+    }
+    # 
+    # print {ResPixStats_XPC ResPixStats_YPC ResPixStats_SUM ResPixStats_ABS ResPixStats_SIG}
+    print "getResPixStats.csv" '%15.5g %15.5g %15.5g %15.5g %15.5g %15.5g\n' {ResPixStats_XPC ResPixStats_YPC ResPixStats_SUM ResPixStats_ABS ResPixStats_SIG ResPixStats_RMS}
+    # end
+
+
+
+
+getClosestDistance 04
+    # 
+    # get the closest distance
+    set imcdis_xarr = $1
+    set imcdis_yarr = $2
+    set imcdis_xcen = $3
+    set imcdis_ycen = $4
+    set imcdis_diff = (imcdis_xarr-imcdis_xcen)**2 + (imcdis_yarr-imcdis_ycen)**2
+    sort {imcdis_diff imcdis_xarr imcdis_yarr}
+    set ClosestDistance = sqrt(imcdis_diff[0])
+    # 
+
+
+
+
+getClosestDistances 02
+    # 
+    # get the closest distance (self-correlate)
+    set imcdises_xarr = $1
+    set imcdises_yarr = $2
+    set ClosestDistances = imcdises_xarr*0.0
+    do _imcdises_i=0,dimen(imcdises_xarr)-1 {
+        set imcdises_flag = imcdises_xarr*0+1 
+        set imcdises_flag[$_imcdises_i] = 0 # do not include itself
+        set imcdises_xarr_noself = imcdises_xarr if(imcdises_flag>0)
+        set imcdises_yarr_noself = imcdises_yarr if(imcdises_flag>0)
+        getClosestDistance imcdises_xarr_noself imcdises_yarr_noself $(imcdises_xarr[$_imcdises_i]) $(imcdises_yarr[$_imcdises_i])
+        set ClosestDistances[$_imcdises_i] = ClosestDistance[0]
+    }
+    # 
+
+
+
+
+
+getCrowdnessVar 04
+    # 
+    # get the closest distance
+    set imcrods_xarr = $1
+    set imcrods_yarr = $2
+    set imcrods_xcen = $3
+    set imcrods_ycen = $4
+    set imcrods_diff = (imcrods_xarr-imcrods_xcen)**2 + (imcrods_yarr-imcrods_ycen)**2
+    set imcrods_fwhm = 2.0*sqrt(ln(2)) set imcrods_pixs = 1.0
+    if('$imax'=='100') { set imcrods_fwhm = 7.2 set imcrods_pixs = 1.2 } # from readme_PGH_v1.0.pdf
+    if('$imax'=='160') { set imcrods_fwhm = 12.0 set imcrods_pixs = 2.4 } # from readme_PGH_v1.0.pdf # <TODO> other bands!
+    if('$imax'=='1160') { set imcrods_fwhm = 19.5 set imcrods_pixs = 2.0 } # from astroPhot.sm
+    set imcrods_gexp = exp(-imcrods_diff*imcrods_pixs**2/imcrods_fwhm**2*4.0*ln(2))
+    sort {imcrods_gexp}
+    set imcrods_gexp = reverse(imcrods_gexp)
+    set CrowdnessVar = sum(imcrods_gexp)
+    if(CrowdnessVar>0) {set CrowdnessVar = lg(CrowdnessVar)} else {set CrowdnessVar = -99.0}
+    if($verbose) { 
+    echo getCrowdnessVar: CrowdnessVar = $(CrowdnessVar)
+    }
+    # 
+
+
+
+
+getCrowdnessVars 02
+    # 
+    # get the crowdness exp() (self-correlate)
+    set imcrodss_xarr = $1
+    set imcrodss_yarr = $2
+    set CrowdnessVars = imcrodss_xarr*0.0
+    do _imcrodss_i=0,dimen(imcrodss_xarr)-1 {
+        set imcrodss_flag = imcrodss_xarr*0+1 
+        set imcrodss_flag[$_imcrodss_i] = 0 # do not include itself
+        set imcrodss_xarr_noself = imcrodss_xarr if(imcrodss_flag>0)
+        set imcrodss_yarr_noself = imcrodss_yarr if(imcrodss_flag>0)
+        getCrowdnessVar imcrodss_xarr_noself imcrodss_yarr_noself $(imcrodss_xarr[$_imcrodss_i]) $(imcrodss_yarr[$_imcrodss_i])
+        set CrowdnessVars[$_imcrodss_i] = CrowdnessVar[0]
+    }
+    # 
+
+
+
+
+checkTooCloseToLargeLocalGalaxies 03
+    # 
+    # check input checkclose_ra and checkclose_dec
+    set checkclose_ra = $1
+    set checkclose_dec = $2
+    set dimen(checkclose_good) = dimen(checkclose_ra)
+    set checkclose_localRA  = {189.42923 189.33849 189.22009 189.27719 189.25615 189.40804 189.3840 189.13526 189.35630 189.22074}
+    set checkclose_localDec = {62.316883 62.212736 62.302124 62.286389 62.311912 62.275457 62.28283 62.283570 62.327734 62.124015}
+    set checkclose_localRad = {20.000000 20.000000 16.000000 20.000000 16.000000 20.000000 10.00000 20.000000 16.000000 10.000000}
+    set checkclose_localRA  = checkclose_localRA  concat ({34.627322  34.628574  34.911526  34.931399  34.851179  34.953106  34.511843  33.973672  34.176684  34.160209  34.367412  34.004326})
+    set checkclose_localDec = checkclose_localDec concat ({-4.8707150 -4.9202488 -4.9995985 -5.0279646 -5.1475464 -5.2102606 -5.2749142 -5.0810261 -4.8419144 -5.2652140 -5.5731018 -5.1781155})
+    set checkclose_localRad = checkclose_localRad concat ({10.000000  10.000000  10.000000  10.000000  10.000000  10.000000  10.000000  10.000000  10.000000  10.000000  10.000000  10.000000})
+    do checkclose_i=0,dimen(checkclose_ra)-1 {
+        set checkclose_dix2 = (checkclose_localRA-checkclose_ra[$checkclose_i])**2
+        set checkclose_diy2 = (checkclose_localDec-checkclose_dec[$checkclose_i])**2
+        set checkclose_diff = sqrt(checkclose_dix2+checkclose_diy2)*3600.0
+        if(sum(checkclose_diff<checkclose_localRad)>0) {
+            set checkclose_good[$checkclose_i] = 0
+        } else {
+            set checkclose_good[$checkclose_i] = 1
+        }
+    }
+    set $3 = checkclose_good
+    # 
+
+

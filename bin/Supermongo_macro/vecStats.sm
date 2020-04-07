@@ -1,0 +1,226 @@
+vecStats 03
+        # Automatically print some statistical information on a
+        # vector. Input arg 2 and 3 are the low and high limits.
+        # Edited by: DzLIU
+        # 
+        if($?1==0) {
+            print 'vecStats:\n' {}
+            print 'vecStats vector\n' {}
+            print '\n' {}
+            return
+        }
+        if($?verbose) {
+           define pref_verbose $verbose} else {
+           define pref_verbose 1
+        } # verbose 1
+        if($?print_noheader) {
+           define pref_noheader $print_noheader} else {
+           define pref_noheader 0
+        } define print_noheader 1
+        if($?1) {set vecsv = $1} else {return}
+        if($?2) {set vecsv = vecsv if (vecsv>=$2)}
+        if($?3) {set vecsv = vecsv if (vecsv<=$3)}
+        vecminmax vecsv vecsvMIN vecsvMAX
+        set vecsvMIN = float($vecsvMIN)
+        set vecsvMAX = float($vecsvMAX)
+        stats vecsv vecsvMEAN vecsvSIGMA vecsvKURT
+        stats_med vecsv vecsvMEDIAN vecsvSIQR
+        set vecsvMEDIAN = float($vecsvMEDIAN)
+        set vecsvSIGMA = float($vecsvSIGMA)
+        set vecsvMEAN = float($vecsvMEAN)
+        set vecsvN = dimen(vecsv)
+        if($verbose) {
+        print 'vecStats $1 : \n' {}
+        print '         $1""_N              = %0d'    {vecsvN}
+        print '         $1""_MIN            = %0.10g' {vecsvMIN}
+        print '         $1""_MAX            = %0.10g' {vecsvMAX}
+        print '         $1""_MEDIAN         = %0.10g' {vecsvMEDIAN}
+        print '         $1""_MEAN           = %0.10g' {vecsvMEAN}
+        print '         $1""_SIGMA          = %0.10g' {vecsvSIGMA}
+        }
+        set $1""_MIN    = float(vecsvMIN)
+        set $1""_MAX    = float(vecsvMAX)
+        set $1""_MEDIAN = float(vecsvMEDIAN)
+        set $1""_MEAN   = float(vecsvMEAN)
+        set $1""_SIGMA  = float(vecsvSIGMA)
+        # 
+        set vecsvF6SIGMA = 6.0*vecsvSIGMA
+        set vecsvI6SIGMA = abs(vecsv-vecsvMEAN)<=vecsvF6SIGMA
+        set vecsvN6SIGMA = sum(vecsvI6SIGMA)
+        set vecsvx = vecsv if(vecsvI6SIGMA)
+        vecminmax vecsvx vecsvMIN vecsvMAX
+        set vecsvMIN = float($vecsvMIN)
+        set vecsvMAX = float($vecsvMAX)
+        stats vecsvx vecsvMEAN vecsvSIGMA vecsvKURT
+        stats_med vecsvx vecsvMEDIAN vecsvSIQR
+        set vecsvMEDIAN = float($vecsvMEDIAN)
+        set vecsvSIGMA = float($vecsvSIGMA)
+        set vecsvMEAN = float($vecsvMEAN)
+        if($verbose) {
+        print '         $1""_6SIGMA         = %0.10g' {vecsvF6SIGMA}
+        print '         $1""_N6SIGMA        = %0.00f' {vecsvN6SIGMA}
+        print '         $1""_MIN_6SIGMA     = %0.10g' {vecsvMIN}
+        print '         $1""_MAX_6SIGMA     = %0.10g' {vecsvMAX}
+        print '         $1""_MEDIAN_6SIGMA  = %0.10g' {vecsvMEDIAN}
+        print '         $1""_MEAN_6SIGMA    = %0.10g' {vecsvMEAN}
+        print '         $1""_SIGMA_6SIGMA   = %0.10g' {vecsvSIGMA}
+        }
+        set $1""_N6SIGMA       = float(vecsvN6SIGMA)
+        set $1""_MIN_6SIGMA    = float(vecsvMIN)
+        set $1""_MAX_6SIGMA    = float(vecsvMAX)
+        set $1""_MEDIAN_6SIGMA = float(vecsvMEDIAN)
+        set $1""_MEAN_6SIGMA   = float(vecsvMEAN)
+        set $1""_SIGMA_6SIGMA  = float(vecsvSIGMA)
+        # 
+        set vecsvF3SIGMA = 3.0*vecsvSIGMA
+        set vecsvI3SIGMA = abs(vecsv-vecsvMEAN)<=vecsvF3SIGMA
+        set vecsvN3SIGMA = sum(vecsvI3SIGMA)
+        set vecsvx = vecsv if(vecsvI3SIGMA)
+        vecminmax vecsvx vecsvMIN vecsvMAX
+        set vecsvMIN = float($vecsvMIN)
+        set vecsvMAX = float($vecsvMAX)
+        stats vecsvx vecsvMEAN vecsvSIGMA vecsvKURT
+        stats_med vecsvx vecsvMEDIAN vecsvSIQR
+        set vecsvMEDIAN = float($vecsvMEDIAN)
+        set vecsvSIGMA = float($vecsvSIGMA)
+        set vecsvMEAN = float($vecsvMEAN)
+        if($verbose) {
+        print '         $1""_3SIGMA         = %0.10g' {vecsvF3SIGMA}
+        print '         $1""_N3SIGMA        = %0.00f' {vecsvN3SIGMA}
+        print '         $1""_MIN_3SIGMA     = %0.10g' {vecsvMIN}
+        print '         $1""_MAX_3SIGMA     = %0.10g' {vecsvMAX}
+        print '         $1""_MEDIAN_3SIGMA  = %0.10g' {vecsvMEDIAN}
+        print '         $1""_MEAN_3SIGMA    = %0.10g' {vecsvMEAN}
+        print '         $1""_SIGMA_3SIGMA   = %0.10g' {vecsvSIGMA}
+        }
+        set $1""_N3SIGMA       = float(vecsvN3SIGMA)
+        set $1""_MIN_3SIGMA    = float(vecsvMIN)
+        set $1""_MAX_3SIGMA    = float(vecsvMAX)
+        set $1""_MEDIAN_3SIGMA = float(vecsvMEDIAN)
+        set $1""_MEAN_3SIGMA   = float(vecsvMEAN)
+        set $1""_SIGMA_3SIGMA  = float(vecsvSIGMA)
+        # 
+        set vecsvF2SIGMA = 2.0*vecsvSIGMA
+        set vecsvI2SIGMA = abs(vecsv-vecsvMEAN)<=vecsvF2SIGMA
+        set vecsvN2SIGMA = sum(vecsvI2SIGMA)
+        set vecsvx = vecsv if(vecsvI2SIGMA)
+        vecminmax vecsvx vecsvMIN vecsvMAX
+        set vecsvMIN = float($vecsvMIN)
+        set vecsvMAX = float($vecsvMAX)
+        stats vecsvx vecsvMEAN vecsvSIGMA vecsvKURT
+        stats_med vecsvx vecsvMEDIAN vecsvSIQR
+        set vecsvMEDIAN = float($vecsvMEDIAN)
+        set vecsvSIGMA = float($vecsvSIGMA)
+        set vecsvMEAN = float($vecsvMEAN)
+        if($verbose) {
+        print '         $1""_2SIGMA         = %0.10g' {vecsvF2SIGMA}
+        print '         $1""_N2SIGMA        = %0.00f' {vecsvN2SIGMA}
+        print '         $1""_MIN_2SIGMA     = %0.10g' {vecsvMIN}
+        print '         $1""_MAX_2SIGMA     = %0.10g' {vecsvMAX}
+        print '         $1""_MEDIAN_2SIGMA  = %0.10g' {vecsvMEDIAN}
+        print '         $1""_MEAN_2SIGMA    = %0.10g' {vecsvMEAN}
+        print '         $1""_SIGMA_2SIGMA   = %0.10g' {vecsvSIGMA}
+        }
+        set $1""_N2SIGMA       = float(vecsvN2SIGMA)
+        set $1""_MIN_2SIGMA    = float(vecsvMIN)
+        set $1""_MAX_2SIGMA    = float(vecsvMAX)
+        set $1""_MEDIAN_2SIGMA = float(vecsvMEDIAN)
+        set $1""_MEAN_2SIGMA   = float(vecsvMEAN)
+        set $1""_SIGMA_2SIGMA  = float(vecsvSIGMA)
+        # 
+        verbose $pref_verbose undef pref_verbose
+        define print_noheader $pref_noheader undef pref_noheader
+        undef vecsvMIN undef vecsvMAX
+        undef vecsvMEDIAN undef vecsvSIQR
+        undef vecsvMEAN undef vecsvSIGMA undef vecsvKURT
+        unset vecsvMIN unset vecsvMAX
+        unset vecsvMEDIAN unset vecsvSIGMA unset vecsvMEAN
+        unset vecsvF6SIGMA unset vecsvI6SIGMA unset vecsvN6SIGMA
+        unset vecsvF3SIGMA unset vecsvI3SIGMA unset vecsvN3SIGMA
+        unset vecsvF2SIGMA unset vecsvI2SIGMA unset vecsvN2SIGMA
+        return
+
+vecHists 04
+        # make histogram of a vector
+        # if $4 is xxx.eps, then output to this xxx.eps, otherwise just plot box
+        if(!$?1||!$?2||!$?3) { print 'vecHists: vec xlower xupper plot.eps\n' {} return }
+        if(!is_vector($1)) { print 'vecHists: Error! Vector $1 is invalid!\n' {} return }
+        set vechs_vector = $1
+        vecminmax vechs_vector vechs_xlower vechs_xupper
+        if($2<$3) {define vechs_xlower $2 define vechs_xupper $3}
+        get_hist vechs_vector vechs_x vechs_h $vechs_xlower $vechs_xupper $(($vechs_xupper-$vechs_xlower)/70.0)
+        if($?4) { set vechs_plot_eps = {"}+<'$4'>+{"}
+           if(index(vechs_plot_eps,'.eps')==strlen(vechs_plot_eps)-5) { device postencap $(vechs_plot_eps) }
+           define TeX_strings 1 expand 1.5 lweight 3.0 limits vechs_x vechs_h location 4000 31000 3500 31000
+           box
+           xlabel $(strReplaceUnderscore($1))
+           ylabel N
+        }
+        histogram vechs_x vechs_h
+        if(!$?vecHists_TextPosX) { define vecHists_TextPosX 18000 }
+        if(!$?vecHists_TextPosY) { define vecHists_TextPosY 28000 }
+        relocate ( $vecHists_TextPosX $vecHists_TextPosY ) 
+        expand 1.15 set vechs_vector = $1 if($1>0) # log10
+        stats_med vechs_vector vechs_vecMed vechs_vecSiq
+        stats vechs_vector vechs_vecMean vechs_vecSig vechs_vecKurt
+        puts N = $(dimen(vechs_vector))
+        puts Median = $vechs_vecMed
+        puts Mean = $vechs_vecMean
+        puts Sigma = $vechs_vecSig
+        expand 1.5
+        if($?4) { 
+           if(index(vechs_plot_eps,'.eps')==strlen(vechs_plot_eps)-5) { device nodevice }
+        }
+
+vecHists_log10 04
+        # make log10 histogram of a vector
+        # if $4 is xxx.eps, then output to this xxx.eps, otherwise just plot box
+        if(!$?1||!$?2||!$?3) { print 'vecHists: vec xlower xupper plot.eps\n' {} return }
+        if(!is_vector($1)) { print 'vecHists: Error! Vector $1 is invalid!\n' {} return }
+        set vechs_vector = $1 if($1>0) # log10
+        set vechs_vector = lg(vechs_vector) # log10
+        vecminmax vechs_vector vechs_xlower vechs_xupper
+        if($2>0&&$2<$3) {define vechs_xlower $(lg($2)) define vechs_xupper $(lg($3))}
+        get_hist vechs_vector vechs_x vechs_h $vechs_xlower $vechs_xupper $(($vechs_xupper-$vechs_xlower)/70.0)
+        set vechs_h = vechs_h / sum(vechs_h)
+        if($?4) { set vechs_plot_eps = {"}+<'$4'>+{"}
+           if(index(vechs_plot_eps,'.eps')==strlen(vechs_plot_eps)-5) { device postencap $(vechs_plot_eps) }
+           define TeX_strings 1 expand 1.5 lweight 3.0 limits vechs_x (1.7*vechs_h) location 4000 31000 3500 31000
+           define pref_ctype $ctype ctype default box
+           xlabel lg($(strReplaceUnderscore($1)))
+           ylabel N
+           ctype $pref_ctype undef pref_ctype
+        }
+        histogram vechs_x vechs_h
+        if(!$?vecHists_TextPosX) { define vecHists_TextPosX 18000 }
+        if(!$?vecHists_TextPosY) { define vecHists_TextPosY 28000 }
+        if(!$?vecHists_Expand) { define vecHists_Expand 1.05 }
+        relocate ( $vecHists_TextPosX $vecHists_TextPosY ) 
+        expand $vecHists_Expand set vechs_vector = $1 if($1>0) # log10
+        stats_med vechs_vector vechs_vecMed vechs_vecSiq
+        stats vechs_vector vechs_vecMean vechs_vecSig vechs_vecKurt
+        puts N = $(dimen(vechs_vector))
+        puts Median = $(sprintf('\"%0.5g\"',$vechs_vecMed))
+        puts Mean = $(sprintf('\"%0.5g\"',$vechs_vecMean))
+        puts Sigma = $(sprintf('\"%0.5g\"',$vechs_vecSig))
+        expand 1.5
+        if($?4) { 
+           if(index(vechs_plot_eps,'.eps')==strlen(vechs_plot_eps)-5) { device nodevice }
+        }
+
+strReplaceUnderscore 01
+        # replace '_' in the input string 
+        if($?1==0) {return}
+        set strRepStr1 = {"}+string(<$1>)+{"} unset strRepStr2
+        while {index(strRepStr1,'_')>=0} { if(index(strRepStr1,'_')==0) {
+        if(!is_vector(strRepStr2)) { set strRepStr2 = <'\\'>+<'_'>
+                 } else { set strRepStr2 = strRepStr2+<'\\'>+<'_'> } } else {
+        if(!is_vector(strRepStr2)) { set strRepStr2 = substr(strRepStr1,0,index(strRepStr1,'_'))+<'\\'>+<'_'>
+                 } else { set strRepStr2 = strRepStr2+substr(strRepStr1,0,index(strRepStr1,'_'))+<'\\'>+<'_'>
+                 } }      set strRepStr1 = substr(strRepStr1,index(strRepStr1,'_')+1,0)
+        } if(!is_vector(strRepStr2)) { set strRepStr2 = strRepStr1
+                              } else { set strRepStr2 = strRepStr2+strRepStr1 }
+        set $0 = strRepStr2 # print {strRepStr2}
+        return
+
+

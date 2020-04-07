@@ -1,0 +1,42 @@
+wcs2ds9reg 05
+            # 
+            # Input: ra dec radius id output
+            # Notes: ra, dec are in degree unit, radius is in arcsec unit.
+            #        if id is -1 then no id will be print. 
+            # 
+            if($?5==0) {
+                echo Usage: 
+                echo     wcs2ds9reg ra dec 0.3 -1 ds9.output.fk5.reg
+                return
+            }
+            print  $5 '\# Region file format: DS9 version 4.1\n' {}
+            print +$5 'global color=green dashlist=8 3 width=1 font=\"helvetica 9 normal roman\" ' {} 
+            print +$5 'select=1 highlite=1 dash=0 fixed=0 edit=1 move=0 delete=1 include=1 source=1\n' {}
+            print +$5 'fk5\n' {}
+            onMute
+            set _wcs2ds9reg_r1 = $1
+            set _wcs2ds9reg_r2 = $2
+            if(dimen($3)!=dimen($1)) { set _wcs2ds9reg_r3 = $1*0.0+$3 } else { set _wcs2ds9reg_r3 = $3 }
+            if(dimen($4)!=dimen($1)) { unset _wcs2ds9reg_r4 } else { set _wcs2ds9reg_r4 = $4 }
+            if(is_vector(_wcs2ds9reg_r4)) {
+            print +$5 'circle(%0.7f,%0.7f,%0.7f\") \# text={ID%0.0f}\n' {_wcs2ds9reg_r1 _wcs2ds9reg_r2 _wcs2ds9reg_r3 _wcs2ds9reg_r4}
+            } else {
+            print +$5 'circle(%0.7f,%0.7f,%0.7f\")\n' {_wcs2ds9reg_r1 _wcs2ds9reg_r2 _wcs2ds9reg_r3}
+            }
+            unMute
+
+
+
+
+
+onMute 00
+            #
+            if($?print_noheader) { define pref_noheader $print_noheader } else { define pref_noheader 0 } define print_noheader 1
+            if($?verbose) { define pref_verbose $verbose } else { define pref_verbose 1 } verbose 0
+
+
+
+unMute 00
+            #
+            if($?pref_noheader) { define print_noheader $pref_noheader undef pref_noheader }
+            if($?pref_verbose) { verbose $pref_verbose undef pref_verbose }

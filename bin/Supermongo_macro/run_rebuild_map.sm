@@ -1,0 +1,104 @@
+rebuildmap_iraf 02
+    #  
+    #  We will rebuild the residual map by combining box fit.fits
+    #  
+    #  Inputs:
+    #      field band
+    # 
+    #  Usage:
+    #      macro read run_rebuild_map.sm rebuildmap_iraf goodss 24
+    #      macro read run_rebuild_map.sm rebuildmap_iraf goodsn 24
+    #      macro read run_rebuild_map.sm rebuildmap_iraf goodsn 20cm
+    #      macro read run_rebuild_map.sm rebuildmap_iraf goodsn 100
+    #      macro read run_rebuild_map.sm rebuildmap_iraf goodsn 160
+    #      macro read run_rebuild_map.sm rebuildmap_iraf goodsn 250
+    #      macro read run_rebuild_map.sm rebuildmap_iraf goodsn 350
+    #      macro read run_rebuild_map.sm rebuildmap_iraf goodsn 500
+    #  
+    if(!$?1){print 'Usage: rebuildmap_iraf 24\n' {} return}
+    # 
+    set DataDir = {"/data/AstroDepth/"}+sprintf('%s','$1') #<TODO>#
+   #set dirTemp = DataDir+{"/Photometry/20150430_fixPos"}  #<TODO>#
+    set dirTemp = DataDir+{"/Photometry/20150430_fitPos"}  #<TODO>#
+    set boxBand = '$2'
+    set boxName = {"boxgalfit"} #<TODO>#
+    set boxRoot = dirTemp+{"/doing"}+string(boxBand)+{"/"}+boxName
+    # 
+    echo chdir $(boxRoot)
+    chdir $(boxRoot)
+    load astroPhot.sm set_$1""_photometry_constants_$(boxBand)
+    load astroGalbox.sm
+    set boxBuff = $gBuff_$(boxBand) + $fBuff_$(boxBand)
+    astroGalbox_mosaic_boxes $SciPhoto_$(boxBand).fits $xStep_$(boxBand) $yStep_$(boxBand) \
+                             $(boxBuff) $(boxBuff)
+    # 
+    # run cl under current directory
+    !cl < "rebuild_mosaic_model.cl"
+    !cl < "rebuild_mosaic_residual.cl"
+    !echo ""
+    !echo "cd \$(pwd)"
+    !echo "ds9mcc "$SciPhoto_$(boxBand)".fits rebuild_mosaic_model.fits rebuild_mosaic_residual.fits"
+    !echo ""
+    # 
+    # done
+
+
+rebuildmap_galfit_DO_NOT_USE 01
+    #  
+    #  No! This method is not working! Galfit can not deal with such big images!
+    #  
+    #  We will rebuild a big map from boxgalfit
+    #  
+    #  Inputs:
+    #      iBand
+    # 
+    #  Usage:
+    #      load astroPhot.sm set_goodsn_photometry_constants_24
+    #      load rfile.sm rfile "/data/AstroDepth/GOODSN/Photometry/Result_Photometry_goodsn_24.txt"
+    #      macro read run_rebuild_map.sm rebuildmap 24
+    # 
+    if(!$?1){print 'Usage: rebuildmap 24\n' {} return}
+    if(!is_vector(x$1)){print 'rebuildmap: Error! Vector x$1 does not exist!\n' {} return}
+    if(!is_vector(y$1)){print 'rebuildmap: Error! Vector y$1 does not exist!\n' {} return}
+    if(!is_vector(m$1)){print 'rebuildmap: Error! Vector m$1 does not exist!\n' {} return}
+    if(!$?SciPhoto_$1) {print 'rebuildmap: Error! Variable SciPhoto_$1 is not defined!\n' {} return}
+    if(!$?RmsPhoto_$1) {print 'rebuildmap: Error! Variable RmsPhoto_$1 is not defined!\n' {} return}
+    if(!$?PsfPhoto_$1) {print 'rebuildmap: Error! Variable PsfPhoto_$1 is not defined!\n' {} return}
+    load astroGalfit.sm
+    echo "+++++++++++++++++++++++"
+    echo "+++ initGalfitParam +++"
+    echo "+++++++++++++++++++++++"
+    initGalfitParam x$1 y$1
+    set Mags = m$1
+    set ParamFitMags = Mags*0 # fix all magnitudes
+    
+    chdir "/upgal/Temp/dzliu_goodsn/Data/Photometry/20150324/doing24/boxgalfit" #<TODO>#
+    
+    echo "++++++++++++++++++++++++"
+    echo "+++ writeGalfitParam +++"
+    echo "++++++++++++++++++++++++"
+    writeGalfitParam "rebuild.param"
+    
+    echo "++++++++++++++++++++++++"
+    echo "+++ writeGalfitLimit +++"
+    echo "++++++++++++++++++++++++"
+    writeGalfitLimit "rebuild.limit"
+    
+    echo "++++++++++++++++++++++++"
+    echo "+++ writeGalfitInput +++"
+    echo "++++++++++++++++++++++++"
+    writeGalfitInput "rebuild.input" $SciPhoto_$1.fits rebuilt.fits $RmsPhoto_$1.fits $PsfPhoto_$1.fits
+    
+    # 
+    # No! This method is not working! Galfit can not deal with such big images!
+    
+    # 
+    # Done!
+
+
+
+rebuildmap_idl 01
+    # idl
+    # postGalfitResidual, 
+
+

@@ -1,0 +1,47 @@
+#!/bin/bash
+#
+
+#type readlink > /dev/null
+#type dirname > /dev/null
+
+if [[ $(type sm 2>/dev/null | wc -l) -eq 0 ]]; then
+    echo ""
+    echo "*************************************"
+    echo "Error! Supermongo was not installed! "
+    echo "*************************************"
+    echo ""
+    exit 255
+fi
+
+CURRENTPATH=$(dirname "${BASH_SOURCE[0]}")
+Supermongo_macro_dir=$(dirname "${CURRENTPATH}")
+
+SMPATH=$(dirname $(dirname $(readlink -f $(which sm))))
+SMDATE=$(date +%s.$(date +%N|cut -b 1,2,3,4)) # SMDATE=$(date +%Y%m%d.%H%M%S.%N.%Z)
+
+SMTEMP="/tmp"; if [[ x"$TMPDIR" != x ]]; then SMTEMP="$TMPDIR"; fi
+
+export SMPATH
+export SMDATE
+export SMTEMP
+
+mkdir                                                  "$SMTEMP/sm.$SMDATE" 2>/dev/null
+echo "fonts          //fonts.bin/"                  >  "$SMTEMP/sm.$SMDATE/.sm"
+echo "history_file   .smhist"                       >> "$SMTEMP/sm.$SMDATE/.sm"
+echo "history        80"                            >> "$SMTEMP/sm.$SMDATE/.sm"
+echo "temp_dir       $SMTEMP/"                      >> "$SMTEMP/sm.$SMDATE/.sm"
+echo "graphcap       //graphcap/"                   >> "$SMTEMP/sm.$SMDATE/.sm"
+echo "+graphcap      //graphcap.local/"             >> "$SMTEMP/sm.$SMDATE/.sm"
+echo "filecap        //filecap/"                    >> "$SMTEMP/sm.$SMDATE/.sm"
+echo "termcap        //termcap/"                    >> "$SMTEMP/sm.$SMDATE/.sm"
+echo "help           //help/"                       >> "$SMTEMP/sm.$SMDATE/.sm"
+echo "macro          $SMTEMP/sm.$SMDATE/macro/"     >> "$SMTEMP/sm.$SMDATE/.sm"
+chmod 777                                         "$SMTEMP/sm.$SMDATE/.sm"
+
+cp -rL "$SMPATH/lib/sm/macro" "$SMTEMP/sm.$SMDATE/" 2>/dev/null
+cp "$Supermongo_macro_dir"/*.sm "$SMTEMP/sm.$SMDATE/macro/" 2>/dev/null
+
+sm -f "$SMTEMP/sm.$SMDATE/.sm" $*
+
+rm -rf "$SMTEMP/sm.$SMDATE" 2>/dev/null
+

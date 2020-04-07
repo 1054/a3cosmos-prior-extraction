@@ -1,0 +1,722 @@
+RunGalfit 04
+    # 
+    #  Input:
+    #      field band rebuild
+    # 
+    #  Example: 
+    #      load Spdb_RunGalfit.sm RunGalfit goodss 24 201500 
+    #      load Spdb_RunGalfit.sm RunGalfit goodss 24 201500 rebuild
+    # 
+    #  Note:
+    #      copied from AstroDepthRunGalfit_v201605.sm
+    #  
+    
+    ############################
+    ### Input Argument Check ###
+    ############################
+    if($?1==0||$?2==0){
+        print 'Example: load Spdb_RunGalfit.sm RunGalfit goodsn 24 fitPos [rebuild]\n' {}
+        return
+    }
+    
+    ########################################
+    ### Set Data Info and Check Software ###
+    ########################################
+    load Spdb_PreConfig.sm SetDataInfo $1 $2 $3
+    
+    #################################
+    ### Deploy Catalog and Images ###
+    #################################
+    
+    astroGalbox_cd_DirPathVector PfitDir
+    !echo 
+    !echo Current directory \$(pwd -P)
+    if(!$?4 || !is_file($SciPhoto_$(boxBand).fits)) {
+    ##echo $DirPhoto_$(boxBand) $SciPhoto_$(boxBand).fits
+    !cp $DirPhoto_$(boxBand)/$SciPhoto_$(boxBand).fits $SciPhoto_$(boxBand).fits
+    !cp $DirPhoto_$(boxBand)/$RmsPhoto_$(boxBand).fits $RmsPhoto_$(boxBand).fits
+    !cp $DirPhoto_$(boxBand)/$PsfPhoto_$(boxBand).fits $PsfPhoto_$(boxBand).fits
+    ##astroGalbox_find_and_copy $DirPhoto_$(boxBand) $SciPhoto_$(boxBand).fits
+    ##astroGalbox_find_and_copy $DirPhoto_$(boxBand) $RmsPhoto_$(boxBand).fits
+    ##astroGalbox_find_and_copy $DirPhoto_$(boxBand) $PsfPhoto_$(boxBand).fits
+    }
+    if(!is_file($SciPhoto_$(boxBand).fits)){print 'Error! $SciPhoto_$(boxBand).fits not found!\n' {} return}
+    if(!is_file($RmsPhoto_$(boxBand).fits)){print 'Error! $RmsPhoto_$(boxBand).fits not found!\n' {} return}
+    if(!is_file($PsfPhoto_$(boxBand).fits)){print 'Error! $PsfPhoto_$(boxBand).fits not found!\n' {} return}
+    !echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    !echo SciPhoto = $SciPhoto_$(boxBand).fits
+    !echo RmsPhoto = $RmsPhoto_$(boxBand).fits
+    !echo PsfPhoto = $PsfPhoto_$(boxBand).fits
+    !echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    
+    
+    if(!$?4) {
+    
+        readCatalog
+        
+        freezeSources $1 $2 # use SED_predictions to fix some very faint sources
+        # freezeSources will freeze the magnitude of some very faint sources
+        # pmG = 0 will freeze the magnitude in astroGalbox.sm
+        
+        writeResults
+        echo 
+        
+        astroGalbox_cd_DirPathVector PfitDir
+        echo 
+        
+        set boxBuff = $gBuff_$(boxBand) + $fBuff_$(boxBand)
+        astroGalbox_make_boxes $SciPhoto_$(boxBand).fits $xStep_$(boxBand) $yStep_$(boxBand) \
+                               $(boxBuff) $(boxBuff) 
+                               # inp: pxF pyF --> out: PosX PosY
+        
+    }
+    
+    
+    if($?4) {
+        
+        if('$4'=='improve' || '$4'=='fitposition') {
+        
+            # astroGalbox_cd_DirPathVector PfitDir
+            
+            # list box* directories
+            !pwd
+            !ls -1dv box* > boxlist.txt
+            data boxlist.txt read {boxdirs 1.s}
+            !cat boxlist.txt | sed -e 's/.*box//g' > boxlist_id.txt
+            data boxlist_id.txt read {boxids 1}
+            
+            # loop ../boxgalfit/box*
+            # set boxids = boxids[0] #<TODO>#
+            do i=0,dimen(boxids)-1 {
+                !test -f $(boxdirs[$i])/fit.fits
+                if($exit_status==0) {
+                    # 
+                    # cd 
+                    cd $(boxdirs[$i])
+                    echo ""
+                    echo "***************************"
+                    echo "cd "$(boxdirs[$i])
+                    echo "***************************"
+                    echo ""
+                    # 
+                    # read galfit results and vary some bright sources
+                    astroGalboxOnMute
+                    readGalfitParam fit.param
+                    readGalfitResult fit.fits
+                    astroGalboxUnMute
+                    set TempMags = ResultMags if(ResultType!='sky') #<TODO># should have same dimen as ParamFitPosX ParamFitPosY
+                    set TempMagsErr = ResultMagsErr if(ResultType!='sky') #<TODO># should have same dimen as ParamFitPosX ParamFitPosY
+                    set TempGood = (TempMagsErr>0.000 && TempMagsErr<=0.125)
+                    set TempFair = (TempMagsErr>0.125 && TempMagsErr<=0.250)
+                    echo "Got good detections S/N>8: "$(sum(TempGood))
+                    echo "Got fair detections 4<S/N<8: "$(sum(TempFair))
+                    echo "We will allow good detections to vary by 2.0 arcsec"
+                    echo "We will allow fair detections to vary by 1.0 arcsec"
+                    set ParamFitPosX = (TempGood) ?                         1   : ParamFitPosX
+                    set ParamFitPosY = (TempGood) ?                         1   : ParamFitPosY
+                    set ParamMinPosX = (TempGood) ? -(2.0/$PixScale_$(boxBand)) : ParamMinPosX #<TODO># allow 2.0" astrometry for S/N>=8 sources
+                    set ParamMaxPosX = (TempGood) ?  (2.0/$PixScale_$(boxBand)) : ParamMaxPosX
+                    set ParamMinPosY = (TempGood) ? -(2.0/$PixScale_$(boxBand)) : ParamMinPosY
+                    set ParamMaxPosY = (TempGood) ?  (2.0/$PixScale_$(boxBand)) : ParamMaxPosY
+                    set Mags         = (TempGood) ?                  TempMags   : Mags
+                    set ParamFitPosX = (TempFair) ?                         1   : ParamFitPosX
+                    set ParamFitPosY = (TempFair) ?                         1   : ParamFitPosY
+                    set ParamMinPosX = (TempFair) ? -(1.0/$PixScale_$(boxBand)) : ParamMinPosX #<TODO># allow 1.0" astrometry for S/N=4-8 sources
+                    set ParamMaxPosX = (TempFair) ?  (1.0/$PixScale_$(boxBand)) : ParamMaxPosX
+                    set ParamMinPosY = (TempFair) ? -(1.0/$PixScale_$(boxBand)) : ParamMinPosY
+                    set ParamMaxPosY = (TempFair) ?  (1.0/$PixScale_$(boxBand)) : ParamMaxPosY
+                    set Mags         = (TempFair) ?                  TempMags   : Mags
+                    #define aaa ?
+                    if($?SkyDoFit_$(boxBand)) {
+                        set ParamFitSkyValue = $SkyDoFit_$(boxBand) #<added><20160530><dzliu># skyvalue
+                    }
+                    # 
+                    # backup original fit.param fit.limit fit.input fit.out fit.fits
+                    foreach TempFitName {fit.param fit.limit fit.input fit.out fit.fits fit.log fit.result} {
+                        backupResults $TempFitName before_improve_fit_position_
+                        !rm $TempFitName
+                    }
+                    # 
+                    # write improved fit.param fit.limit fit.input
+                    writeGalfitParam fit.param
+                    writeGalfitLimit fit.limit
+                    writeGalfitInput fit.input
+                    # 
+                    # then run galfit
+                    #!galfit fit.input > fit.out
+                    # 
+                    # cd back
+                    cd ".."
+                } else {
+                    print '\n' {}
+                    print 'Warning! \"$(boxdirs[$i])\" dose not contain \"fit.fits\"!\n' {}
+                    !pwd
+                    !ls $(boxdirs[$i])
+                    print '\n' {}
+                }
+            }
+        }
+    }
+    
+    
+    if($?4) {
+        
+        if('$4'=='fitsersic') {
+        
+            # astroGalbox_cd_DirPathVector PfitDir
+            
+            # list box* directories
+            !pwd
+            !ls -1dv box* > boxlist.txt
+            data boxlist.txt read {boxdirs 1.s}
+            !cat boxlist.txt | sed -e 's/.*box//g' > boxlist_id.txt
+            data boxlist_id.txt read {boxids 1}
+            
+            # loop ../boxgalfit/box*
+            # set boxids = boxids[0] #<TODO>#
+            do i=0,dimen(boxids)-1 {
+                !test -f $(boxdirs[$i])/fit.fits
+                if($exit_status==0) {
+                    # 
+                    # cd 
+                    cd $(boxdirs[$i])
+                    echo ""
+                    echo "***************************"
+                    echo "cd "$(boxdirs[$i])
+                    echo "***************************"
+                    echo ""
+                    # 
+                    # read galfit results and fit sersic for some bright sources
+                    astroGalboxOnMute
+                    readGalfitParam fit.param
+                    readGalfitResult fit.fits
+                    astroGalboxUnMute
+                    set TempIObj = IObj 
+                    set TempPosX = ResultPosX if(ResultType!='sky') #<TODO># should have same dimen as ParamFitPosX ParamFitPosY
+                    set TempPosY = ResultPosY if(ResultType!='sky') #<TODO># should have same dimen as ParamFitPosX ParamFitPosY
+                    set TempRads = ResultRads if(ResultType!='sky') #<TODO># should have same dimen as ParamFitPosX ParamFitPosY
+                    set TempSers = ResultSers if(ResultType!='sky') #<TODO># should have same dimen as ParamFitPosX ParamFitPosY
+                    set TempElli = ResultElli if(ResultType!='sky') #<TODO># should have same dimen as ParamFitPosX ParamFitPosY
+                    set TempRoti = ResultRoti if(ResultType!='sky') #<TODO># should have same dimen as ParamFitPosX ParamFitPosY
+                    set TempMags = ResultMags if(ResultType!='sky') #<TODO># should have same dimen as ParamFitPosX ParamFitPosY
+                    set TempMagsErr = ResultMagsErr if(ResultType!='sky') #<TODO># should have same dimen as ParamFitPosX ParamFitPosY
+                    #convert_mag2flux $1 $(boxBand) TempMags TempMagsErr # convert mag to flux --> output f_$(boxBand) df_$(boxBand)
+                    #set TempFlux = f_$(boxBand)
+                    #set TempFluxErr = df_$(boxBand)
+                    # get residual flux
+                    load fresidual.sm 
+                    set fResidual = fresidual_inPixel("fit.fits[3]",TempPosX,TempPosY,5.0)
+                    #stats fResidual fResidualMEAN fResidualSIGMA fResidualKURT
+                    #set mResidual = -2.5*lg(fResidual) #<TODO># assuming GALFIT input parameter MAGZERO=0
+                    #set mResidualMean = -2.5*lg($fResidualMEAN) #<TODO># assuming GALFIT input parameter MAGZERO=0
+                    #set mResidualSigma = $fResidualSIGMA/$fResidualMEAN
+                    #set mDiff = mResidual-mResidualMean
+                    #set mSigma = mResidual*0.0 + 3.0*mResidualSigma
+                    #set TempSelect = (TempMagsErr>0.0 && TempMagsErr<=0.2 && (mDiff)<-0.75)
+                    #print {TempIObj mResidual TempMags TempMagsErr mDiff mSigma TempSelect}
+                    #
+                    set mResidual = -2.5*lg(fResidual) #<TODO># assuming GALFIT input parameter MAGZERO=0
+                    stats mResidual mResidualMEAN mResidualSIGMA mResidualKURT
+                    set mDiff = mResidual - $mResidualMEAN
+                    set mSigma = mResidual*0.0 + $mResidualSIGMA
+                    set TempSelect = (TempMagsErr>0.0 && TempMagsErr<=0.2 && (mDiff)<-$mResidualSIGMA)
+                    #print {TempIObj mResidual TempMags TempMagsErr mDiff mSigma TempSelect}
+                    #quit
+                    #define aaa ?
+                    # select sources
+                    #echo ""
+                    echo "Select sources with S/N>5 but (mResidual-mag)<-$mResidualSIGMA: "$(sum(TempSelect))
+                    echo "We will fit the "$(sum(TempSelect))" selected sources with Sersic models"
+                    echo ""
+                    #define aaa ?
+                    set ParamFitRads = (TempSelect) ?                         1   : ParamFitRads
+                    set ParamFitSers = (TempSelect) ?                         1   : ParamFitSers
+                    set ParamFitElli = (TempSelect) ?                         1   : ParamFitElli
+                    set ParamFitRoti = (TempSelect) ?                         1   : ParamFitRoti
+                    set Mags         = (TempSelect) ?                  TempMags   : Mags
+                    set Rads         = (TempSelect) ?                  TempRads   : Rads
+                    set Sers         = (TempSelect) ?                  TempSers   : Sers
+                    set Elli         = (TempSelect) ?                  TempElli   : Elli
+                    set Roti         = (TempSelect) ?                  TempRoti   : Roti
+                    set Type         = (TempSelect) ?                  'sersic'   : Type
+                    set Rads         = (TempSelect && Rads==0.0) ?          2.0   : Rads     #<TODO># initial guess of source size radius
+                    #define aaa ?
+                    if($?SkyDoFit_$(boxBand)) {
+                        set ParamFitSkyValue = $SkyDoFit_$(boxBand) #<added><20160530><dzliu># skyvalue
+                    }
+                    # 
+                    # backup original fit.param fit.limit fit.input fit.out fit.fits
+                    foreach TempFitName {fit.param fit.limit fit.input fit.out fit.fits fit.log fit.result} {
+                        backupResults $TempFitName before_improve_fit_sersic_
+                        !rm $TempFitName
+                    }
+                    # 
+                    # write improved fit.param fit.limit fit.input
+                    writeGalfitParam fit.param
+                    writeGalfitLimit fit.limit
+                    writeGalfitInput fit.input
+                    # 
+                    # then run galfit
+                    #!galfit fit.input > fit.out
+                    # 
+                    # cd back
+                    cd ".."
+                } else {
+                    print '\n' {}
+                    print 'Warning! \"$(boxdirs[$i])\" dose not contain \"fit.fits\"!\n' {}
+                    !pwd
+                    !ls $(boxdirs[$i])
+                    print '\n' {}
+                }
+            }
+        }
+    }
+    
+    
+    if($?4) {
+        
+        if('$4'=='rebuild') {
+            
+            readCatalog
+            
+            set boxBuff = $gBuff_$(boxBand) + $fBuff_$(boxBand)
+            astroGalbox_read_boxes $SciPhoto_$(boxBand).fits $xStep_$(boxBand) $yStep_$(boxBand) \
+                                   $(boxBuff) $(boxBuff) 
+                                   # inp: --> out: astroGalbox_ResultXXXX
+            
+            load vecIntersec.sm
+            set astroGalbox_Matched = whereIntersec(astroGalbox_ResultIObj,id$(boxBand))
+            #set       x$(boxBand)[astroGalbox_Matched] = astroGalbox_ResultPosX #<added><20150430><dzliu># CAN NOT DO THIS BECAUSE PosX IS IN SMALL BOX
+            #set       y$(boxBand)[astroGalbox_Matched] = astroGalbox_ResultPosY #<added><20150430><dzliu># CAN NOT DO THIS BECAUSE PosX IS IN SMALL BOX
+            set       id$(boxBand)[astroGalbox_Matched] = astroGalbox_ResultIObj
+            #set     rms$(boxBand)[astroGalbox_Matched] = astroGalbox_ResultRmsPix
+            set        m$(boxBand)[astroGalbox_Matched] = astroGalbox_ResultMags
+            set       em$(boxBand)[astroGalbox_Matched] = astroGalbox_ResultMagsErr
+            set     fRes$(boxBand)[astroGalbox_Matched] = astroGalbox_ResultResPix #<added><20150430><dzliu>#
+            set closeDis$(boxBand)[astroGalbox_Matched] = astroGalbox_ResultCloDis #<added><20150430><dzliu>#
+            convert_mag2flux $1 $(boxBand) m$(boxBand) em$(boxBand) # convert mag to flux --> output f_$(boxBand) df_$(boxBand)
+            echo 
+            
+            writeResults
+            echo 
+            
+            # # <TODO> rebuild by re-modeling
+            # rebuildSources
+            # echo 
+            
+            VisitDirPathVector DataDir
+            echo
+            
+            VisitDirPathVector PfitDir
+            echo
+            
+            # <TODO> rebuild by mosaicing -- BUG: some boxes are at the edge and were cut
+            # see also run_rebuild_map.sm
+            # !ln -fs $DirPhoto_$(boxBand)/$SciPhoto_$(boxBand).fits
+            set boxBuff = $gBuff_$(boxBand) + $fBuff_$(boxBand)
+            astroGalbox_mosaic_boxes $SciPhoto_$(boxBand).fits $xStep_$(boxBand) $yStep_$(boxBand) \
+                                     $(boxBuff) $(boxBuff)
+            # run cl under current directory
+            !cl < "rebuild_mosaic_model.cl"
+            !cl < "rebuild_mosaic_residual.cl"
+            !echo ""
+            !echo "cd \$(pwd)"
+            !echo "ds9mcc "$SciPhoto_$(boxBand)".fits rebuild_mosaic_model.fits rebuild_mosaic_residual.fits"
+            !echo ""
+            
+            # copy final input image, model image, and residual image. 
+            !cp $SciPhoto_$(boxBand).fits ../../../$(PfitOut[dimen(PfitOut)-1])_fitting_image.fits
+            !cp rebuild_mosaic_model.fits ../../../$(PfitOut[dimen(PfitOut)-1])_fitting_model.fits
+            !cp rebuild_mosaic_residual.fits ../../../$(PfitOut[dimen(PfitOut)-1])_fitting_residual.fits
+            !echo ""
+            !echo -n "cd ''"
+            PrintDirPathVector DataDir "/Photometry/"
+            !echo "ds9mcc "$(PfitOut[dimen(PfitOut)-1])_fitting_image.fits $(PfitOut[dimen(PfitOut)-1])_fitting_model.fits $(PfitOut[dimen(PfitOut)-1])_fitting_residual.fits
+            !echo ""
+            
+        }
+        
+    }
+    
+    
+    
+    # 
+    # BACK
+    # 
+    # chdir $(BackDir)
+    !echo 
+    !echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    !echo 
+    !echo Current directory \$(pwd -P)
+    
+    # 
+    # END
+    # 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+readCatalog 00
+    if(1) {
+        VisitDirPathVector DataDir
+        VisitDirPathVectorFile PfitCat
+        #read {idF 1 raF 2 deF 3}
+        if(is_vector(_id)) {unset _id}
+        if(is_vector(_ra)) {unset _ra}
+        if(is_vector(_de)) {unset _de}
+        if(is_vector(id)) {unset id}
+        if(is_vector(ra)) {unset ra}
+        if(is_vector(de)) {unset de}
+        if(is_vector(dec)) {unset dec}
+        set CatalogFileName = PfitCat[$(dimen(PfitCat)-1)]
+        load rfile.sm rfile $(CatalogFileName)
+        if(is_vector(_id)) {set idF = _id}
+        if(is_vector(_ra)) {set raF = _ra}
+        if(is_vector(_de)) {set deF = _de}
+        if(is_vector(id)) {set idF = id}
+        if(is_vector(ra)) {set raF = ra}
+        if(is_vector(de)) {set deF = de}
+        if(is_vector(dec)) {set deF = dec}
+        print 'readCatalog: read $(dimen(idF)) sources from ' {} PrintDirPathVector PfitCat
+        # convert_ad2xy
+        VisitDirPathVector DataDir
+        VisitDirPathVector PfitDir
+        print 'readCatalog: ' {}
+        convert_ad2xy $SciPhoto_$(boxBand).fits raF deF \
+                      $xBias_$(boxBand) $yBias_$(boxBand) $(boxBand)
+                      # output sky2xy_x sky2xy_y
+    }
+    if(is_vector(sky2xy_x) && is_vector(sky2xy_y)) { 
+        # columns should be: x y rms m em id ra de f df
+        # write initializing result file
+        set x$(boxBand)   = sky2xy_x
+        set y$(boxBand)   = sky2xy_y
+        set rms$(boxBand) = sky2xy_x*0.0
+        set m$(boxBand)   = sky2xy_x*0.0+99 #<TODO># initial default value of magnitude
+        set em$(boxBand)  = sky2xy_x*0.0
+        set f$(boxBand)   = sky2xy_x*0.0
+        set df$(boxBand)  = sky2xy_x*0.0
+        set id$(boxBand)  = idF
+        set ra$(boxBand)  = raF
+        set de$(boxBand)  = deF
+        set pxF = sky2xy_x # the input argument for astroGalbox.sm
+        set pyF = sky2xy_y # the input argument for astroGalbox.sm
+        #writeResults
+    } else {
+        print 'readCatalog: Error! Failed to run convert_ad2xy!\n' {}
+        define errorbreak 1
+        define errorbreak ?
+        exit
+        return
+    }
+
+
+readResults 00
+    if(is_vector(PfitOut)==0) {
+        print 'readResults: vector PfitOut does not exist yet! \n' {} return
+    }
+    if(1==1) { 
+        # visit PfitOut file directory
+        # data $(PfitOut) 
+        VisitDirPathVector DataDir
+        VisitDirPathVectorFile PfitOut ".txt"
+        # columns should be: x y rms m em id ra de f df
+        read <x$(boxBand) 1 y$(boxBand) 2 rms$(boxBand) 3 m$(boxBand) 4 em$(boxBand) 5>
+        read <id$(boxBand) 6 ra$(boxBand) 7 de$(boxBand) 8 f$(boxBand) 9 df$(boxBand) 10>
+        print 'readResults: read $(dimen(id$(boxBand))) sources from ' {} PrintDirPathVector PfitOut ".txt"
+        # 
+        # get back to DataDir
+        VisitDirPathVector DataDir
+    }
+
+
+writeResults 00
+    if(is_vector(PfitOut)==0) {
+        print 'writeResults: vector PfitOut does not exist yet!\n' {} return
+    }
+    if(1==1) { 
+        # visit PfitOut file directory
+        print 'writeResults: checking ' {} PrintDirPathVector PfitOut ".txt"
+        VisitDirPathVector DataDir
+        TouchDirPathVectorFile PfitOut ".txt"
+        define OutputName $(PfitOut[dimen(PfitOut)-1])".txt"
+        backupResults $OutputName
+        # columns should be: x y rms m em id ra de f df
+        print $OutputName '%15.3f%15.3f%15g%15g%15g%15.0f%15.7f%15.7f%15g%15g\n' \
+            <x$(boxBand) y$(boxBand) rms$(boxBand) m$(boxBand) em$(boxBand) id$(boxBand) \
+            ra$(boxBand) de$(boxBand) f$(boxBand) df$(boxBand)>
+        # now also write an idl program to rebuild the big image and residual
+        print  $OutputName".res.pro" '; qsub -IX -l walltime=72:00:00 -l mem=32GB\n' {}
+        print +$OutputName".res.pro" '; module load \n' {}
+        print +$OutputName".res.pro" 'cd, \"$(PfitDir)\"\n' {}
+        print +$OutputName".res.pro" 'postGalfitResidual, ' {}
+        print +$OutputName".res.pro" '\"$OutputName\", ' {}
+        print +$OutputName".res.pro" '\"$(PfitDir)/$SciPhoto_$(boxBand).fits\", ' {}
+        print +$OutputName".res.pro" '\"$(PfitDir)/$RmsPhoto_$(boxBand).fits\", ' {}
+        print +$OutputName".res.pro" '\"$(PfitDir)/$PsfPhoto_$(boxBand).fits\"\n' {}
+        # 
+        # get back to DataDir
+        VisitDirPathVector DataDir
+    }
+
+
+backupResults 02
+    # backup the input $1 file, keeping version number
+    # usage: backupResults aaa.txt # --> output aaa.txt.01
+    if(!$?1) {
+        print 'Error! No input for backupResults!\n' {}
+        print 'Usage: backupResults aaa.txt # --> output aaa.txt.01\n' {}
+        print 'Usage: backupResults aaa.txt bbb_ # --> output bbb_aaa.txt.01\n' {}
+        return
+    }
+    if(is_file($1)==1) {
+        set _i = 0
+        set _f = 1
+        while {_f==1 || _i==0} {
+            set _i = _i + 1 
+            if(_i<100) {
+                set _s = {"."}+sprintf('%02d',_i)
+            } else {
+                set _s = {"."}+sprintf('%d',_i)
+            }
+            if($?2) {
+                DEFINE exit_status DELETE !test -f $2""$1""$(_s)
+            } else {
+                DEFINE exit_status DELETE !test -f $1$(_s)
+            }
+            set _f = ($exit_status == 0)
+        }
+        if($?2) {
+            if($verbose) {
+                print 'backupResults: $1 already exists! We will backup it as $2""$1""$(_s)!\n' {}
+            }
+            !\cp $1 $2""$1""$(_s)
+        } else {
+            if($verbose) {
+                print 'backupResults: $1 already exists! We will backup it as $1$(_s)!\n' {}
+            }
+            !\cp $1 $1$(_s)
+        }
+    }
+
+
+rebuildSources
+    # needed vectors: x$(boxBand) y$(boxBand) m$(boxBand) id$(boxBand)
+    echo "Rebuilding source models"
+    echo 
+    readResults
+    echo 
+    astroGalbox_cd_DirPathVector PfitDir
+    echo
+    !mkdir "rebuild" 2>/dev/null
+    chdir "rebuild"
+    !echo Current directory \$(pwd -P)
+    echo 
+    
+    if(!is_file($SciPhoto_$(boxBand).fits)) {
+    astroGalbox_find_and_copy $DirPhoto_$(boxBand) $SciPhoto_$(boxBand).fits
+    astroGalbox_find_and_copy $DirPhoto_$(boxBand) $RmsPhoto_$(boxBand).fits
+    astroGalbox_find_and_copy $DirPhoto_$(boxBand) $PsfPhoto_$(boxBand).fits }
+    if(!is_file($SciPhoto_$(boxBand).fits)){print 'Error! $SciPhoto_$(boxBand).fits not found!\n' {} return}
+    if(!is_file($RmsPhoto_$(boxBand).fits)){print 'Error! $RmsPhoto_$(boxBand).fits not found!\n' {} return}
+    if(!is_file($PsfPhoto_$(boxBand).fits)){print 'Error! $PsfPhoto_$(boxBand).fits not found!\n' {} return}
+    
+    echo "Preparing large galfit input file"
+    initGalfitParam x$(boxBand) y$(boxBand) 0 0 0
+    set Mags = m$(boxBand)
+    set Note = id$(boxBand)
+    writeGalfitParam fit.param
+    writeGalfitInput fit.input $SciPhoto_$(boxBand).fits rebuilt_sources.fits \
+                               $RmsPhoto_$(boxBand).fits $PsfPhoto_$(boxBand).fits
+    echo "Please run galfit fit.input"
+    echo 
+
+
+freezeSources 02
+    # 
+    #  We will freeze some faint galaxies by their SED flux
+    # 
+    #  We will automatically search DataDir/
+    # 
+    if($?1==0||$?2==0){
+        print 'Usage: freezeSources goodsn 24\n' {} 
+        define errorbreak 1
+        define errorbreak ?
+        return
+    }
+    # 
+    # in default we do not fit position but fit mag
+    set pxG = x$2*0   # do not fit pos
+    set pyG = x$2*0   # do not fit pos
+    set pmG = x$2*0+1 # fit mag
+    # 
+    # Pass1 -- fixed sources
+    if(1==PassVer) {
+        return
+    }
+    # return
+    # 
+    # <TODO><20151214>
+    # 
+    if('$2'=='24'||'$2'=='16') {
+        set pxG = pxG*0+1.0  echo set pxG = pxG*0+1.0
+        set pyG = pyG*0+1.0  echo set pyG = pyG*0+1.0
+        set pmG = pmG*0+1.0  echo set pmG = pmG*0+1.0
+        return
+    }
+    if('$2'=='20cm') {
+        set pxG = pxG*0+2.0  echo set pxG = pxG*0+2.0 
+        set pyG = pyG*0+2.0  echo set pyG = pyG*0+2.0
+        set pmG = pmG*0+1.0  echo set pmG = pmG*0+1.0
+        return
+    }
+    if('$2'=='100'||'$2'=='160') {
+        set pxG = pxG*0+1.0 
+        set pyG = pyG*0+1.0
+        # go SED preselection
+    }
+    if('$2'=='250') {
+        set pxG = pxG*0+0.3 
+        set pyG = pyG*0+0.3
+        # go SED preselection
+    }
+    if('$2'=='350'||'$2'=='500') {
+        # go SED preselection
+    }
+    if('$2'=='1160') {
+        # go SED preselection
+    }
+    # 
+    # read SED predictions
+    define TODO 0
+    if($TODO) {
+        set PfitSED_prediction = DataDir+{"/SED/SED_predictions"}+sprintf('_%s','$1')+sprintf('_%s.txt','$2') <TODO>
+        if(!is_file($(PfitSED_prediction))){
+            print 'freezeSources: Error! PfitSED_prediction $(PfitSED_prediction) not found! Give Ctrl+C to break!\n' {} 
+            define errorbreak 1
+            define errorbreak ?
+            return
+        }
+        if($verbose){define freeze_verbose 1} else{define freeze_verbose 0}
+        data $(PfitSED_prediction) read < exc$(boxBand) 4 xf$(boxBand) 7 xe$(boxBand) 8 >
+        verbose $freeze_verbose
+        # <added><20150515><dzliu> additional new objects selected from residual maps
+        set nObjAdd = 0
+        set nObjAdd = (dimen(id$(boxBand))-dimen(exc$(boxBand)))
+        if(nObjAdd>0) { 
+            set dimen(vObjAdd) = $(nObjAdd)
+            set vObjAdd = vObjAdd*0
+            set exc$(boxBand) = exc$(boxBand) concat vObjAdd
+            set xf$(boxBand) = xf$(boxBand) concat vObjAdd
+            set xe$(boxBand) = xe$(boxBand) concat vObjAdd
+        }
+    }
+    # 
+    # convert_flux2mag
+    load astroPhot.sm convert_flux2mag $1 $2 xf$(boxBand) xe$(boxBand)
+    set PfitSED_predict_mag = m$(boxBand) # +- em$(boxBand)
+    set PfitSED_predict_mag = PfitSED_predict_mag>25 ? 25 : PfitSED_predict_mag #<corrected><20150503><dzliu>#
+    set pmF = exc$(boxBand)? PfitSED_predict_mag : 5.0
+    set pmG = 1-exc$(boxBand)
+    set pxG = exc$(boxBand)? 0 : pxG #<fixed><20150717><dzliu>#
+    set pyG = exc$(boxBand)? 0 : pyG #<fixed><20150717><dzliu>#
+    # set pmF and pmG = 0 will let astroGalbox.sm fix these magnitude values
+    set m$(boxBand) = exc$(boxBand)? m$(boxBand) : 5.0 #<TODO># initial guess magnitude 5.0
+    set em$(boxBand) = exc$(boxBand)? em$(boxBand) : 0.0
+    # 
+    # set pmF and pmG then astroGalbox will use these two vectors 
+    # to fix magnitude
+    # print {idF xf100 xe100 pmF pmG}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

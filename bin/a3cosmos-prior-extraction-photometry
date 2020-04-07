@@ -862,7 +862,7 @@ for (( i=0; i<${#SciImages[@]}; i++ )); do
     ##echo  "if [[ ! -f astrodepth_go_galfit.sm.backup.20170611 ]]; then cp astrodepth_go_galfit.sm astrodepth_go_galfit.sm.backup.20170611; fi" >> "$SourceDir/$SourceName.run.bash"
     #echo  "if [[ ! -f astrodepth_go_galfit.sm.backup.20170626 ]]; then cp astrodepth_go_galfit.sm astrodepth_go_galfit.sm.backup.20170626; fi" >> "$SourceDir/$SourceName.run.bash"
     #echo  "cp ~/Cloud/Github/DeepFields.SuperDeblending/Softwares/astrodepth_prior_extraction_photometry_go_galfit.sm astrodepth_go_galfit.sm" >> "$SourceDir/$SourceName.run.bash"
-    #echo  "echo \"macro read astrodepth_go_galfit.sm print_result_fit_2\" | sm"                                                                >> "$SourceDir/$SourceName.run.bash"
+    #echo  "echo \"macro read astrodepth_go_galfit.sm print_result_fit_2\" | smdl"                                                                >> "$SourceDir/$SourceName.run.bash"
     #echo  "cd ../../"                                                                                                                          >> "$SourceDir/$SourceName.run.bash"
     #
     # determine buffer if the image is cut
@@ -946,9 +946,9 @@ for (( i=0; i<${#SciImages[@]}; i++ )); do
     ##      "$SourceName" == "2015.1.00379.S_SB2_GB1_MB1_VUDS0511234877_sci"* || \
     ##      "$SourceName" == "2015.1.00861.S_SB1_GB1_MB1_PACS_787_sci"* ]]; then
     ####echo  "cd \"$SourceDir/$SourceName/\""                                                                        >> "$SourceDir/$SourceName.run.bash"
-    ####echo  "echo \"macro read astrodepth_go_getpix.sm print_result\" | sm"                                         >> "$SourceDir/$SourceName.run.bash"
-    ####echo  "echo \"macro read astrodepth_go_galfit.sm print_result_fit_2\" | sm"                                   >> "$SourceDir/$SourceName.run.bash"
-    ####echo  "echo \"macro read astrodepth_go_galfit.sm print_result_final\" | sm"                                   >> "$SourceDir/$SourceName.run.bash"
+    ####echo  "echo \"macro read astrodepth_go_getpix.sm print_result\" | smdl"                                         >> "$SourceDir/$SourceName.run.bash"
+    ####echo  "echo \"macro read astrodepth_go_galfit.sm print_result_fit_2\" | smdl"                                   >> "$SourceDir/$SourceName.run.bash"
+    ####echo  "echo \"macro read astrodepth_go_galfit.sm print_result_final\" | smdl"                                   >> "$SourceDir/$SourceName.run.bash"
     ####echo  "cd ../../"                                                                                             >> "$SourceDir/$SourceName.run.bash"
     ##echo  "astrodepth_prior_extraction_photometry -cat \"$InputCat\" \\"                                            >> "$SourceDir/$SourceName.run.bash"
     ##echo  "                                       -sci \"$SciImage\" \\"                                            >> "$SourceDir/$SourceName.run.bash"
@@ -972,7 +972,7 @@ for (( i=0; i<${#SciImages[@]}; i++ )); do
     # 
     #<20170613> fix "getpix.result" (pb_corr), "fit_2.result" (pb_corr and getpix.mask), "fit_2.log" (nan)
     ##echo  "cd \"$SourceDir/$SourceName/\""                                                                          >> "$SourceDir/$SourceName.run.bash"
-    ##echo  "echo \"macro read astrodepth_go_galfit.sm print_result_fit_2\" | sm"                                     >> "$SourceDir/$SourceName.run.bash"
+    ##echo  "echo \"macro read astrodepth_go_galfit.sm print_result_fit_2\" | smdl"                                     >> "$SourceDir/$SourceName.run.bash"
     ##echo  "cd ../../"                                                                                               >> "$SourceDir/$SourceName.run.bash"
     echo  ""                                                                                 >> "$SourceDir/$SourceName.run.bash"
     echo  "# do cleaning"                                                                    >> "$SourceDir/$SourceName.run.bash"

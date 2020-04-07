@@ -1,0 +1,65 @@
+crabPlotThreeColorPlot 07
+    # 
+    # In this macro, we plot a scatter diagram with three color. 
+    # 
+    # e.g. crabPlotThreeColorPlot z Mgas
+    # 
+    # optional arguments: 
+    #    define CrabPlotLegendPosX 20000
+    #    define CrabPlotLegendPosY 29000
+    # 
+    # last Modified:
+    #    2016-04-01 09:15 added $3==3.5 upper limits
+    # 
+    if($?3==0) {print 'usage: crabPlotThreeColorPlot XArray YArray ColorArray Color1Text Color2Text Color3Text FinalText\n' {}}
+    # 
+    # 
+    set Crab_XArr_1 = $1 if($3==1)
+    set Crab_XArr_2 = $1 if($3==2)
+    set Crab_XArr_3 = $1 if($3==3)
+    set Crab_XArr_35 = $1 if($3==3.5)
+    set Crab_YArr_1 = $2 if($3==1)
+    set Crab_YArr_2 = $2 if($3==2)
+    set Crab_YArr_3 = $2 if($3==3)
+    set Crab_YArr_35 = $2 if($3==3.5)
+    set Crab_XArr_T = $1 if($3==1||$3==2||$3==3||$3==3.5)
+    # 
+    # backup lweight
+    define crabPlotTCP_lw $lweight
+    # 
+    # 
+    load crabPlot.sm
+    set crabPlotTCP_cs = CTYPE(STRING)
+    if(sum(crabPlotTCP_cs=='grey')==0) {
+    add_ctype grey 170 170 170 }
+    upper ptype $upper expand 1.2
+    ctype grey      lweight 0.02  crabPlotOverPlot_y_log10 Crab_XArr_35 Crab_YArr_35
+    ptype 4 1       expand 2.0
+    ctype grey      lweight 2.0  crabPlotOverPlot_y_log10 Crab_XArr_3 Crab_YArr_3
+    ptype 4 1       expand 2.0
+    ctype seagreen  lweight 2.3  crabPlotOverPlot_y_log10 Crab_XArr_2 Crab_YArr_2
+    ptype 4 1       expand 2.0
+    ctype royalblue lweight 2.5  crabPlotOverPlot_y_log10 Crab_XArr_1 Crab_YArr_1
+    # 
+    # restore lweight
+    lweight $crabPlotTCP_lw
+    # 
+    # 
+    if(!$?CrabPlotLegendPosX) {define CrabPlotLegendPosX 18000}
+    if(!$?CrabPlotLegendPosY) {define CrabPlotLegendPosY 29000}
+    if($?4) { relocate ( $CrabPlotLegendPosX $CrabPlotLegendPosY ) undef CrabPlotLegendPosX undef CrabPlotLegendPosY
+              ctype royalblue          puts $(dimen(Crab_XArr_1)) $4 }
+    if($?5) { ctype seagreen           puts $(dimen(Crab_XArr_2)) $5 }
+    if($?6) { ctype grey               puts $(dimen(Crab_XArr_3)) $6 }
+    if($?7) { ctype default            puts $(dimen(Crab_XArr_T)) $7 } #else {ctype default puts $(dimen(Crab_XArr_T)) in total }
+    # 
+    # 
+    ctype default
+    # 
+    # 
+
+
+
+
+
+

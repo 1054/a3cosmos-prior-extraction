@@ -1,0 +1,37 @@
+#!/bin/bash
+#
+
+type readlink > /dev/null
+type dirname > /dev/null
+
+SMPATH=$(dirname $(dirname $(readlink -f $0)))
+SMDATE=$(date +%s.$(date +%N|cut -b 1,2,3,4)) # SMDATE=$(date +%Y%m%d.%H%M%S.%N.%Z)
+
+echo "fonts		$SMPATH/lib/sm/fonts.bin"      >  "$SMPATH/lib/sm/.sm"
+echo "history_file	.smhist"                   >> "$SMPATH/lib/sm/.sm"
+echo "history		80"                        >> "$SMPATH/lib/sm/.sm"
+echo "temp_dir	/tmp/"                         >> "$SMPATH/lib/sm/.sm"
+echo "graphcap	$SMPATH/lib/sm/graphcap"       >> "$SMPATH/lib/sm/.sm"
+echo "+graphcap	$SMPATH/lib/sm/graphcap.local" >> "$SMPATH/lib/sm/.sm"
+echo "filecap		$SMPATH/lib/sm/filecap"    >> "$SMPATH/lib/sm/.sm"
+echo "termcap		$SMPATH/lib/sm/termcap"    >> "$SMPATH/lib/sm/.sm"
+echo "help		/tmp/sm.$SMDATE/help/"         >> "$SMPATH/lib/sm/.sm"
+echo "macro		/tmp/sm.$SMDATE/macro/"        >> "$SMPATH/lib/sm/.sm"
+#echo "help		$SMPATH/lib/sm/help/"          >> "$SMPATH/lib/sm/.sm"
+#echo "macro		$SMPATH/lib/sm/macro/"         >> "$SMPATH/lib/sm/.sm"
+
+chmod 777 "$SMPATH/lib/sm/.sm"
+mkdir "/tmp/sm.$SMDATE" 2>/dev/null
+ln -fs "$SMPATH/lib/sm/macro" "/tmp/sm.$SMDATE/macro" 2>/dev/null
+ln -fs "$SMPATH/lib/sm/help" "/tmp/sm.$SMDATE/help" 2>/dev/null
+if [[ -f $SMPATH/bin/sm ]]; then
+$SMPATH/bin/sm -f "$SMPATH/lib/sm/.sm" $*
+else
+echo ""
+echo "*************************************"
+echo "Error! Supermongo was not installed! "
+echo "*************************************"
+echo ""
+fi
+rm -rf "/tmp/sm.$SMDATE" 2>/dev/null
+

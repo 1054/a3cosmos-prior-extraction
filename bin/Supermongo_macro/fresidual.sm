@@ -1,0 +1,496 @@
+fresidual 04
+    # 
+    # aims:
+    #   get apeture photometry for each source on the residual image
+    #   the aperture diameter is the PSF FWHM at that band. 
+    # 
+    # usage:
+    #   load fresidual.sm set fres = fresidual(fitsfile,ra,dec,radiusInArcsec)
+    # 
+    # inputs:
+    #   $1 is fitsfile
+    #   $2 is ra in degree (J2000)
+    #   $3 is dec in degree (J2000)
+    #   $4 is radius in arcsec
+    # 
+    # dependency:
+    #   sky2xy
+    #   CrabPhotAperPhot
+    # 
+    # check inputs
+    if(!$?4) {
+        print 'Usage: fresidual fitsfile[extn] ra dec radiusInArcsec\n' {}
+        return
+    }
+    # 
+    # check dependencies
+    check_fresidual_code_dependencies
+    # 
+    # prepare fits file name and fits extension number
+    get_fits_filename_and_extension_number $1
+    # 
+    # convert radec to posxy
+    set _fresi_ra = $2
+    set _fresi_de = $3
+    print "aaa_fresidual_sky2xy_input" '%15.7f%15.7f\n' {_fresi_ra _fresi_de}
+    !sky2xy $1 @"aaa_fresidual_sky2xy_input" > "aaa_fresidual_sky2xy_output"
+    define _fresi_verbose $verbose verbose 0
+    data "aaa_fresidual_sky2xy_output" read {_fresi_px 5 _fresi_py 6}
+    verbose $_fresi_verbose undef _fresi_verbose
+    # 
+    # compute pixel scale
+    print "aaa_fresidual_xy2sky_input" '$(_fresi_px[0]) $(_fresi_py[0])\n' {}
+    print +"aaa_fresidual_xy2sky_input" '$(_fresi_px[0]) $(_fresi_py[0]+1)\n' {}
+    !xy2sky -d -n 10 $(_fresi_fits) @"aaa_fresidual_xy2sky_input" > "aaa_fresidual_xy2sky_output"
+    define _fresi_verbose $verbose verbose 0
+    data "aaa_fresidual_xy2sky_output" read {_fresi_ara 1 _fresi_ade 2}
+    verbose $_fresi_verbose undef _fresi_verbose
+    set _fresi_pixscale = abs(_fresi_ade[1] - _fresi_ade[0]) * 3600.0 # pixel scale in arcsec/pixel
+    if($verbose) {
+        print 'fresidual: Pixel scale is $(_fresi_pixscale) arcsec/pixel.\n' {}
+    }
+    # 
+    # convert radius from arcsec to pixel unit
+    set _fresi_radius = $4
+    set _fresi_radius = _fresi_radius / _fresi_pixscale
+    # 
+    # check dimension
+    if(dimen(_fresi_px)!=dimen(_fresi_py)) {
+        print 'fresidual: Error! Dimensions of $2 and $3 do not match!\n' {}
+        return
+    }
+    if(dimen(_fresi_px)!=dimen(_fresi_radius)) {
+        set _fresi_radius = _fresi_px*0.0 + _fresi_radius[0]
+    }
+    # 
+    # prepare aperture list file and run aperture photometry on residual image <TODO> residual image extension number "-ext 2" <DONE> now read from input str
+    print "aaa_fresidual_aperphot_input" '%15g%15g%17g\n' {_fresi_px _fresi_py _fresi_radius}
+    if($verbose) {
+        echo "fresidual: Running CrabPhotAperPhot "$(_fresi_fits)" -ext "$(_fresi_fext)" none \"aaa_fresidual_aperphot_input\" > \"aaa_fresidual_aperphot_output\""
+    }
+    !CrabPhotAperPhot -header-no-comment $(_fresi_fits) -ext $(_fresi_fext) none "aaa_fresidual_aperphot_input" > "aaa_fresidual_aperphot_output"
+    !CrabTableReadColumn "aaa_fresidual_aperphot_output" "sumabs_int" > "aaa_fresidual_aperphot_output_sumabs"
+    !CrabTableReadColumn "aaa_fresidual_aperphot_output" "sum" > "aaa_fresidual_aperphot_output_sum"
+    define _fresi_verbose $verbose verbose 0
+    data "aaa_fresidual_aperphot_output_sum" lines 2 0 read _fresi_fsum 1 #<TODO># version 2015-12-21, might change columns
+    data "aaa_fresidual_aperphot_output_sumabs" lines 2 0 read _fresi_fabs 1 #<TODO># version 2015-12-21, might change columns
+    verbose $_fresi_verbose undef _fresi_verbose
+    # 
+    # return
+    set $0 = _fresi_fabs
+    return
+
+
+
+fresidual_inPixel 04
+    # 
+    # usage:
+    #   load fresidual.sm set fres = fresidual_inPixel(fitsfile,px,py,radiusInPixel)
+    # 
+    # inputs:
+    #   $1 is fitsfile
+    #   $2 is px in pixel, starting from 1
+    #   $3 is py in pixel, starting from 1
+    #   $4 is radius in pixel
+    # 
+    # dependency:
+    #   sky2xy
+    #   CrabPhotAperPhot
+    # 
+    # check inputs
+    if(!$?4) {
+        print 'Usage: fresidual_inPixel fitsfile[extn] px py radiusInPixel\n' {}
+        return
+    }
+    # 
+    # prepare fits file name and fits extension number
+    get_fits_filename_and_extension_number $1
+    # 
+    # read input
+    set _fresipix_px = float($2)
+    set _fresipix_py = float($3)
+    set _fresipix_radius = float($4)
+    # 
+    # check dimension
+    if(dimen(_fresipix_px)!=dimen(_fresipix_py)) {
+        print 'fresidual_inPixel: Error! Dimensions of $2 and $3 do not match!\n' {}
+        return
+    }
+    if(dimen(_fresipix_px)!=dimen(_fresipix_radius)) {
+        set _fresipix_radius = _fresipix_px*0.0 + _fresipix_radius[0]
+    }
+    # 
+    # prepare aperture list file and run aperture photometry on residual image <TODO> residual image extension number "-ext 2" <DONE> now read from input str
+    print "aaa_fresidual_aperphot_input" '%15g%15g%17g\n' {_fresipix_px _fresipix_py _fresipix_radius}
+    if($verbose) {
+        echo "fresidual_inPixel: Running CrabPhotAperPhot "$(_fresi_fits)" -ext "$(_fresi_fext)" none \"aaa_fresidual_aperphot_input\" > \"aaa_fresidual_aperphot_output\""
+    }
+    !CrabPhotAperPhot -header-no-comment $(_fresi_fits) -ext $(_fresi_fext) none "aaa_fresidual_aperphot_input" > "aaa_fresidual_aperphot_output"
+    !CrabTableReadColumn "aaa_fresidual_aperphot_output" "sumabs_int" > "aaa_fresidual_aperphot_output_sumabs"
+    !CrabTableReadColumn "aaa_fresidual_aperphot_output" "sum"        > "aaa_fresidual_aperphot_output_sum"
+    !CrabTableReadColumn "aaa_fresidual_aperphot_output" "rms"        > "aaa_fresidual_aperphot_output_rms"
+    !CrabTableReadColumn "aaa_fresidual_aperphot_output" "npix"       > "aaa_fresidual_aperphot_output_npix"
+    define _fresipix_verbose $verbose verbose 0
+    data "aaa_fresidual_aperphot_output_sum" lines 2 0 read _fresipix_fsum 1 #<TODO># version 2015-12-21, might change columns
+    data "aaa_fresidual_aperphot_output_sumabs" lines 2 0 read _fresipix_fabs 1 #<TODO># version 2015-12-21, might change columns
+    data "aaa_fresidual_aperphot_output_rms" lines 2 0 read _fresipix_rms 1
+    data "aaa_fresidual_aperphot_output_npix" lines 2 0 read _fresipix_npix 1
+    verbose $_fresipix_verbose undef _fresipix_verbose
+    # 
+    # return
+    set $0 = _fresipix_fabs
+    return
+
+
+
+check_fresidual_code_dependencies
+    # 
+    # checking dependencies
+    if($verbose) {
+        print 'fresidual: Checking dependencies: \n' {}
+    }
+    foreach _fresi_var {sky2xy xy2sky CrabPhotAperPhot} {
+        if($verbose) {
+            !echo -n "fresidual: Checking "$_fresi_var": ''"
+            !type $_fresi_var
+        } else {
+            !type $_fresi_var >/dev/null 2>&1
+        }
+        if($exit_status!=0) {
+            print 'fresidual: Error! The wcstools \"$_fresi_var\" was not found! Please contact dzliu\n' {}
+            return
+        }
+    }
+
+
+get_fits_filename_and_extension_number 01
+    # 
+    # prepare fits file name and fits extension number
+    print "aaa_fresidual_fitsname" '$1\n' {}
+    #!sed -i -e 's/\(.*\)\[\([0-9]*\)\]\$/\1\\n\2/g' "aaa_fresidual_fitsname" # seems not working under Mac 10.12.4, using perl now <20170508>
+    !perl -pi -e 's/(.*)\[([0-9]*)\]\$/\1\\n\2/g' "aaa_fresidual_fitsname"
+    define _fresi_verbose $verbose verbose 0
+    data "aaa_fresidual_fitsname"
+    read row _fresi_fits 1.s
+    read row _fresi_fext 2
+    if(!is_vector(_fresi_fext)) {set _fresi_fext=0}
+    verbose $_fresi_verbose undef _fresi_verbose
+    # 
+    # check file exists
+    if(!is_file($(_fresi_fits))) {
+        print 'fresidual: Error! $1 was not found!\n' {}
+        return
+    }
+
+
+
+get_pixel_values_by_radec 03
+    # 
+    # Usage: 
+    #     load fresidual.sm get_pixel_values_by_radec fitsfile ra dec
+    # 
+    # Output:
+    #     pixel_values
+    # 
+    # check
+    if( $?1==0 || is_vector($2)==0 || is_vector($3)==0 ) {
+        echo Usage: get_pixel_values_by_radec fitsfile ra dec
+        return
+    }
+    # inputs
+    define t_getpix_rd_fitsfile <$1>
+    set t_getpix_rd_ra = $2
+    set t_getpix_rd_dec = $3
+    # sky2xy
+    !\rm aaa_getpix_rd_sky2xy_input >> /dev/null 2>&1
+    !\rm aaa_getpix_rd_sky2xy_output >> /dev/null 2>&1
+    if($?print_noheader==1) {define prev_noheader $print_noheader} else {define prev_noheader 0} define print_noheader 1 
+    print  aaa_getpix_rd_sky2xy_input '%17.7f %17.7f\n' { t_getpix_rd_ra t_getpix_rd_dec }
+    !sky2xy -j $t_getpix_rd_fitsfile @aaa_getpix_rd_sky2xy_input > aaa_getpix_rd_sky2xy_output
+    data aaa_getpix_rd_sky2xy_output read { t_getpix_rd_xx 5 t_getpix_rd_yy 6 }
+    if($?prev_noheader==1) {define print_noheader $prev_noheader}
+    # getpix
+    if($?print_noheader==1) {define prev_noheader $print_noheader} else {define prev_noheader 0} define print_noheader 1
+    print aaa_getpix_rd_getpix_input '%15.5f %15.5f\n' {t_getpix_rd_xx t_getpix_rd_yy}
+    !getpix -n 1 -s $t_getpix_rd_fitsfile @aaa_getpix_rd_getpix_input > aaa_getpix_rd_getpix_output
+    data aaa_getpix_rd_getpix_output read { t_getpix_rd_pixvalues 1 }
+    if($?prev_noheader==1) {define print_noheader $prev_noheader}
+    # output
+    set pixel_values = t_getpix_rd_pixvalues
+
+
+get_pixel_values_by_posxy 03
+    
+    # Usage: 
+    #     load fresidual.sm get_pixel_values_by_posxy fitsfile x y
+    # 
+    # Output:
+    #     pixel_values
+    # 
+    # check
+    if( $?1==0 || is_vector($2)==0 || is_vector($3)==0 ) {
+        echo Usage: get_pixel_values_by_posxy fitsfile x y
+        return
+    }
+    # inputs
+    define t_getpix_xy_fitsfile <$1>
+    set t_getpix_xy_xx = $2
+    set t_getpix_xy_yy = $3
+    # getpix
+    if($?print_noheader==1) {define prev_noheader $print_noheader} else {define prev_noheader 0} define print_noheader 1
+    print aaa_getpix_xy_getpix_input '%15.5f %15.5f\n' {t_getpix_xy_xx t_getpix_xy_yy}
+    !getpix -n 1 -s $t_getpix_xy_fitsfile @aaa_getpix_xy_getpix_input > aaa_getpix_xy_getpix_output
+    data aaa_getpix_xy_getpix_output read { t_getpix_xy_pixvalues 1 }
+    if($?prev_noheader==1) {define print_noheader $prev_noheader}
+    
+    # output
+    set pixel_values = t_getpix_xy_pixvalues
+
+
+
+
+
+
+getRmsPixStats 03
+    # Usage:
+    #     macro read run_image_util.sm getRmsPixStats image xc yc
+    # 
+    define RmsPixStats_IMG $1
+    define RmsPixStats_PSF 1 # use a radius 1 to calc rms pix stats
+    set RmsPixStats_IMG = {"}+<'$1'>+{"}
+    set RmsPixStats_XPC = $2
+    set RmsPixStats_YPC = $3
+    set RmsPixStats_PSF = 1 # use a radius 1 to calc rms pix stats
+    # echo 
+    if($verbose) { 
+    echo run_image_util::getRmsPixStats: RmsPixStats_IMG = $(RmsPixStats_IMG)
+    echo run_image_util::getRmsPixStats: RmsPixStats_PSF = $(RmsPixStats_PSF)
+    }
+    # open image
+    define file_type fits      # must define file_type fits so as to read fits file
+    print 'run_image_util::getRmsPixStats: ' {}
+    data non_exist_file      # clear any data in buffer otherwise can not open fits
+    image $(RmsPixStats_IMG)     # macro "image" can read one fits file
+    define BITPIX image
+    if($BITPIX==(-64)) { # patch for double type fits #<NOte># same as getResPixStats
+        echo Illegal? No worry, we have fixed it now. 
+        set RmsPixStats_64S = RmsPixStats_IMG
+        set RmsPixStats_64S = substr(RmsPixStats_64S,0,strlen(RmsPixStats_64S)-6) # suffix .fits"
+        set RmsPixStats_32S = RmsPixStats_64S+{_float"}
+        set RmsPixStats_64S = RmsPixStats_64S+{"}
+        ### print {RmsPixStats_64S}
+        ### print {RmsPixStats_32S}
+        if(!is_file($(RmsPixStats_32S).fits)) { # 
+            !\rm do.cl 2>/dev/null
+            print  do.cl 'images\ndataio\n' {}
+            print +do.cl 'rfits $(RmsPixStats_64S).fits 0 $(RmsPixStats_64S)_IRAF.fits\n' {}
+            print +do.cl 'imdel $(RmsPixStats_32S).fits\n' {}
+            print +do.cl 'wfits $(RmsPixStats_64S)_IRAF.fits $(RmsPixStats_32S).fits bitpix=-32\n' {}
+            print +do.cl 'imdel $(RmsPixStats_64S)_IRAF.fits\n' {}
+            print +do.cl 'logout\n\n' {}
+            !cl -old < do.cl >> /dev/null 2>&1
+        }
+        #### !cat do.cl
+        if($verbose) { echo run_image_util::getRmsPixStats: image $(RmsPixStats_32S).fits }
+        image $(RmsPixStats_32S).fits
+    }
+    define NAXIS1 image
+    define NAXIS2 image
+    # we use IRAF imstats to calculate the rms pix stats
+    set RmsPixStats_XP1 = (RmsPixStats_XPC-RmsPixStats_PSF)>=1       ? (RmsPixStats_XPC-RmsPixStats_PSF) : 1
+    set RmsPixStats_XP2 = (RmsPixStats_XPC+RmsPixStats_PSF)<=$NAXIS1 ? (RmsPixStats_XPC+RmsPixStats_PSF) : $NAXIS1
+    set RmsPixStats_YP1 = (RmsPixStats_YPC-RmsPixStats_PSF)>=1       ? (RmsPixStats_YPC-RmsPixStats_PSF) : 1
+    set RmsPixStats_YP2 = (RmsPixStats_YPC+RmsPixStats_PSF)<=$NAXIS2 ? (RmsPixStats_YPC+RmsPixStats_PSF) : $NAXIS2
+    if($?print_noheader) { if($print_noheader==0) {
+        define getRmsPixStats_noheader 0
+        define print_noheader 1 }
+    } else {
+        define getRmsPixStats_noheader 0
+        define print_noheader 1 ###<Added><DZLIU>###
+    }
+    !\rm "aaa_noise" 2>/dev/null
+    print  do.cl 'images\n' {}
+    print +do.cl 'imstat $1[%.0f:%.0f,%.0f:%.0f] nclip=0 >> aaa_noise \n' \
+                  {RmsPixStats_XP1 RmsPixStats_XP2 RmsPixStats_YP1 RmsPixStats_YP2}
+    print +do.cl 'logout\n\n' {}
+    !cl -old < do.cl >> /dev/null 2>&1   ###<Modified><DZLIU>### stdout to null
+    # 
+    if($?getRmsPixStats_noheader) {
+        define print_noheader $getRmsPixStats_noheader
+        undef getRmsPixStats_noheader
+    }
+    # verbose 0
+    if($?verbose) { if($verbose==1) {
+        define getRmsPixStats_verbose 1
+        verbose 0 }
+    } else {
+        define getRmsPixStats_verbose 1
+        verbose 0 ###<Added><DZLIU>###
+    }
+    # read noise (rms)
+    data "aaa_noise" read RmsPixStats_RMS 4
+    # verbose
+    if($?getRmsPixStats_verbose) {
+        verbose $getRmsPixStats_verbose
+        undef getRmsPixStats_verbose
+    }
+    # save rms values into vector
+    set RmsPixStats_RMS = (RmsPixStats_XP1==1 || RmsPixStats_YP1==1 || RmsPixStats_XP2==$NAXIS1 || RmsPixStats_YP2==$NAXIS2) ? 1e10 : RmsPixStats_RMS
+    set RmsPixStats_RMS = RmsPixStats_RMS>0 ? RmsPixStats_RMS : 1e10
+    # 
+    # print {RmsPixStats_XPC RmsPixStats_YPC RmsPixStats_SUM RmsPixStats_ABS RmsPixStats_SIG}
+    print "getRmsPixStats.csv" '%15.5g %15.5g %15g\n' {RmsPixStats_XPC RmsPixStats_YPC RmsPixStats_RMS}
+    # end
+
+
+
+
+
+
+
+getResPixStats 04
+    # Usage:
+    #     macro read run_image_util.sm getResPixStats image xc yc psf
+    # 
+    define ResPixStats_IMG $1
+    define ResPixStats_PSF $4
+    set ResPixStats_IMG = {"}+<'$1'>+{"}
+    set ResPixStats_XPC = $2
+    set ResPixStats_YPC = $3
+    set ResPixStats_PSF = {"}+<'$4'>+{"}
+    # We use PSF image to select object radius
+    define file_type fits      # must define file_type fits so as to read fits file
+    print 'run_image_util::getResPixStats: ' {}
+    data non_exist_file      # clear any data in buffer otherwise can not open fits
+    #<Corrected><20140909><DzLIU>
+    !touch "aaa_getpix" #<Corrected><20140909><DzLIU>
+    define fver $verbose verbose 0 data "aaa_getpix" verbose $fver #<Corrected><20140909><DzLIU>
+    # ---- this is a bug of supermongo, must do this before second image $ResPixStats_PSF
+    # echo 
+    if($verbose) { 
+    echo run_image_util::getResPixStats: ResPixStats_IMG = $ResPixStats_IMG
+    echo run_image_util::getResPixStats: ResPixStats_PSF = $ResPixStats_PSF
+    }
+    ##### echo getResPixStats: image $ResPixStats_PSF
+    print 'run_image_util::getResPixStats: ' {}
+    image $(ResPixStats_PSF)     # macro "image" can read one fits file
+    define BITPIX image
+    if($BITPIX==(-64)) { # patch for double type fits
+        echo Illegal? No worry, we have fixed it now. 
+        set ResPixStats_64S = ResPixStats_PSF # '$ResPixStats_PSF'
+        set ResPixStats_64S = substr(ResPixStats_64S,0,strlen(ResPixStats_64S)-6) # $ResPixStats_PSF  -5)
+        set ResPixStats_32S = ResPixStats_64S+{_float"}
+        set ResPixStats_64S = ResPixStats_64S+{"}
+        ### print {ResPixStats_64S}
+        ### print {ResPixStats_32S}
+        if(!is_file($(ResPixStats_32S).fits)) { # 
+            !\rm do.cl 2>/dev/null
+            print  do.cl 'images\ndataio\n' {}
+            print +do.cl 'rfits $(ResPixStats_64S).fits 0 $(ResPixStats_64S)_IRAF.fits\n' {}
+            print +do.cl 'imdel $(ResPixStats_32S).fits\n' {}
+            print +do.cl 'wfits $(ResPixStats_64S)_IRAF.fits $(ResPixStats_32S).fits bitpix=-32\n' {}
+            print +do.cl 'imdel $(ResPixStats_64S)_IRAF.fits\n' {}
+            print +do.cl 'logout\n\n' {}
+            !cl -old < do.cl >> /dev/null 2>&1
+        }
+        #### !cat do.cl
+        if($verbose) { print 'run_image_util::getResPixStats: image $(ResPixStats_32S).fits\n' {} }
+        print 'run_image_util::getResPixStats: ' {}
+        image $(ResPixStats_32S).fits
+    }
+    define NAXIS1 image
+    define NAXIS2 image
+    limits 0 $NAXIS1 0 $NAXIS2 # must set limits so as to analyze the whole image
+    minmax image_min image_max
+    define image_med $(0.5*$image_max) #<TODO># 0.5*$image_max
+    #echo $image_min $image_max $image_med
+    set image_pix = image[*,*]
+    set image_isc = 0,($NAXIS1*$NAXIS2-1)
+    set image_xsc =    (image_isc%$NAXIS2)
+    set image_ysc = int(image_isc/$NAXIS2)
+    set image_coo = image_pix>=$image_med
+    set imobj_xsc = image_xsc if(image_coo)
+    set imobj_ysc = image_ysc if(image_coo)
+    # 
+    set ResPixStats_SUM = ResPixStats_XPC*0.0
+    set ResPixStats_ABS = ResPixStats_XPC*0.0
+    set ResPixStats_SIG = ResPixStats_XPC*0.0
+    set ResPixStats_RMS = ResPixStats_XPC*0.0
+    # image $ResPixStats_IMG     # macro "image" can read one fits file
+    # define image_xns image
+    # define image_yns image
+    # set imobj_xsc = imobj_xsc - (($NAXIS1-1)/2) + (($image_xns-1)/2) + 1 # for getpix, these are sky position rather than image index
+    # set imobj_ysc = imobj_ysc - (($NAXIS2-1)/2) + (($image_yns-1)/2) + 1 # for getpix, these are sky position rather than image index
+    # 
+    # close image
+    image delete
+    define file_type C
+    # set ResPixStats_ABS = 0 return #<TODO><DEBUG>#
+    # 
+    # loop
+    do iResPixStats=0,dimen(ResPixStats_XPC)-1 {
+        define xResPixStats $(ResPixStats_XPC[$iResPixStats])
+        define yResPixStats $(ResPixStats_YPC[$iResPixStats])
+        set imres_xsc = imobj_xsc - (($NAXIS1-1)/2) + $xResPixStats # for getpix, these are sky position rather than image index
+        set imres_ysc = imobj_ysc - (($NAXIS2-1)/2) + $yResPixStats # for getpix, these are sky position rather than image index
+        # We use getpix to get object residual pixels
+        define  print_noheader 1
+        print  "aaa_getpix_resmap_input" '%15.0f %15.0f\n' {imres_xsc imres_ysc}                                 #<Modified><20140820><DzLIU># %0.3f->%0.0f
+        print  "aaa_getpix_resmap_input.ds9.reg" '\# Region file format: DS9 version 4.1\n' {}
+        print +"aaa_getpix_resmap_input.ds9.reg" 'global dashlist=8 3 width=1 select=1 edit=1 move=0 delete=1\n' {}
+        print +"aaa_getpix_resmap_input.ds9.reg" 'image\n' {}
+        print +"aaa_getpix_resmap_input.ds9.reg" 'point(%0.0f,%0.0f) \# point=circle\n' {imres_xsc imres_ysc}    #<Modified><20140820><DzLIU># %0.3f->%0.0f
+        print +"aaa_getpix_resmap_input.ds9.reg" '\n' {}
+        define  print_noheader 0
+        # echo !getpix -n 1 %15.5g $ResPixStats_IMG @"aaa_getpix_resmap_input" > "aaa_getpix_resmap_output"
+        !getpix -n 1 %15.5g $ResPixStats_IMG @"aaa_getpix_resmap_input" > "aaa_getpix_resmap_output"
+        ##### echo getResPixStats: $($iResPixStats+1)/$(dimen(ResPixStats_XPC))
+        declare imres_pix 0
+        define fver $verbose verbose 0 data "aaa_getpix_resmap_output" read {imres_pix 1} verbose $fver
+        # <TODO><BUG> can not image x.fits -- data read -- image xx.fits !!
+        # define file_type fits image sci.2.fits data aaa_getpix_resmap_output read xxx 1 image sci.2.fits
+        # define file_type fits image sci.2.fits data aaa_getpix_resmap_output read xxx 1 data non_exist_file image sci.2.fits
+        # Check imres_pix
+        ## if(dimen(imres_pix)>1) { if(sum(imres_pix!=0)==0) { set imres_pix={0} } } #<Modified><20141012><DzLIU>#
+        # Calc sum of object residual pixels
+        if(dimen(imres_pix)>1) { # DO NOT USE && sum(imres_pix)>0 #<Corrected><20140707><DZLIU>#
+        if(sum(imres_pix!=0)==0) { #<Modified><20141012><DzLIU>#
+        define imres_sig 0.0
+        } else {
+        stats  imres_pix imres_mean imres_sig imres_ku 
+        } #<Modified><20141012><DzLIU>#
+        ##<DEBUG><20140820>## echo dimen(imres_pix)=$(dimen(imres_pix)) x=$xResPixStats y=$yResPixStats
+        ##<DEBUG><20140820>## print {imres_pix}
+        ##<DEBUG><20140820>## !sleep 3.0
+        define imres_sum $(sum(imres_pix))
+        define imres_abs $(abs(sum(imres_pix)))
+        define imres_rms $(sqrt(sum(imres_pix**2)/dimen(imres_pix)))
+        if($verbose) { 
+        echo getResPixStats: ResPixStats_ABS = $imres_abs
+        }
+        set ResPixStats_SUM[$iResPixStats] = $imres_sum
+        set ResPixStats_ABS[$iResPixStats] = $imres_abs
+        set ResPixStats_SIG[$iResPixStats] = $imres_sig
+        set ResPixStats_RMS[$iResPixStats] = $imres_rms
+        } else {
+        define imres_sum -99 # out of image #<Corrected><20140707><DZLIU>#
+        define imres_abs -99 # out of image #<Corrected><20140707><DZLIU>#
+        define imres_rms -99 # out of image #<Corrected><20140707><DZLIU>#
+        define imres_sig -99 # out of image #<Corrected><20140707><DZLIU>#
+        set ResPixStats_SUM[$iResPixStats] = -99 # out of image #<Corrected><20140704><DZLIU>#
+        set ResPixStats_ABS[$iResPixStats] = -99 # out of image
+        set ResPixStats_SIG[$iResPixStats] = -99 # out of image
+        set ResPixStats_RMS[$iResPixStats] = -99 # out of image
+        }
+        # !sleep 300
+    }
+    # 
+    # print {ResPixStats_XPC ResPixStats_YPC ResPixStats_SUM ResPixStats_ABS ResPixStats_SIG}
+    print "getResPixStats.csv" '%15.5g %15.5g %15.5g %15.5g %15.5g %15.5g\n' {ResPixStats_XPC ResPixStats_YPC ResPixStats_SUM ResPixStats_ABS ResPixStats_SIG ResPixStats_RMS}
+    # end
+
+
+
+
+
+

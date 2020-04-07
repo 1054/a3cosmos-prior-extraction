@@ -1,0 +1,2705 @@
+astroSfig
+    # 
+    # here we provide some useful tools for the star formation things
+    # 
+    print 'load astroSfig.sm\n' {}
+    print '\# \n' {}
+    print '\# Functions for stellar mass - star formation rate calculation: \n' {}
+    print '\# \n' {}
+    print 'set lg_SFR_MS = calc_Bethermin2014_SFR(z,lg_M_star) --> lg_SFR_MS\n' {}
+    print 'set lg_SFR_MS = calc_Schreiber2014_SFR(z,lg_M_star) --> lg_SFR_MS\n' {}
+    print 'set lg_SFR_MS = calc_Sargent2014_SFR(z,lg_M_star) --> lg_SFR_MS\n' {}
+    print '\# \n' {}
+    print '\# Functions for molecular gas - infrared luminosity calculation: \n' {}
+    print '\# \n' {}
+    print 'set L_CO = calc_Daddi2010_CO(LTIR,J_up[,z]) --> L_CO_J_up_K_km_s_pc2\n' {} 
+    print 'set L_CO = calc_Liu2015_CO(LTIR,J_up[,z]) --> L_CO_J_up_K_km_s_pc2\n' {} 
+    print '\# \n' {}
+    print '\# Functions for infrared to submillimeter molecular and atomic lines: \n' {}
+    print '\# \n' {}
+    print 'set Freq_CO_J = calc_line_freq(co,J[,z]) --> Freq_CO_at_J_at_z_GHz\n' {}
+    print 'set time_onsoure = calc_noema_time(LineFreq,LineFlux,LineWidth,SNRatio) --> hours on source\n' {}
+    print 'calc_FIR_lines 3.083 \# --> input redshift, output far-infrared line frequencies\n' {}
+    print 'calc_nebular_lines 3.083 \# --> input redshift, output nebular line frequencies\n' {}
+    print '\n' {}
+
+
+
+calc_Pearson2018_SFR 02
+    # 
+    # calculate SFR according to the sSFR evolution track of MS galaxies in Pearson 2018
+    # Table 2
+    # note that they are using Chabrier IMF for SFR and Mstar
+    # input $1 is redshift
+    # input $2 is stellar mass in log in Chabrier IMF
+    # output $0 is SFR in log in Chabrier IMF
+    # 
+    if($?1==0||$?2==0){print 'Usage: calc_Pearson2018_SFR z lg_M_star --> lg_SFR_MS\n' {} return}
+    set _Pearson2018_z = $1
+    set _Pearson2018_Mstar = $2
+    set _Pearson2018_alpha = 0.38 + 0.12 * _Pearson2018_z
+    set _Pearson2018_beta = 1.10 + (0.53 * ln(0.03 + _Pearson2018_z))
+    #set _Pearson2018_alpha = (_Pearson2018_z>=0.2 && _Pearson2018_z<0.5) ? 0.43 : _Pearson2018_alpha
+    #set _Pearson2018_beta = (_Pearson2018_z>=0.2 && _Pearson2018_z<0.5) ? 0.58 : _Pearson2018_beta
+    #set _Pearson2018_alpha = (_Pearson2018_z>=0.5 && _Pearson2018_z<0.8) ? 0.50 : _Pearson2018_alpha
+    #set _Pearson2018_beta = (_Pearson2018_z>=0.5 && _Pearson2018_z<0.8) ? 0.92 : _Pearson2018_beta
+    set _Pearson2018_SFR = _Pearson2018_alpha * (_Pearson2018_Mstar-10.5) + _Pearson2018_beta
+    set $0 = _Pearson2018_SFR
+    return
+
+calc_Schreiber2015_SFR 02
+    # 
+    # calculate SFR according to the sSFR evolution track of MS galaxies in Schreiber 2014 (arxiv) 2015 A&A
+    # equation (9) and text 
+    # note that they are using Salpeter IMF for SFR and Mstar
+    # input $1 is redshift
+    # input $2 is stellar mass in log in Chabrier IMF
+    # output $0 is SFR in log in Chabrier IMF
+    # 
+    if($?1==0||$?2==0){print 'Usage: calc_Schreiber2014_SFR z lg_M_star --> lg_SFR_MS\n' {} return}
+    set _Schreiber2014_z = $1
+    set _Schreiber2014_Mstar = $2
+    set _Schreiber2014_Mstar = _Schreiber2014_Mstar+lg(1.73) # converts Chabrier IMF values to Salpeter IMF values for internal calculation
+    set _Schreiber2014_SFR = _Schreiber2014_Mstar-9.0-0.50+1.5*lg(_Schreiber2014_z+1.0)
+    set _Schreiber2014_mmr = _Schreiber2014_Mstar-9.0-0.36-2.5*lg(_Schreiber2014_z+1.0)
+    set _Schreiber2014_SFR = _Schreiber2014_mmr>0 ? (_Schreiber2014_SFR-0.30*_Schreiber2014_mmr**2) : _Schreiber2014_SFR
+    set _Schreiber2014_SFR = _Schreiber2014_SFR-lg(1.73) # converts back to Chabrier IMF values
+    set $0 = _Schreiber2014_SFR
+    return
+
+calc_Schreiber2014_SFR 02
+    # 
+    # calculate SFR according to the sSFR evolution track of MS galaxies in Schreiber 2014 (arxiv) 2015 A&A
+    # note that they are using Salpeter IMF for SFR and Mstar
+    # input $1 is redshift
+    # input $2 is stellar mass in log in Chabrier IMF
+    # output $0 is SFR in log in Chabrier IMF
+    # 
+    if($?1==0||$?2==0){print 'Usage: calc_Schreiber2014_SFR z lg_M_star --> lg_SFR_MS\n' {} return}
+    set _Schreiber2014_z = $1
+    set _Schreiber2014_Mstar = $2
+    set _Schreiber2014_Mstar = _Schreiber2014_Mstar-lg(1.73) # 20180219 buggy
+    set _Schreiber2014_SFR = _Schreiber2014_Mstar-9.0-0.50+1.5*lg(_Schreiber2014_z+1.0)
+    set _Schreiber2014_mmr = _Schreiber2014_Mstar-9.0-0.36-2.5*lg(_Schreiber2014_z+1.0)
+    set _Schreiber2014_SFR = _Schreiber2014_mmr>0 ? (_Schreiber2014_SFR-0.30*_Schreiber2014_mmr**2) : _Schreiber2014_SFR
+    set _Schreiber2014_SFR = _Schreiber2014_SFR+lg(1.73) # 20180219 buggy
+    set $0 = _Schreiber2014_SFR
+    return
+
+calc_Sargent2014_SFR 02
+    # 
+    # calculate SFR according to the sSFR evolution track of MS galaxies in Sargent 2014 ApJ (2013 arXiv)
+    # note that they are using Chabrier IMF for SFR and Mstar
+    # input $1 is redshift
+    # input $2 is stellar mass in log in Chabrier IMF
+    # output $0 is SFR in log in Chabrier IMF
+    # 
+    # see paper http://fr.arxiv.org/pdf/1303.4392v2
+    #     appendix
+    #     equation A1  sSFR(M_star,z) = N_M_star * exp(A*z/(1.0+B*z**C))
+    #                  where N_M_star = 0.095 * 10**(-0.21*(log_M_star-lg(5e10)))
+    #                        A = 2.05, B = 0.16, C = 1.54
+    # 
+    if($?1==0||$?2==0){print 'Usage: calc_Sargent2014_SFR z lg_M_star --> lg_SFR_MS\n' {} return}
+    set _Sargent2014_z = $1
+    set _Sargent2014_lgMstar = $2
+    set _Sargent2014_sSFR = 0.095 * 10**(-0.21*(_Sargent2014_lgMstar-lg(5e10))) * exp(2.05*_Sargent2014_z/(1.0+0.16*_Sargent2014_z**1.54))
+    set _Sargent2014_lgSFR = lg(_Sargent2014_sSFR / 1e9 * 10**(_Sargent2014_lgMstar))
+    set $0 = _Sargent2014_lgSFR
+    #print {_Sargent2014_SFR _Sargent2014_sSFR _Sargent2014_Mstar _Sargent2014_z}
+    return
+
+calc_Speagle2014_SFR 03
+    # 
+    # calculate SFR according to the SFR evolution track of MS galaxies in Speagle 2014 ApJS (2014ApJS..214...15S)
+    # note that they are using Chabrier IMF for SFR and Mstar
+    # input $1 is redshift
+    # input $2 is stellar mass in log in Chabrier IMF
+    # input $3 is cosmoAge (optional, if not given then will compute with "calc_cosmic_age" in this macro)
+    # output $0 is SFR in log in Chabrier IMF
+    # 
+    # see 
+    #     equation 28  lg SFR(M_star,cosmoAge) = ((0.84 +- 0.02) - (0.026 +- 0.003) * cosmoAge) * lgMstar
+    #                                            - ((6.51 +- 0.24) - (0.11 +- 0.03) * t)
+    # 
+    if($?1==0||$?2==0){print 'Usage: calc_Speagle2014_SFR z lg_M_star cosmoAge --> lg_SFR_MS\n' {} return}
+    set _Speagle2014_z = $1
+    set _Speagle2014_lgMstar = $2
+    if($?3) {
+        set _Speagle2014_cosmoAge = $3
+    } else {
+        set _Speagle2014_cosmoAge = calc_cosmic_age(_Speagle2014_z)
+    }
+    set _Speagle2014_lgSFR = (0.84 - 0.026*_Speagle2014_cosmoAge) * _Speagle2014_lgMstar - (6.51 - 0.11*_Speagle2014_cosmoAge)
+    set _Speagle2014_sSFR = 10**(_Speagle2014_lgSFR - _Speagle2014_lgMstar)
+    set $0 = _Speagle2014_lgSFR
+    return
+
+calc_Bethermin2014_SFR 02
+    # 
+    # calculate SFR according to the sSFR evolution track of MS galaxies in Bethermin 2014 arXiv (2015 A&A)
+    # note that they are using Chabrier IMF for SFR and Mstar
+    # input $1 is redshift
+    # input $2 is stellar mass in log
+    # output $0 is SFR in log
+    # 
+    # see paper http://fr.arxiv.org/pdf/1409.5796v2
+    #     section 4.2
+    #     paragraph 1  (0.061±0.006Gyr**{−1})*(1+z)**{2.82±0.12} at z<2 and as (1+z)**{2.2±0.3} at z>2.
+    # 
+    if($?1==0||$?2==0){print 'Usage: calc_Bethermin2014_SFR z lg_M_star --> lg_SFR_MS\n' {} return}
+    set _Bethermin2014_z = $1
+    set _Bethermin2014_opz = 1.0 + _Bethermin2014_z
+    set _Bethermin2014_Mstar = $2
+    set _Bethermin2014_sSFR = (_Bethermin2014_z<2.0) ? (0.061*_Bethermin2014_opz**2.82) : (_Bethermin2014_opz**2.2)/10.0 
+                                                                                          #<TODO># ERROR in Bethermin 2015 ???
+                                                                                          #<TODO># ERROR in Bethermin 2015 ???
+    #<TODO># set _Bethermin2014_sSFR = _Bethermin2014_sSFR / 10.0 # <TODO> seems there has a factor of 10 correction?
+    set _Bethermin2014_SFR = lg(_Bethermin2014_sSFR / 1e9 * 10**($2))
+    set $0 = _Bethermin2014_SFR
+    return
+
+calc_Bethermin2014_U 02
+    # 
+    # calculate <U> according to the <U> evolution track of MS galaxies in Bethermin 2014 arXiv (2015 A&A)
+    # input $1 is redshift
+    # input $2 is starburst-ness: 0 for MS, 1 for SB. 
+    # output $0 is <U>
+    # 
+    # see paper http://fr.arxiv.org/pdf/1409.5796v2
+    #     Fig.7 caption: (3.0+-1.1)*(1+z)**(1.8+-0.4) for MS, 31+-3 for SB. 
+    # 
+    if($?1==0){print 'Usage: set U = calc_Bethermin2014_U(z) ==> <U>\n' {} return}
+    set _Bethermin2014_z = $1
+    set _Bethermin2014_opz = 1.0 + _Bethermin2014_z
+    set _Bethermin2014_U = 3.0 * _Bethermin2014_opz**1.8
+    set _Bethermin2014_U = _Bethermin2014_U<=50.0? _Bethermin2014_U: 50.0
+    if($?2) {if($2>=1) {set _Bethermin2014_U = 31.0} }
+    set $0 = _Bethermin2014_U
+    return
+
+calc_Schechter 04
+    # compute Schechter function
+    # input arguments are Phi, Mchar, alpha
+    if(!$?3) {print 'Usage: calc_Schechter lgMchar Phi alpha \# => output vector: Schechter_M, Schechter_P, Schechter_M_log10, Schechter_P_log10\n' {} return}
+    set Schechter_Mchar_log10 = ($1) # should be in log10 space
+    set Schechter_Pchar = ($2) # should be in linear space
+    set Schechter_alpha = ($3)
+    set Schechter_style = 'default' # == 'grazian'
+    set Schechter_Mstep = 0.10 # dlogM = dM/(M*ln10)
+    # the 4th argument is style: Muzzin, Ilbert, Grazian, Song, etc.
+    if($?4) {
+        verbose 0 
+        !echo $4 | tr '[:upper:]' '[:lower:]' > ".calc_Schechter.tmp"
+        data ".calc_Schechter.tmp" read Schechter_style 1.s
+        verbose 1
+    }
+    set Schechter_M_log10 = 7.0,13.0,$(Schechter_Mstep) # default log10 stellar mass range, down to 8.0 <TODO>
+    set Schechter_M = 10**Schechter_M_log10
+    set Schechter_D_log10 = Schechter_M_log10 - Schechter_Mchar_log10 # in log10 space
+    set Schechter_E = 10**Schechter_D_log10 # in linear space
+    set Schechter_S = Schechter_Pchar * Schechter_E**(1.0+Schechter_alpha) # https://arxiv.org/pdf/1507.05636v2.pdf -- Page 14 right bottom
+    #set Schechter_S = Schechter_Pchar * 10**(Schechter_D_log10*(1.0+Schechter_alpha)) # should be the same as above
+    #if(Schechter_style=='muzzin' || Schechter_style=='grazian') {
+    #    set Schechter_S = Schechter_Pchar * 10**(Schechter_D_log10*(1.0+Schechter_alpha)) # Muzzin, Grazian
+    #    #              == Schechter_Pchar * (10**(Schechter_D_log10))**(1.0+Schechter_alpha)
+    #    #              == Schechter_Pchar * Schechter_E**(1.0+Schechter_alpha)
+    #}
+    set Schechter_P = exp(-Schechter_E) * Schechter_S
+    set Schechter_P = Schechter_P * ln(10)
+    # --
+    #    P * dM =  exp(-M/Mchar) * Pchar * (M/Mchar)**alpha * d(M/Mchar)
+    #    E = M/Mchar
+    #    P * dM = exp(-E) * Pchar * E**alpha / Mchar * dM
+    #           = exp(-E) * Pchar * E**(1+alpha) / M * dM
+    #    dlogM = dM / (M*ln10)
+    #    P = exp(-E) * Pchar * E**(1+alpha) / M * dlogM * (M*ln10)
+    #      = exp(-E) * Pchar * E**(1+alpha) * ln10 * dlogM
+    # --
+    #if(Schechter_style=='muzzin' || Schechter_style=='grazian' || Schechter_style=='baldry' || Schechter_style=='default' || Schechter_style=='pengyingjie') {
+    #    set Schechter_P = Schechter_P * ln(10) # Muzzin2013 needs to multiply ln(10) to account for (1+alpha) dM_*
+    #}
+    # 
+    # -- <TODO><dzliu> -- add a sharp end at lgMstar ~ 7.5
+    #set Schechter_P = (Schechter_M_log10<7.5) ? Schechter_P * exp(-((Schechter_M_log10-7.5)/(2.0*0.25))**2) : Schechter_P
+    # 
+    set Schechter_P = Schechter_P>0 ? Schechter_P : 1e-99
+    set Schechter_P_log10 = lg(Schechter_P) # output in log10 space with unit [1/Mpc^3/dex]
+    # 
+    print 'calc_Schechter: output vector: Schechter_M, Schechter_P, Schechter_M_log10, Schechter_P_log10\n' {}
+
+calc_z_bin_center_weighted_by_stellar_mass 02
+    # 
+    # In this subroutine, we use stellar mass growth curve to compute the weighted center of a redshift bin
+    # Input: zMIN zMAX
+    # Output: zCEN
+    # 
+    if($?2==0){print 'Usage: set zCEN = calc_z_bin_center_weighted_by_stellar_mass(z1,z2)\n' {} return}
+    set _zzbin_zMIN = $1
+    set _zzbin_zMAX = $2
+    set _zzbin_zCEN = 0.0
+
+
+
+
+
+
+calc_Daddi2010_CO 05
+    # 
+    # calculate the CO luminosity for a given total IR luminosity
+    # CO luminosity is in unit of K km s-1 pc2, IR luminosity is in unit of solar luminosity. 
+    # input $1 is LTIR (in linear not in log)
+    # input $2 is J_upper
+    # input $3 is z
+    # input $4 is starburst-ness: 1.0 for strong SB, 0.0 for MS. Default is 0.0.
+    # #<Modified><20160314># input $5 is excitation: if unset then same as starburst-ness: 1.0 for thermalized excitation, 0.0 for HERACLES/z2BzK exc. 
+    # input $5 is excitation: if unset then use BzK: 1.0 for BzK excitation. 
+    # 
+    # see paper http://fr.arxiv.org/pdf/1003.3889
+    #     equation (1) disk sequence: lg_LTIR = 1.31 * lg_MH2 - 2.09
+    #                  starburst seq: lg_LTIR = 1.31 * lg_MH2 - 2.09 + 1.1  (1.1 dex see caption of figure 1)
+    #                  and they are using alpha_CO = 3.6 for BzK, 4.6 for local spirals, 0.8 for local LRG/SMG
+    # 
+    if($?1==0){
+        print 'Usage: \n' {} 
+        print '    set LPrmCO10 = calc_Daddi2010_CO(LTIR)\n' {} 
+        print '    set LPrmCO10 = calc_Daddi2010_CO(LTIR,CO_J_up,z,SBrst,COexc)\n' {} 
+        print 'Notes: \n' {} 
+        print '    LTIR is the total infrared luminosity 8-1000um in linear space not in log.\n' {} 
+        print '    CO_J_up is the upper transition, default is 1. When given a J_up>1, we will convert J_up=1 line luminosity to that J_up, with COexc.\n' {} 
+        print '    z is the redshift. When given a z, we will compute _Daddi2010_FluxCO in unit of Jy km/s.\n' {} 
+        print '    SBrst is the starburstiness, 0 means main-sequence galaxy, 0-1 means starburst galaxy.\n' {} 
+        print '    COexc is the CO excitation level, 0-1, not yet implemented.\n' {} 
+        print '\n' {} 
+        return
+    }
+    if($?4){set _Daddi2010_starbursty = float($4)} else {set _Daddi2010_starbursty = ($1)*0.0+0.0}
+    if($?5){set _Daddi2010_excitation = float($5)} else {set _Daddi2010_excitation = ($1)*0.0+1.0}
+    ##if($?2){set _Daddi2010_Jupper = float($2)} else {set _Daddi2010_Jupper = 1.0}
+    set _Daddi2010_LumTIR = $1
+    set _Daddi2010_PosID = 0,dimen(_Daddi2010_LumTIR)-1 set _Daddi2010_PosID = _Daddi2010_PosID if(_Daddi2010_LumTIR>0)
+    if(dimen(_Daddi2010_PosID)==0){print 'calc_Daddi2010_CO: Error! Input data array has no positive value! ' {} return}
+    set _Daddi2010_Mmol_Disc = _Daddi2010_LumTIR * 0 
+    set _Daddi2010_Mmol_SBst = _Daddi2010_LumTIR * 0 
+    set _Daddi2010_Mmol_Disc[_Daddi2010_PosID] = 10**((lg(_Daddi2010_LumTIR[_Daddi2010_PosID])+2.09)/1.31)
+    set _Daddi2010_Mmol_SBst[_Daddi2010_PosID] = 10**((lg(_Daddi2010_LumTIR[_Daddi2010_PosID])+2.09-1.1)/1.31) # SBrst shifted 1.1 dex
+    if(dimen(_Daddi2010_starbursty)>1) {set _Daddi2010_starbursty = _Daddi2010_starbursty[_Daddi2010_PosID]}
+    if(dimen(_Daddi2010_excitation)>1) {set _Daddi2010_excitation = _Daddi2010_excitation[_Daddi2010_PosID]}
+    set _Daddi2010_LPrmCO = (1.0-_Daddi2010_starbursty)*_Daddi2010_Mmol_Disc/4.6 + _Daddi2010_starbursty*_Daddi2010_Mmol_SBst/0.8
+    set _Daddi2010_FluxCO = _Daddi2010_LPrmCO*0.0
+    set _Daddi2010_FreqCO = _Daddi2010_LPrmCO*0.0
+    set _Daddi2010_ResFreq = _Daddi2010_LPrmCO*0.0
+    set _Daddi2010_ObsFreq = _Daddi2010_LPrmCO*0.0
+    if(1==1) { 
+        set _Daddi2010_Jupper = _Daddi2010_LumTIR*0+1.0
+        set _Daddi2010_Jscale = _Daddi2010_LumTIR*0+1.0
+        if($?3) { if($3>0) {
+            define _Daddi2010_Verbose $verbose verbose 0
+            set _Daddi2010_FreqCO = _Daddi2010_LumTIR*0+calc_line_freq(co,1,0) # FreqCO is restframe
+            set _Daddi2010_LumDist = calc_lumdist($3)
+            set _Daddi2010_FluxCO[_Daddi2010_PosID] = convert_lprm2flux($3,_Daddi2010_LPrmCO[_Daddi2010_PosID],_Daddi2010_FreqCO,_Daddi2010_LumDist)
+            verbose $_Daddi2010_Verbose #undef _Daddi2010_Verbose
+        }}
+        #if($verbose) { 
+        #    define print_noheader 1
+        #    print '\ncalc_Daddi2010_CO:\n' {}
+        #    print '\nL_TIR = %15.7e  L_sun\nJ_CO  = %15.0f\nSB    = %15.2f\nL_CO  = %15.7e  K km s-1 pc2\nS_CO  = %15f  Jy km s-1\n' \
+        #           {_Daddi2010_LumTIR _Daddi2010_Jupper _Daddi2010_starbursty _Daddi2010_LPrmCO _Daddi2010_FluxCO} 
+        #    define print_noheader 0
+        #}
+    }
+    if($?2) { 
+        #<TODO># 
+        #<TODO># if we input arg2 -- CO J_upper, then we 
+        #<TODO># calculate CO J_upper line luminosity from CO 1-0
+        #<TODO># 
+        set _Daddi2010_Jupper = _Daddi2010_LumTIR*0+($2)
+        set _Daddi2010_Jscale = _Daddi2010_LumTIR*0+1.0
+        #<Modified><20160314># set _Daddi2010_Jscale = (_Daddi2010_Jupper==1)  ? 1.000+(0.000*_Daddi2010_excitation) : _Daddi2010_Jscale # _Daddi2010_excitation is K km/s. _Jscale is Jy km/s. 
+        #<Modified><20160314># set _Daddi2010_Jscale = (_Daddi2010_Jupper==2)  ? 0.760+(0.240*_Daddi2010_excitation) : _Daddi2010_Jscale # 0.59/0.193/2**2=0.76 see Daddi2015 Fig.10 BzK-average
+        #<Modified><20160314># set _Daddi2010_Jscale = (_Daddi2010_Jupper==3)  ? 0.420+(0.580*_Daddi2010_excitation) : _Daddi2010_Jscale # 0.73/0.193/3**2=0.42 see Daddi2015 Fig.10 BzK-average
+        #<Modified><20160314># set _Daddi2010_Jscale = (_Daddi2010_Jupper==4)  ? 0.320+(0.680*_Daddi2010_excitation) : _Daddi2010_Jscale # 1.00/0.193/4**2=0.32 see Daddi2015 Fig.10 BzK-average
+        #<Modified><20160314># set _Daddi2010_Jscale = (_Daddi2010_Jupper==5)  ? 0.230+(0.770*_Daddi2010_excitation) : _Daddi2010_Jscale # 1.12/0.193/5**2=0.23 see Daddi2015 Fig.10 BzK-average
+        #<Modified><20160314># set _Daddi2010_Jscale = (_Daddi2010_Jupper==6)  ? 0.120+(0.880*_Daddi2010_excitation) : _Daddi2010_Jscale # 0.85/0.193/6**2=0.12 see Daddi2015 Fig.10 BzK-average
+        #<Modified><20160314># set _Daddi2010_Jscale = (_Daddi2010_Jupper==7)  ? 0.052+(0.948*_Daddi2010_excitation) : _Daddi2010_Jscale # 0.50/0.193/7**2
+        #<Modified><20160314># set _Daddi2010_Jscale = (_Daddi2010_Jupper==8)  ? 0.016+(0.984*_Daddi2010_excitation) : _Daddi2010_Jscale # 0.20/0.193/8**2
+        set _Daddi2010_Jscale = (_Daddi2010_Jupper==1)  ? 1.00+0.000/1**2*_Daddi2010_excitation : _Daddi2010_Jscale # _Daddi2010_excitation is K km/s. _Jscale is Jy km/s. 
+        set _Daddi2010_Jscale = (_Daddi2010_Jupper==2)  ? 0.59/0.193/2**2*_Daddi2010_excitation : _Daddi2010_Jscale # 0.59/0.193/2**2=0.76 see Daddi2015 Fig.10 BzK-average
+        set _Daddi2010_Jscale = (_Daddi2010_Jupper==3)  ? 0.73/0.193/3**2*_Daddi2010_excitation : _Daddi2010_Jscale # 0.73/0.193/3**2=0.42 see Daddi2015 Fig.10 BzK-average
+        set _Daddi2010_Jscale = (_Daddi2010_Jupper==4)  ? 1.00/0.193/4**2*_Daddi2010_excitation : _Daddi2010_Jscale # 1.00/0.193/4**2=0.32 see Daddi2015 Fig.10 BzK-average
+        set _Daddi2010_Jscale = (_Daddi2010_Jupper==5)  ? 1.12/0.193/5**2*_Daddi2010_excitation : _Daddi2010_Jscale # 1.12/0.193/5**2=0.23 see Daddi2015 Fig.10 BzK-average
+        set _Daddi2010_Jscale = (_Daddi2010_Jupper==6)  ? 0.85/0.193/6**2*_Daddi2010_excitation : _Daddi2010_Jscale # 0.85/0.193/6**2=0.12 see Daddi2015 Fig.10 BzK-average
+        set _Daddi2010_Jscale = (_Daddi2010_Jupper==7)  ? 0.50/0.193/7**2*_Daddi2010_excitation : _Daddi2010_Jscale # 0.50/0.193/7**2=0.0528709
+        set _Daddi2010_Jscale = (_Daddi2010_Jupper==8)  ? 0.20/0.193/8**2*_Daddi2010_excitation : _Daddi2010_Jscale # 0.20/0.193/8**2=0.0161917
+        set _Daddi2010_Jscale = _Daddi2010_Jscale * _Daddi2010_Jupper**2
+        ### print {_Daddi2010_Jupper _Daddi2010_Jscale}
+        set _Daddi2010_LPrmCO = _Daddi2010_LPrmCO * _Daddi2010_Jscale / _Daddi2010_Jupper**2 # note that the LPrm is K km s-1 pc2
+        if($?3) { if($3>0) {
+            define _Daddi2010_Verbose $verbose verbose 0
+            set _Daddi2010_Redshift = ($3)
+            set _Daddi2010_LumDist = calc_lumdist(_Daddi2010_Redshift)
+            do _Daddi2010_i = 0, dimen(_Daddi2010_Redshift)-1 {
+                set _Daddi2010_ResFreq[$_Daddi2010_i] = calc_line_freq(co,$(_Daddi2010_Jupper[$_Daddi2010_i]),0) # ResFreq is restframe
+                set _Daddi2010_ObsFreq[$_Daddi2010_i] = calc_line_freq(co,$(_Daddi2010_Jupper[$_Daddi2010_i]),$(_Daddi2010_Redshift[$_Daddi2010_i])) # FreqCO is obsframe
+            }
+            set _Daddi2010_FluxCO[_Daddi2010_PosID] = convert_lprm2flux(_Daddi2010_Redshift,_Daddi2010_LPrmCO[_Daddi2010_PosID],_Daddi2010_ResFreq,_Daddi2010_LumDist)
+            set _Daddi2010_FreqCO = _Daddi2010_ObsFreq
+            verbose $_Daddi2010_Verbose #undef _Daddi2010_Verbose
+        }}
+        if($verbose) { 
+            define print_noheader 1
+            print '\ncalc_Daddi2010_CO:\n' {}
+            print '\nJ_CO  = %15.0f\nSB    = %15.2f\nRJ1   = %15.2f\nL_CO  = %15.7e  K km s-1 pc2\nF_CO  = %15f  Jy km s-1\n' \
+                   {_Daddi2010_Jupper _Daddi2010_starbursty _Daddi2010_Jscale _Daddi2010_LPrmCO _Daddi2010_FluxCO} 
+            define print_noheader 0
+        }
+    }
+    if($verbose) { print '\n' {} }
+    set $0 = _Daddi2010_LPrmCO
+    return
+
+calc_Daddi2015_CO 05
+    # calculate the CO luminosity for a given total IR luminosity
+    # CO luminosity is in unit of K km s-1 pc2, IR luminosity is in unit of solar luminosity. 
+    # input $1 is LTIR (in linear not in log)
+    # input $2 is J_upper
+    # input $3 is z
+    # input $4 is starburst-ness: 1.0 for strong SB, 0.0 for MS. Default is 0.0.
+    # input $5 is excitation: if unset then use BzK: 1.0 for BzK excitation. 
+    # we use conversion factor IR/CO54 = 2.36 (BzK) Daddi2015
+    # see paper http://arxiv.org/pdf/1409.8158v2.pdf
+    # 
+    if($?1==0){print 'Usage: calc_Daddi2015_CO LTIR [CO_J_up z SB exc] --> LCO10\n' {} return}
+    if($?4){set _Daddi2015_starbursty = float($4)} else {set _Daddi2015_starbursty = ($1)*0.0+0.0}
+    if($?5){set _Daddi2015_excitation = float($5)} else {set _Daddi2015_excitation = ($1)*0.0+1.0}
+    ##if($?2){set _Daddi2015_Jupper = float($2)} else {set _Daddi2015_Jupper = 1.0}
+    set _Daddi2015_LumTIR = $1
+    set _Daddi2015_PosID = 0,dimen(_Daddi2015_LumTIR)-1 set _Daddi2015_PosID = _Daddi2015_PosID if(_Daddi2015_LumTIR>0)
+    if(dimen(_Daddi2015_PosID)==0){print 'calc_Daddi2015_CO: Error! Input data array has no positive value! ' {} return}
+    if(dimen(_Daddi2015_starbursty)>1) {set _Daddi2015_starbursty = _Daddi2015_starbursty[_Daddi2015_PosID]}
+    if(dimen(_Daddi2015_excitation)>1) {set _Daddi2015_excitation = _Daddi2015_excitation[_Daddi2015_PosID]}
+    set _Daddi2015_LPrmCO = _Daddi2015_LumTIR*0.0
+    set _Daddi2015_LPrmCO[_Daddi2015_PosID] = 10**(lg(_Daddi2015_LumTIR[_Daddi2015_PosID])-2.36) #<TODO># 2.36 2.52 #<TODO># +_Daddi2015_starbursty
+    set _Daddi2015_LPrmCO[_Daddi2015_PosID] = _Daddi2015_LPrmCO[_Daddi2015_PosID] / (1.12/0.193/5**2) # Daddi2015 is CO54, convert to CO10 using BzK CO SLED
+    set _Daddi2015_FluxCO = _Daddi2015_LPrmCO*0.0
+    if(1==1) { 
+        set _Daddi2015_Jupper = _Daddi2015_LumTIR*0+1.0
+        set _Daddi2015_Jscale = _Daddi2015_LumTIR*0+1.0
+        if($?3) { if($3>0) {
+            define _Daddi2015_Verbose $verbose verbose 0
+            set _Daddi2015_FreqCO = _Daddi2015_LumTIR*0+calc_line_freq(co,1,0) # FreqCO is restframe
+            set _Daddi2015_LumDist = calc_lumdist($3)
+            set _Daddi2015_FluxCO[_Daddi2015_PosID] = convert_lprm2flux($3,_Daddi2015_LPrmCO[_Daddi2015_PosID],_Daddi2015_FreqCO,_Daddi2015_LumDist)
+            verbose $_Daddi2015_Verbose #undef _Daddi2015_Verbose
+        }}
+        #if($verbose) { 
+        #    define print_noheader 1
+        #    print '\ncalc_Daddi2015_CO:\n' {}
+        #    print '\nL_TIR = %15.7e  L_sun\nJ_CO  = %15.0f\nSB    = %15.2f\nL_CO  = %15.7e  K km s-1 pc2\nS_CO  = %15f  Jy km s-1\n' \
+        #           {_Daddi2015_LumTIR _Daddi2015_Jupper _Daddi2015_starbursty _Daddi2015_LPrmCO _Daddi2015_FluxCO} 
+        #    define print_noheader 0
+        #}
+    }
+    if($?2) { 
+        #<TODO># 
+        #<TODO># if we input arg2 -- CO J_upper, then we 
+        #<TODO># calculate CO J_upper line luminosity from CO 1-0
+        #<TODO># 
+        set _Daddi2015_Jupper = _Daddi2015_LumTIR*0+($2)
+        set _Daddi2015_Jscale = _Daddi2015_LumTIR*0+1.0
+        set _Daddi2015_Jscale = (_Daddi2015_Jupper==1)  ? 1.00+0.000/1**2*_Daddi2015_excitation : _Daddi2015_Jscale # _Daddi2015_excitation is K km/s. _Jscale is Jy km/s. 
+        set _Daddi2015_Jscale = (_Daddi2015_Jupper==2)  ? 0.59/0.193/2**2*_Daddi2015_excitation : _Daddi2015_Jscale # 0.59/0.193/2**2=0.76 see Daddi2015 Fig.10 BzK-average
+        set _Daddi2015_Jscale = (_Daddi2015_Jupper==3)  ? 0.73/0.193/3**2*_Daddi2015_excitation : _Daddi2015_Jscale # 0.73/0.193/3**2=0.42 see Daddi2015 Fig.10 BzK-average
+        set _Daddi2015_Jscale = (_Daddi2015_Jupper==4)  ? 1.00/0.193/4**2*_Daddi2015_excitation : _Daddi2015_Jscale # 1.00/0.193/4**2=0.32 see Daddi2015 Fig.10 BzK-average
+        set _Daddi2015_Jscale = (_Daddi2015_Jupper==5)  ? 1.12/0.193/5**2*_Daddi2015_excitation : _Daddi2015_Jscale # 1.12/0.193/5**2=0.23 see Daddi2015 Fig.10 BzK-average
+        set _Daddi2015_Jscale = (_Daddi2015_Jupper==6)  ? 0.85/0.193/6**2*_Daddi2015_excitation : _Daddi2015_Jscale # 0.85/0.193/6**2=0.12 see Daddi2015 Fig.10 BzK-average
+        set _Daddi2015_Jscale = (_Daddi2015_Jupper==7)  ? 0.50/0.193/7**2*_Daddi2015_excitation : _Daddi2015_Jscale # 0.50/0.193/7**2=0.0528709
+        set _Daddi2015_Jscale = (_Daddi2015_Jupper==8)  ? 0.20/0.193/8**2*_Daddi2015_excitation : _Daddi2015_Jscale # 0.20/0.193/8**2=0.0161917
+        set _Daddi2015_Jscale = _Daddi2015_Jscale * _Daddi2015_Jupper**2
+        set _Daddi2015_LPrmCO = _Daddi2015_LPrmCO * _Daddi2015_Jscale / _Daddi2015_Jupper**2 # note that the LPrm is K km s-1 pc2
+        echo "DEBUG: calc_Daddi2015_CO"
+        echo "DEBUG: calc_Daddi2015_CO $2 = "$(_Daddi2015_Jupper)
+        if($?3) { if($3>0) {
+            define _Daddi2015_Verbose $verbose verbose 0
+            set _Daddi2015_ResFreq = _Daddi2015_LumTIR*0+calc_line_freq(co,_Daddi2015_Jupper,0) # ResFreq is restframe
+            set _Daddi2015_LumDist = calc_lumdist($3)
+            set _Daddi2015_FluxCO[_Daddi2015_PosID] = convert_lprm2flux($3,_Daddi2015_LPrmCO[_Daddi2015_PosID],_Daddi2015_ResFreq,_Daddi2015_LumDist)
+            set _Daddi2015_FreqCO = _Daddi2015_LumTIR*0 + calc_line_freq(co,_Daddi2015_Jupper,$3) # FreqCO is obsframe
+            verbose $_Daddi2015_Verbose #undef _Daddi2015_Verbose
+        }}
+        if($verbose) { 
+            define print_noheader 1
+            print '\ncalc_Daddi2015_CO:\n' {}
+            print '\nJ_CO  = %15.0f\nSB    = %15.2f\nRJ1   = %15.2f\nL_CO  = %15.7e  K km s-1 pc2\nS_CO  = %15f  Jy km s-1\n' \
+                   {_Daddi2015_Jupper _Daddi2015_starbursty _Daddi2015_Jscale _Daddi2015_LPrmCO _Daddi2015_FluxCO} 
+            echo "Output vectors: _Daddi2015_Jupper _Daddi2015_starbursty _Daddi2015_Jscale _Daddi2015_LPrmCO _Daddi2015_FluxCO"
+            define print_noheader 0
+        }
+    }
+    if($verbose) { print '\n' {} }
+    set $0 = _Daddi2015_LPrmCO
+    return
+
+calc_Genzel2010_CO 05
+    # 
+    # Genzel 2010 MNRAS -- LFIR/LPrmCO10 = 27 +- 5.6
+    #                   -- LTIR = LFIR * 1.3
+    #                   -- LTIR/LPrmCO10 = 27*1.3 +- 5.6*1.3
+    #                   -- for SF MS type galaxies only
+    #                   -- for CO10 only
+    # input $1 is LTIR
+    # input $2 is J_upper
+    # input $3 is z
+    # input $4 is starburst-ness: 1.0 for strong SB, 0.0 for MS. Default is 0.0.
+    # input $5 is excitation: if unset then same as starburst-ness: 1.0 for thermalized excitation, 0.0 for HERACLES/z2BzK exc. 
+    if($?1==0){print 'Usage: calc_Genzel2010_CO LTIR [CO_J_up z SB EXCT] --> LCO10\n' {} return}
+    if($?4){set _Genzel2010_starbursty = float($4)} else {set _Genzel2010_starbursty = ($1)*0.0}
+    if($?5){set _Genzel2010_excitation = float($5)} else {set _Genzel2010_excitation = _Genzel2010_starbursty}
+    ##if($?2){set _Genzel2010_Jupper = $2} else {set _Genzel2010_Jupper = 1}
+    set _Genzel2010_LumTIR = $1
+    set _Genzel2010_LumFIR = _Genzel2010_LumTIR / 1.3
+    set _Genzel2010_PosID = 0,dimen(_Genzel2010_LumFIR)-1 set _Genzel2010_PosID = _Genzel2010_PosID if(_Genzel2010_LumFIR>0)
+    if(dimen(_Genzel2010_PosID)==0){print 'calc_Genzel2010_CO: Error! Input data array has no positive value! ' {} return}
+    set _Genzel2010_LPrmCO10_Disc = _Genzel2010_LumFIR * 0 
+    set _Genzel2010_LPrmCO10_SBst = _Genzel2010_LumFIR * 0 
+    set _Genzel2010_LPrmCO10_Disc[_Genzel2010_PosID] = 10**((lg(_Genzel2010_LumFIR[_Genzel2010_PosID])-0.02)/1.15) # Disc
+    set _Genzel2010_LPrmCO10_SBst[_Genzel2010_PosID] = 10**((lg(_Genzel2010_LumFIR[_Genzel2010_PosID])-0.63)/1.15) # SBst
+    if(dimen(_Genzel2010_starbursty)>1) {set _Genzel2010_starbursty = _Genzel2010_starbursty[_Genzel2010_PosID]}
+    set _Genzel2010_LPrmCO = (1.0-_Genzel2010_starbursty)*_Genzel2010_LPrmCO10_Disc + _Genzel2010_starbursty*_Genzel2010_LPrmCO10_SBst
+    set _Genzel2010_FluxCO = _Genzel2010_LPrmCO*0.0
+    if(1==1) { 
+        set _Genzel2010_Jupper = _Genzel2010_LumFIR*0+1
+        set _Genzel2010_Jscale = _Genzel2010_LumFIR*0+1.0
+        if($?3) { if($3>0) {
+            define _Genzel2010_Verbose $verbose verbose 0
+            set _Genzel2010_ResFreq = _Genzel2010_LumFIR*0+calc_line_freq(co,1,0) # ResFreq is restframe
+            set _Genzel2010_LumDist = calc_lumdist($3)
+            set _Genzel2010_FluxCO[_Genzel2010_PosID] = convert_lprm2flux($3,_Genzel2010_LPrmCO[_Genzel2010_PosID],_Genzel2010_ResFreq,_Genzel2010_LumDist)
+            set _Genzel2010_FreqCO = _Genzel2010_LumTIR*0 + calc_line_freq(co,$2,$3) # FreqCO is obsframe
+            verbose $_Genzel2010_Verbose #undef _Genzel2010_Verbose
+        }}
+        if($verbose) { 
+            #define print_noheader 1
+            #print '\ncalc_Genzel2010_CO:\n' {}
+            #print '\nL_TIR = %15.7e  L_sun\nJ_CO  = %15d\nL_CO  = %15.7e  K km s-1 pc2\nS_CO  = %15f  Jy km s-1\n' \
+            #       {_Genzel2010_LumFIR _Genzel2010_Jupper _Genzel2010_LPrmCO _Genzel2010_FluxCO} 
+            #define print_noheader 0
+        }
+    }
+    if($?2) { 
+        #<TODO># 
+        #<TODO># if we input arg2 -- CO J_upper, then we 
+        #<TODO># calculate CO J_upper line luminosity from CO 1-0
+        #<TODO># 
+        set _Genzel2010_Jupper = _Genzel2010_LumFIR*0+($2)
+        set _Genzel2010_Jscale = _Genzel2010_LumFIR*0+1.0 # <TODO> modify as Daddi2010 <20160314>
+        set _Genzel2010_Jscale = (_Genzel2010_Jupper==1)  ? 1.000+(0.000*_Genzel2010_excitation) : _Genzel2010_Jscale
+        set _Genzel2010_Jscale = (_Genzel2010_Jupper==2)  ? 0.760+(0.240*_Genzel2010_excitation) : _Genzel2010_Jscale #<># 0.59/0.193/2**2 see Daddi2015
+        set _Genzel2010_Jscale = (_Genzel2010_Jupper==3)  ? 0.420+(0.580*_Genzel2010_excitation) : _Genzel2010_Jscale #<># 0.73/0.193/3**2
+        set _Genzel2010_Jscale = (_Genzel2010_Jupper==4)  ? 0.320+(0.680*_Genzel2010_excitation) : _Genzel2010_Jscale #<># 1.00/0.193/4**2
+        set _Genzel2010_Jscale = (_Genzel2010_Jupper==5)  ? 0.230+(0.770*_Genzel2010_excitation) : _Genzel2010_Jscale #<># 1.12/0.193/5**2
+        set _Genzel2010_Jscale = (_Genzel2010_Jupper==6)  ? 0.120+(0.880*_Genzel2010_excitation) : _Genzel2010_Jscale #<># 0.85/0.193/6**2
+        set _Genzel2010_Jscale = (_Genzel2010_Jupper==7)  ? 0.052+(0.948*_Genzel2010_excitation) : _Genzel2010_Jscale #<># 0.50/0.193/7**2
+        set _Genzel2010_Jscale = (_Genzel2010_Jupper==8)  ? 0.016+(0.984*_Genzel2010_excitation) : _Genzel2010_Jscale #<># 0.20/0.193/8**2
+        ### print {_Genzel2010_Jupper _Genzel2010_Jscale}
+        set _Genzel2010_LPrmCO = _Genzel2010_LPrmCO * _Genzel2010_Jscale # note that the LPrm is K km s-1 pc2
+        if($?3) { if($3>0) {
+            define _Genzel2010_Verbose $verbose verbose 0
+            set _Genzel2010_FreqCO = _Genzel2010_LumFIR*0+calc_line_freq(co,$2,0) # FreqCO is restframe
+            set _Genzel2010_LumDist = calc_lumdist($3)
+            set _Genzel2010_FluxCO[_Genzel2010_PosID] = convert_lprm2flux($3,_Genzel2010_LPrmCO[_Genzel2010_PosID],_Genzel2010_FreqCO,_Genzel2010_LumDist)
+            verbose $_Genzel2010_Verbose #undef _Genzel2010_Verbose
+        }}
+        if($verbose) { 
+            #define print_noheader 1
+            #print '\nJ_CO  = %15d\nL_CO  = %15.7e  K km s-1 pc2\nS_CO  = %15f  Jy km s-1\n' \
+            #       {_Genzel2010_Jupper _Genzel2010_LPrmCO _Genzel2010_FluxCO} 
+            #define print_noheader 0
+        }
+    }
+    if($verbose) { print '\n' {} }
+    set $0 = _Genzel2010_LPrmCO
+    return
+
+calc_Liu2015_CO 04
+    # 
+    # calculate the multiple CO line luminosities for a given total IR luminosity 
+    # calc_Liu2015_CO LTIR CO_J_up z
+    # 
+    if($?1==0||$?2==0){print 'Usage: set L_CO_J_up = calc_Liu2015_CO(LTIR,J_up[,z,[LineWidth]]) --> LCO_J_up\n' {} return}
+    if($2<1||$2>15){print 'calc_Liu2015_CO: Error! we only support CO(4-3) to CO(15-14), sorry!\n' {} return}
+    set _Liu2015_LumTIR = $1
+    set _Liu2015_LumFIR = _Liu2015_LumTIR/1.3 # convert TIR to FIR
+    set _Liu2015_PosID = 0,dimen(_Liu2015_LumFIR)-1 set _Liu2015_PosID = _Liu2015_PosID if(_Liu2015_LumFIR>0)
+    if($?2){set _Liu2015_Jupper = _Liu2015_LumFIR*0+($2)} else {set _Liu2015_Jupper = _Liu2015_LumFIR*0+1} # default J = 1
+    if(dimen(_Liu2015_PosID)==0){print 'calc_Liu2015_CO: Error! Input data array has no positive value!' {} return}
+    #[20160828]#set _Liu2015_N = 0.0 set _Liu2015_A = 0.0
+    #[20160828]##if($2==1)  {set _Liu2015_N = 1.06 set _Liu2015_A = 1.49} #<TODO># using CO(4-3) as a lower limit for now
+    #[20160828]##if($2==2)  {set _Liu2015_N = 1.06 set _Liu2015_A = 1.49} #<TODO># using CO(4-3) as a lower limit for now
+    #[20160828]##if($2==3)  {set _Liu2015_N = 1.06 set _Liu2015_A = 1.49} #<TODO># using CO(4-3) as a lower limit for now
+    #[20160828]##if($2==4)  {set _Liu2015_N = 1.06 set _Liu2015_A = 1.49}
+    #[20160828]##if($2==5)  {set _Liu2015_N = 1.07 set _Liu2015_A = 1.71}
+    #[20160828]##if($2==6)  {set _Liu2015_N = 1.10 set _Liu2015_A = 1.79}
+    #[20160828]##if($2==7)  {set _Liu2015_N = 1.03 set _Liu2015_A = 2.62}
+    #[20160828]##if($2==8)  {set _Liu2015_N = 1.02 set _Liu2015_A = 2.82}
+    #[20160828]##if($2==9)  {set _Liu2015_N = 1.01 set _Liu2015_A = 3.10}
+    #[20160828]##if($2==10) {set _Liu2015_N = 0.96 set _Liu2015_A = 3.67}
+    #[20160828]##if($2==11) {set _Liu2015_N = 1.00 set _Liu2015_A = 3.51}
+    #[20160828]##if($2==12) {set _Liu2015_N = 0.99 set _Liu2015_A = 3.83}
+    #[20160828]#if($2==1)  {set _Liu2015_N = 1.00 set _Liu2015_A = 1.96} #<TODO># using CO(4-3) as a lower limit for now
+    #[20160828]#if($2==2)  {set _Liu2015_N = 1.00 set _Liu2015_A = 1.96} #<TODO># using CO(4-3) as a lower limit for now
+    #[20160828]#if($2==3)  {set _Liu2015_N = 1.00 set _Liu2015_A = 1.96} #<TODO># using CO(4-3) as a lower limit for now
+    #[20160828]#if($2==4)  {set _Liu2015_N = 1.00 set _Liu2015_A = 1.96}
+    #[20160828]#if($2==5)  {set _Liu2015_N = 1.00 set _Liu2015_A = 2.27}
+    #[20160828]#if($2==6)  {set _Liu2015_N = 1.00 set _Liu2015_A = 2.56}
+    #[20160828]#if($2==7)  {set _Liu2015_N = 1.00 set _Liu2015_A = 2.86}
+    #[20160828]#if($2==8)  {set _Liu2015_N = 1.00 set _Liu2015_A = 3.04}
+    #[20160828]#if($2==9)  {set _Liu2015_N = 1.00 set _Liu2015_A = 3.20}
+    #[20160828]#if($2==10) {set _Liu2015_N = 1.00 set _Liu2015_A = 3.38}
+    #[20160828]#if($2==11) {set _Liu2015_N = 1.00 set _Liu2015_A = 3.56}
+    #[20160828]#if($2==12) {set _Liu2015_N = 1.00 set _Liu2015_A = 3.77}
+    #[20160828]#if($2==13) {set _Liu2015_N = 1.00 set _Liu2015_A = 3.98} #<TODO># STILL NEEDS TEST
+    #[20160828]#if($2==14) {set _Liu2015_N = 1.00 set _Liu2015_A = 4.19} #<TODO># STILL NEEDS TEST
+    #[20160828]#if($2==15) {set _Liu2015_N = 1.00 set _Liu2015_A = 4.40} #<TODO># STILL NEEDS TEST
+    set _Liu2015_Jupper = int(_Liu2015_Jupper) #<Done># 20160828 Now support input Jupper as an array
+    set _Liu2015_N = _Liu2015_LumFIR*0 + 1.00 set _Liu2015_A = _Liu2015_LumFIR*0 - 99.0
+    set _Liu2015_N = (_Liu2015_Jupper==1)  ? 1.06 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==1)  ? 1.49 : _Liu2015_A #<TODO># using non-linear slope #<TODO># using CO(4-3) as a lower limit for now
+    set _Liu2015_N = (_Liu2015_Jupper==2)  ? 1.06 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==2)  ? 1.49 : _Liu2015_A #<TODO># using non-linear slope #<TODO># using CO(4-3) as a lower limit for now
+    set _Liu2015_N = (_Liu2015_Jupper==3)  ? 1.06 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==3)  ? 1.49 : _Liu2015_A #<TODO># using non-linear slope #<TODO># using CO(4-3) as a lower limit for now
+    set _Liu2015_N = (_Liu2015_Jupper==4)  ? 1.06 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==4)  ? 1.49 : _Liu2015_A #<TODO># using non-linear slope
+    set _Liu2015_N = (_Liu2015_Jupper==5)  ? 1.07 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==5)  ? 1.71 : _Liu2015_A #<TODO># using non-linear slope
+    set _Liu2015_N = (_Liu2015_Jupper==6)  ? 1.10 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==6)  ? 1.79 : _Liu2015_A #<TODO># using non-linear slope
+    set _Liu2015_N = (_Liu2015_Jupper==7)  ? 1.03 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==7)  ? 2.62 : _Liu2015_A #<TODO># using non-linear slope
+    #set _Liu2015_N = (_Liu2015_Jupper==1)  ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==1)  ? 1.96 : _Liu2015_A #<TODO># using linear slope #<TODO># using CO(4-3) as a lower limit for now
+    #set _Liu2015_N = (_Liu2015_Jupper==2)  ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==2)  ? 1.96 : _Liu2015_A #<TODO># using linear slope #<TODO># using CO(4-3) as a lower limit for now
+    #set _Liu2015_N = (_Liu2015_Jupper==3)  ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==3)  ? 1.96 : _Liu2015_A #<TODO># using linear slope #<TODO># using CO(4-3) as a lower limit for now
+    #set _Liu2015_N = (_Liu2015_Jupper==4)  ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==4)  ? 1.96 : _Liu2015_A #<TODO># using linear slope
+    #set _Liu2015_N = (_Liu2015_Jupper==5)  ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==5)  ? 2.27 : _Liu2015_A #<TODO># using linear slope
+    #set _Liu2015_N = (_Liu2015_Jupper==6)  ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==6)  ? 2.56 : _Liu2015_A #<TODO># using linear slope
+    #set _Liu2015_N = (_Liu2015_Jupper==7)  ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==7)  ? 2.86 : _Liu2015_A #<TODO># using linear slope
+    set _Liu2015_N = (_Liu2015_Jupper==8)  ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==8)  ? 3.04 : _Liu2015_A
+    set _Liu2015_N = (_Liu2015_Jupper==9)  ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==9)  ? 3.20 : _Liu2015_A
+    set _Liu2015_N = (_Liu2015_Jupper==10) ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==10) ? 3.38 : _Liu2015_A
+    set _Liu2015_N = (_Liu2015_Jupper==11) ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==11) ? 3.56 : _Liu2015_A
+    set _Liu2015_N = (_Liu2015_Jupper==12) ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==12) ? 3.77 : _Liu2015_A
+    set _Liu2015_N = (_Liu2015_Jupper==13) ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==13) ? 3.98 : _Liu2015_A #<TODO># STILL NEEDS TEST
+    set _Liu2015_N = (_Liu2015_Jupper==14) ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==14) ? 4.19 : _Liu2015_A #<TODO># STILL NEEDS TEST
+    set _Liu2015_N = (_Liu2015_Jupper==15) ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==15) ? 4.40 : _Liu2015_A #<TODO># STILL NEEDS TEST
+    set _Liu2015_PeakCO = _Liu2015_LumFIR*0-99.0
+    set _Liu2015_FluxCO = _Liu2015_LumFIR*0+0.0
+    set _Liu2015_LPrmCO = _Liu2015_LumFIR*0+0.0
+    set _Liu2015_LPrmCO[_Liu2015_PosID] = 10**((lg(_Liu2015_LumFIR[_Liu2015_PosID])-_Liu2015_A[_Liu2015_PosID])/_Liu2015_N[_Liu2015_PosID])
+    set _Liu2015_ObsFreq = _Liu2015_LumFIR*0+0.0
+    if($?3) { if($3>0) { 
+        define _Liu2015_Verbose $verbose verbose 0
+        set _Liu2015_ResFreq = _Liu2015_LumFIR*0 #[20160828]# + calc_line_freq(co,$2,0) # ResFreq is restframe
+        set _Liu2015_ObsFreq = _Liu2015_LumFIR*0 #[20160828]# + calc_line_freq(co,$2,$3) # ObsFreq is obsframe
+        set _Liu2015_Redshift = ($3)
+        set _Liu2015_LumDist = calc_lumdist(_Liu2015_Redshift)
+        if(dimen(_Liu2015_Redshift)==1 && dimen(_Liu2015_Jupper)>1) {
+            set _Liu2015_Redshift = _Liu2015_LumFIR*0 + _Liu2015_Redshift
+            set _Liu2015_LumDist = _Liu2015_LumFIR*0 + _Liu2015_LumDist
+        }
+        do _Liu2015_i = 0, dimen(_Liu2015_LumFIR)-1 {
+            set _Liu2015_ResFreq[$_Liu2015_i] = calc_line_freq(co,$(_Liu2015_Jupper[$_Liu2015_i]),0)
+            set _Liu2015_ObsFreq[$_Liu2015_i] = calc_line_freq(co,$(_Liu2015_Jupper[$_Liu2015_i]),$(_Liu2015_Redshift[$_Liu2015_i]))
+        }
+        set _Liu2015_FluxCO[_Liu2015_PosID] = convert_lprm2flux(_Liu2015_Redshift[_Liu2015_PosID],_Liu2015_LPrmCO[_Liu2015_PosID],_Liu2015_ResFreq[_Liu2015_PosID],_Liu2015_LumDist[_Liu2015_PosID])
+        set _Liu2015_FreqCO = _Liu2015_ObsFreq # FreqCO is obsframe
+        verbose $_Liu2015_Verbose undef _Liu2015_Verbose
+        if($?4) { if($4>0) {
+            # 20160828
+            set _Liu2015_W_CO = float($4) # line width in km/s
+            if(dimen(_Liu2015_W_CO)==1 && dimen(_Liu2015_Jupper)>1) {
+                set _Liu2015_W_CO = _Liu2015_LumFIR*0 + _Liu2015_W_CO
+            }
+            set _Liu2015_J_CO = _Liu2015_Jupper
+            set _Liu2015_L_CO = _Liu2015_LPrmCO
+            set _Liu2015_F_CO = _Liu2015_FluxCO
+            set _Liu2015_S_CO = _Liu2015_PeakCO
+            set _Liu2015_S_CO[_Liu2015_PosID] = _Liu2015_FluxCO[_Liu2015_PosID] / _Liu2015_W_CO[_Liu2015_PosID] * 1e3
+            set _Liu2015_PeakCO[_Liu2015_PosID] = _Liu2015_FluxCO[_Liu2015_PosID] / _Liu2015_W_CO[_Liu2015_PosID] * 1e3
+            set J_CO = _Liu2015_J_CO # 
+            set L_CO = _Liu2015_L_CO # K km/s pc2
+            set F_CO = _Liu2015_F_CO # Jy km/s
+            set S_CO = _Liu2015_S_CO # mJy
+            set W_CO = _Liu2015_W_CO # km/s
+            set v_CO = _Liu2015_FreqCO # GHz, obs freq
+        }}
+    }}
+    if($verbose) { 
+        define print_noheader 1 
+        print '\ncalc_Liu2015_CO:\n' {}
+        print '\nL_TIR = %15.7e  L_sun\nL_FIR = %15.7e  L_sun\nJ_CO  = %15d\nv_CO  = %15.3f  GHz\nL_CO  = %15.7e  K km s-1 pc2\nF_CO  = %15f  Jy km s-1\nS_CO  = %15f  mJy\n\n' \
+               {_Liu2015_LumTIR _Liu2015_LumFIR _Liu2015_Jupper _Liu2015_ObsFreq _Liu2015_LPrmCO _Liu2015_FluxCO _Liu2015_PeakCO}
+        define print_noheader 0
+    }
+    set $0 = _Liu2015_LPrmCO
+
+calc_dzliu_CII 04
+    # 
+    # calculate the CII 158um line luminosities for a given total IR luminosity 
+    # when L_TIR < 1e11, we use calc_DeLooze2011_CII(), 
+    # otherwise we consider a redshift/luminosity-dependent decaying, which can fit WangRan2013 data
+    # 
+    if($?1==0){print 'Usage: set L_CII_158um = calc_dzliu_CII(L_TIR[,z,W_CII]) --> L_CII_158um\n' {} return}
+    set _dzliu_LumTIR = ($1)
+    set _dzliu_LumFIR = _dzliu_LumTIR/1.3 # convert TIR to FIR
+    set _dzliu_PosID = 0,dimen(_dzliu_LumFIR)-1 set _dzliu_PosID = _dzliu_PosID if(_dzliu_LumFIR>0) # good input index
+    set _dzliu_Jupper = _dzliu_LumFIR*0+1   # default CII transition = 3P1-3P0 158um <TODO> will not be used in here
+    set _dzliu_R60100 = _dzliu_LumFIR*0+0.8 # default R_f60/f100 = 0.8 <TODO> will not be used in here
+    if(dimen(_dzliu_Jupper)!=dimen(_dzliu_LumFIR)) {set _dzliu_Jupper = _dzliu_LumFIR*0+_dzliu_Jupper}
+    if(dimen(_dzliu_R60100)!=dimen(_dzliu_LumFIR)) {set _dzliu_R60100 = _dzliu_LumFIR*0+_dzliu_R60100}
+    if(dimen(_dzliu_PosID)==0){print 'calc_dzliu_CII: Error! Input data array has no positive value!' {} return}
+    set _dzliu_N = 0.983 set _dzliu_A = lg(194.55575172665547) # Slope is 0.983, Intercept see the above computing with IDL # see calc_DeLooze2011_CII()
+    set _dzliu_FluxCII = _dzliu_LumFIR*0+0.0
+    set _dzliu_LPrmCII = _dzliu_LumFIR*0+0.0
+    set _dzliu_LPrmCII[_dzliu_PosID] = 10**((lg(_dzliu_LumTIR[_dzliu_PosID])-_dzliu_A)/_dzliu_N)
+    set _dzliu_LumiCII = _dzliu_LumFIR*0+0.0
+    set _dzliu_LumiCII[_dzliu_PosID] = _dzliu_LPrmCII[_dzliu_PosID] * 0.21839784
+    set _dzliu_PeakCII = _dzliu_LumFIR*0-99.0
+    set _dzliu_FluxCII = _dzliu_LumFIR*0+0.0
+    set _dzliu_FreqCII = _dzliu_LumFIR*0+0.0
+    set _dzliu_ObsFreq = _dzliu_LumFIR*0+0.0
+    set _dzliu_ResFreq = _dzliu_LumFIR*0+0.0
+    if($?2) { 
+        set _dzliu_Redshift = ($2)
+        # Apply redshift/luminosity-dependent decaying <20160903> <TODO> assuming Bethermin 2015 Sec.4.3 http://cn.arxiv.org/pdf/1409.5796.pdf
+        set _dzliu_Decaying = (_dzliu_LumTIR>1e10) ? (_dzliu_LumTIR/1e11)**0.335 : 1.0
+        set _dzliu_Decaying = 1.0 / _dzliu_Decaying
+        set _dzliu_LPrmCII = _dzliu_LPrmCII * _dzliu_Decaying
+        set _dzliu_LumiCII = _dzliu_LumiCII * _dzliu_Decaying
+        # 
+        define _dzliu_Verbose $verbose verbose 0
+        set _dzliu_ResFreq = _dzliu_LumFIR*0 + calc_line_freq(CII,1,0)  # FreqCII is restframe
+        set _dzliu_ObsFreq = _dzliu_LumFIR*0 + calc_line_freq(CII,1,_dzliu_Redshift) # ObsFreq is obsframe
+        set _dzliu_LumDist = calc_lumdist(_dzliu_Redshift)
+        set _dzliu_FluxCII[_dzliu_PosID] = convert_lprm2flux(_dzliu_Redshift,_dzliu_LPrmCII[_dzliu_PosID],_dzliu_ResFreq,_dzliu_LumDist)
+        set _dzliu_FreqCII = _dzliu_ObsFreq
+        verbose $_dzliu_Verbose undef _dzliu_Verbose
+        if($?3) { 
+            # 20160903
+            set _dzliu_W_CII = float($3)
+            if(dimen(_dzliu_W_CII)==1 && dimen(_dzliu_Jupper)>1) {
+                set _dzliu_W_CII = _dzliu_LumFIR*0 + _dzliu_W_CII
+            }
+            set _dzliu_J_CII = _dzliu_Jupper
+            set _dzliu_L_CII = _dzliu_LPrmCII
+            set _dzliu_F_CII = _dzliu_FluxCII
+            set _dzliu_S_CII = _dzliu_PeakCII
+            set _dzliu_S_CII[_dzliu_PosID] = _dzliu_FluxCII[_dzliu_PosID] / _dzliu_W_CII[_dzliu_PosID] * 1e3
+            set _dzliu_PeakCII[_dzliu_PosID] = _dzliu_FluxCII[_dzliu_PosID] / _dzliu_W_CII[_dzliu_PosID] * 1e3
+            set J_CII = _dzliu_J_CII # 
+            set L_CII = _dzliu_L_CII # K km/s pc2
+            set F_CII = _dzliu_F_CII # Jy km/s
+            set S_CII = _dzliu_S_CII # mJy
+            set W_CII = _dzliu_W_CII # km/s
+            set v_CII = _dzliu_FreqCII # GHz
+        }
+    }
+    if($verbose) { 
+        define print_noheader 1 set _dzliu_Jupper = int(_dzliu_Jupper)
+        print '\ncalc_dzliu_CII:\n' {}
+        print '\nL_TIR  = %15.7e  L_sun\nL_FIR  = %15.7e  L_sun\nJ_CII  = %15d\nv_CII  = %15.3f  GHz' \
+               {_dzliu_LumTIR _dzliu_LumFIR _dzliu_Jupper _dzliu_ObsFreq}
+        print 'L_CII  = %15.7e  K km s-1 pc2\nL_CII  = %15.7e  K km s-1 pc2\nF_CII  = %15f  Jy km s-1\nS_CII  = %15f  mJy\n\n' \
+               {_dzliu_LPrmCII _dzliu_LumiCII _dzliu_FluxCII _dzliu_PeakCII}
+        define print_noheader 0
+    }
+    set $0 = _dzliu_LPrmCII
+
+calc_dzliu_NII 04
+    # 
+    # calculate the NII 205um line luminosities for a given total IR luminosity 
+    # calc_dzliu_NII LTIR NII_J_up z R60100 # all input are in linear form
+    # 
+    if($?1==0||$?2==0){print 'Usage: set L_NII_205um = calc_dzliu_NII(LTIR,J_up[,z[,R60100]]) --> L_NII_205um\n' {} return}
+    if($2<1||$2>1){print 'calc_dzliu_NII: Error! we only support NII 205um 3P1-3P0, sorry!\n' {} return}
+    set _dzliu_LumTIR = $1
+    set _dzliu_LumFIR = _dzliu_LumTIR/1.3 # convert TIR to FIR
+    set _dzliu_PosID = 0,dimen(_dzliu_LumTIR)-1 set _dzliu_PosID = _dzliu_PosID if(_dzliu_LumTIR>0)
+    if($?2){set _dzliu_Jupper = $2} else {set _dzliu_Jupper = _dzliu_LumTIR*0+1.0} # default NII transition = 3P1-3P0 205um
+    if($?4){set _dzliu_R60100 = $4} else {set _dzliu_R60100 = _dzliu_LumTIR*0+0.8} # TODO: default R_f60/f100 = 0.8
+    if(dimen(_dzliu_Jupper)!=dimen(_dzliu_LumTIR)) {set _dzliu_Jupper = _dzliu_LumTIR*0+_dzliu_Jupper}
+    if(dimen(_dzliu_R60100)!=dimen(_dzliu_LumTIR)) {set _dzliu_R60100 = _dzliu_LumTIR*0+_dzliu_R60100}
+    if(dimen(_dzliu_PosID)==0){print 'calc_dzliu_NII: Error! Input data array has no positive value!' {} return}
+    set _dzliu_N = 0.0 set _dzliu_A = 0.0 
+    set _dzliu_I = 0,dimen(_dzliu_LumTIR)-1 set _dzliu_I = _dzliu_I if(_dzliu_R60100>0)
+    set _dzliu_X = float(_dzliu_I)*0 set _dzliu_X[_dzliu_I] = lg(_dzliu_R60100[_dzliu_I]) # TODO: default R_f60/f100 = 0.8
+    # if($2==1) {set _dzliu_N = 1.00 set _dzliu_A = 3.48914*_dzliu_X**0 +1.68786*_dzliu_X**1 -8.76484*_dzliu_X**2 -18.47071*_dzliu_X**3} # dzliu MPFIT 2016-03-09
+    if($2==1) {set _dzliu_N = 1.00 set _dzliu_A = 4.58563*_dzliu_X**0 +1.54078*_dzliu_X**1 -9.22952*_dzliu_X**2 -18.77348*_dzliu_X**3} # dzliu MPFIT 2016-03-13
+    # dzliu MPFIT 2016-03-13 If fit LuminTIR/LineLumi(R60100): y = +4.58563*x^0 +1.54078*x^1 -9.22952*x^2 -18.77348*x^3
+    set _dzliu_X = (_dzliu_X<-0.4) ? -0.4 : _dzliu_X
+    set _dzliu_X = (_dzliu_X>0.2) ? 0.2 : _dzliu_X
+    # comparing Zhao2016 fitting LuminTIR/LineLumi(R70160): y = 3.83 + 1.26*x + 1.86*x^2 + 0.90*x^3 # see Zhao Yinghe, Lu Nanyao et al. 2016 Eq(1)
+    set _dzliu_FluxNII = _dzliu_LumTIR*0+0.0
+    set _dzliu_LumiNII = _dzliu_LumTIR*0+0.0
+    set _dzliu_LumiNII[_dzliu_PosID] = 10**((lg(_dzliu_LumTIR[_dzliu_PosID])-_dzliu_A)/_dzliu_N) # correlation between LineLumi and LuminTIR
+    set _dzliu_LPrmNII = _dzliu_LumTIR*0+0.0
+    set _dzliu_LPrmNII[_dzliu_PosID] = _dzliu_LumiNII[_dzliu_PosID] / (3.1814084e-11 * $(calc_line_freq(NII,$2,0))**3)
+    set _dzliu_ObsFreq = _dzliu_LumTIR*0+0.0
+    if($?3) { if($3>0) { 
+        define _dzliu_Verbose $verbose verbose 0
+        set _dzliu_ResFreq = _dzliu_LumTIR*0 + calc_line_freq(NII,$2,0) # FreqNII is restframe
+        set _dzliu_ObsFreq = _dzliu_LumTIR*0 + calc_line_freq(NII,$2,$3) # ObsFreq is obsframe
+        set _dzliu_FreqNII = _dzliu_ObsFreq
+        set _dzliu_LumDist = calc_lumdist($3) 
+        set _dzliu_FluxNII[_dzliu_PosID] = convert_lprm2flux($3,_dzliu_LPrmNII[_dzliu_PosID],_dzliu_ResFreq,_dzliu_LumDist)
+        verbose $_dzliu_Verbose undef _dzliu_Verbose
+    }}
+    if($verbose) { 
+        define print_noheader 1 set _dzliu_Jupper = int(_dzliu_Jupper)
+        print '\ncalc_dzliu_NII:\n' {}
+        print '\nL_TIR  = %15.7e  L_sun\nL_FIR  = %15.7e  L_sun\nJ_NII  = %15d\nv_NII  = %15.3f  GHz\nL_NII  = %15.7e  K km s-1 pc2\nS_NII  = %15f  Jy km s-1\n\n' \
+               {_dzliu_LumTIR _dzliu_LumFIR _dzliu_Jupper _dzliu_ObsFreq _dzliu_LPrmNII _dzliu_FluxNII}
+        define print_noheader 0
+    }
+    set $0 = _dzliu_LPrmNII
+
+calc_Zhao2016_NII 04
+    # 
+    # calculate the NII 205um line luminosities for a given total IR luminosity 
+    # calc_Zhao2016_NII LTIR NII_J_up z R70160 # all input are in linear form
+    # 
+    if($?1==0||$?2==0){print 'Usage: set L_NII_205um = calc_Zhao2016_NII(LTIR,J_up[,z[,R70160]]) --> L_NII_205um\n' {} return}
+    if($2<1||$2>1){print 'calc_Zhao2016_NII: Error! we only support NII 205um 3P1-3P0, sorry!\n' {} return}
+    set _Zhao2016_LumTIR = $1
+    set _Zhao2016_LumFIR = _Zhao2016_LumTIR/1.3 # NO NEED TO convert TIR to FIR
+    set _Zhao2016_PosID = 0,dimen(_Zhao2016_LumTIR)-1 set _Zhao2016_PosID = _Zhao2016_PosID if(_Zhao2016_LumTIR>0)
+    if($?2){set _Zhao2016_Jupper = float($2)} else {set _Zhao2016_Jupper = _Zhao2016_LumTIR*0+1.0} # default NII transition = 3P1-3P0 205um
+    if($?4){set _Zhao2016_R70160 = float($4)} else {set _Zhao2016_R70160 = _Zhao2016_LumTIR*0+0.9} # TODO: default R_f70/f100 = 0.9
+    if(dimen(_Zhao2016_Jupper)!=dimen(_Zhao2016_LumTIR)) {set _Zhao2016_Jupper = _Zhao2016_LumTIR*0+_Zhao2016_Jupper}
+    if(dimen(_Zhao2016_R70160)!=dimen(_Zhao2016_LumTIR)) {set _Zhao2016_R70160 = _Zhao2016_LumTIR*0+_Zhao2016_R70160}
+    if(dimen(_Zhao2016_PosID)==0){print 'calc_Zhao2016_NII: Error! Input data array has no positive value!' {} return}
+    set _Zhao2016_N = 0.0 set _Zhao2016_A = 0.0 
+    set _Zhao2016_I = 0,dimen(_Zhao2016_LumTIR)-1 set _Zhao2016_I = _Zhao2016_I if(_Zhao2016_R70160>0)
+    set _Zhao2016_X = float(_Zhao2016_I)*0 set _Zhao2016_X[_Zhao2016_I] = lg(_Zhao2016_R70160[_Zhao2016_I]) # TODO: default R_f70/f100 = 0.9
+    if($2==1) {set _Zhao2016_N = 1.00 set _Zhao2016_A = 3.83+1.26*_Zhao2016_X+1.86*_Zhao2016_X**2+0.90*_Zhao2016_X**3} # see Zhao Yinghe, Lu Nanyao et al. 2016 Eq(1)
+    set _Zhao2016_FluxNII = _Zhao2016_LumTIR*0+0.0
+    set _Zhao2016_LumiNII = _Zhao2016_LumTIR*0+0.0
+    set _Zhao2016_LumiNII[_Zhao2016_PosID] = 10**((lg(_Zhao2016_LumTIR[_Zhao2016_PosID])-_Zhao2016_A)/_Zhao2016_N) # correlation between LineLumi and LuminTIR
+    set _Zhao2016_LPrmNII = _Zhao2016_LumTIR*0+0.0
+    set _Zhao2016_LPrmNII[_Zhao2016_PosID] = _Zhao2016_LumiNII[_Zhao2016_PosID] / (3.1814084e-11 * $(calc_line_freq(NII,$2,0))**3)
+    echo _Zhao2016_A = $(_Zhao2016_A)
+    if($?3) { if($3>0) { 
+        define _Zhao2016_Verbose $verbose verbose 0
+        set _Zhao2016_FreqNII = _Zhao2016_LumTIR*0 + calc_line_freq(NII,$2,0) # FreqNII is restframe
+        set _Zhao2016_ObsFreq = _Zhao2016_LumTIR*0 + calc_line_freq(NII,$2,$3) # ObsFreq is obsframe
+        set _Zhao2016_LumDist = calc_lumdist($3) 
+        set _Zhao2016_FluxNII[_Zhao2016_PosID] = convert_lprm2flux($3,_Zhao2016_LPrmNII[_Zhao2016_PosID],_Zhao2016_FreqNII,_Zhao2016_LumDist)
+        verbose $_Zhao2016_Verbose undef _Zhao2016_Verbose
+    }}
+    if($verbose) { 
+        define print_noheader 1
+        print '\ncalc_Zhao2016_NII:\n' {}
+        print '\nL_TIR  = %15.7e  L_sun\nL_FIR  = %15.7e  L_sun\nJ_NII  = %15.0f\nv_NII  = %15.3f  GHz\nL_NII  = %15.7e  K km s-1 pc2\nS_NII  = %15f  Jy km s-1\n\n' \
+               {_Zhao2016_LumTIR _Zhao2016_LumFIR _Zhao2016_Jupper _Zhao2016_ObsFreq _Zhao2016_LPrmNII _Zhao2016_FluxNII}
+        define print_noheader 0
+    }
+    set $0 = _Zhao2016_LPrmNII
+
+calc_Ota2014_CII 04
+    # 
+    # calculate the CII 158um line luminosities for a given total IR luminosity 
+    # according to paper Ota et al. 2014 (cited by Capak 2015 Nature)
+    # https://arxiv.org/pdf/1405.5387v2.pdf
+    # TODO
+
+calc_DeLooze2011_CII 03
+    # 
+    # calculate the CII 158um line luminosities for a given total IR luminosity 
+    # according to paper Ota et al. 2014 (cited by Capak 2015 Nature)
+    # http://adsabs.harvard.edu/abs/2011MNRAS.416.2712D
+    # Equation 8
+    # SFR (Kroupa IMF) [Msun/yr] = ( L_CII [erg/s] )^0.983 / 1.028e40
+    # SFR (Kroupa IMF) [Msun/yr] = SFR (Salpeter IMF) [Msun/yr] / 1.51
+    # SFR (Salpeter IMF) [Msun/yr] = L_TIR [erg/s] / 2.2e43 = L_TIR [Lsun] / 5.8e9 -- Kennicutt 1998 ApJ
+    # => L_TIR [Lsun] = ( L_CII [erg/s]                                                           )^0.983 / 1.028D40 * 1.51 * 5.8D9 ; computing with IDL
+    #                 = ( L_CII [Lsun] * 2.2e43 / 5.8e9                                           )^0.983 / 1.028D40 * 1.51 * 5.8D9
+    #                 = ( LPrm_CII [K km s-1 pc2] * 3.1814084D-11 * 1900.53690^3 * 2.2D43 / 5.8D9 )^0.983 / 1.028D40 * 1.51 * 5.8D9
+    #                 = ( LPrm_CII [K km s-1 pc2] * 0.21839784                   * 2.2D43 / 5.8D9 )^0.983 / 1.028D40 * 1.51 * 5.8D9
+    #                 = ( LPrm_CII [K km s-1 pc2] * 8.2840560D+32                                 )^0.983 * 8.5194552D-31
+    #                 = ( LPrm_CII [K km s-1 pc2])^0.983 * 8.2840560D+32^0.983 * 8.5194552D-31
+    #                 = ( LPrm_CII [K km s-1 pc2])^0.983 * 194.55575172665547
+    # -- note that (3.1814084D-11 * 1900.53690^3) = 0.21839784
+    # 
+    if($?1==0){print 'Usage: set L_CII_158um = calc_DeLooze2011_CII(L_TIR[,z,W_CII]) --> L_CII_158um\n' {} return}
+    set _DeLooze2011_LumTIR = ($1)
+    set _DeLooze2011_LumFIR = _DeLooze2011_LumTIR/1.3 # convert TIR to FIR
+    set _DeLooze2011_PosID = 0,dimen(_DeLooze2011_LumFIR)-1 set _DeLooze2011_PosID = _DeLooze2011_PosID if(_DeLooze2011_LumFIR>0) # good input index
+    set _DeLooze2011_Jupper = _DeLooze2011_LumFIR*0+1   # default CII transition = 3P1-3P0 158um <TODO> will not be used in here
+    set _DeLooze2011_R60100 = _DeLooze2011_LumFIR*0+0.8 # default R_f60/f100 = 0.8 <TODO> will not be used in here
+    if(dimen(_DeLooze2011_Jupper)!=dimen(_DeLooze2011_LumFIR)) {set _DeLooze2011_Jupper = _DeLooze2011_LumFIR*0+_DeLooze2011_Jupper}
+    if(dimen(_DeLooze2011_R60100)!=dimen(_DeLooze2011_LumFIR)) {set _DeLooze2011_R60100 = _DeLooze2011_LumFIR*0+_DeLooze2011_R60100}
+    if(dimen(_DeLooze2011_PosID)==0){print 'calc_DeLooze2011_CII: Error! Input data array has no positive value!' {} return}
+    set _DeLooze2011_N = 0.983 set _DeLooze2011_A = lg(194.55575172665547) # Slope is 0.983, Intercept see the above computing with IDL
+    set _DeLooze2011_FluxCII = _DeLooze2011_LumFIR*0+0.0
+    set _DeLooze2011_LPrmCII = _DeLooze2011_LumFIR*0+0.0
+    set _DeLooze2011_LPrmCII[_DeLooze2011_PosID] = 10**((lg(_DeLooze2011_LumTIR[_DeLooze2011_PosID])-_DeLooze2011_A)/_DeLooze2011_N)
+    set _DeLooze2011_LumiCII = _DeLooze2011_LumFIR*0+0.0
+    set _DeLooze2011_LumiCII[_DeLooze2011_PosID] = _DeLooze2011_LPrmCII[_DeLooze2011_PosID] * 0.21839784
+    set _DeLooze2011_PeakCII = _DeLooze2011_LumFIR*0-99.0
+    set _DeLooze2011_FluxCII = _DeLooze2011_LumFIR*0+0.0
+    set _DeLooze2011_FreqCII = _DeLooze2011_LumFIR*0+0.0
+    set _DeLooze2011_ObsFreq = _DeLooze2011_LumFIR*0+0.0
+    set _DeLooze2011_ResFreq = _DeLooze2011_LumFIR*0+0.0
+    if($?2) { 
+        set _DeLooze2011_Redshift = ($2)
+        define _DeLooze2011_Verbose $verbose verbose 0
+        set _DeLooze2011_ResFreq = _DeLooze2011_LumFIR*0 + calc_line_freq(CII,1,0)  # FreqCII is restframe
+        set _DeLooze2011_ObsFreq = _DeLooze2011_LumFIR*0 + calc_line_freq(CII,1,_DeLooze2011_Redshift) # ObsFreq is obsframe
+        set _DeLooze2011_LumDist = calc_lumdist(_DeLooze2011_Redshift)
+        set _DeLooze2011_FluxCII[_DeLooze2011_PosID] = convert_lprm2flux(_DeLooze2011_Redshift,_DeLooze2011_LPrmCII[_DeLooze2011_PosID],_DeLooze2011_ResFreq,_DeLooze2011_LumDist)
+        set _DeLooze2011_FreqCII = _DeLooze2011_ObsFreq
+        verbose $_DeLooze2011_Verbose undef _DeLooze2011_Verbose
+        if($?3) { 
+            # 20160903
+            set _DeLooze2011_W_CII = float($3)
+            if(dimen(_DeLooze2011_W_CII)==1 && dimen(_DeLooze2011_Jupper)>1) {
+                set _DeLooze2011_W_CII = _DeLooze2011_LumFIR*0 + _DeLooze2011_W_CII
+            }
+            set _DeLooze2011_J_CII = _DeLooze2011_Jupper
+            set _DeLooze2011_L_CII = _DeLooze2011_LPrmCII
+            set _DeLooze2011_F_CII = _DeLooze2011_FluxCII
+            set _DeLooze2011_S_CII = _DeLooze2011_PeakCII
+            set _DeLooze2011_S_CII[_DeLooze2011_PosID] = _DeLooze2011_FluxCII[_DeLooze2011_PosID] / _DeLooze2011_W_CII[_DeLooze2011_PosID] * 1e3
+            set _DeLooze2011_PeakCII[_DeLooze2011_PosID] = _DeLooze2011_FluxCII[_DeLooze2011_PosID] / _DeLooze2011_W_CII[_DeLooze2011_PosID] * 1e3
+            set J_CII = _DeLooze2011_J_CII # 
+            set L_CII = _DeLooze2011_L_CII # K km/s pc2
+            set F_CII = _DeLooze2011_F_CII # Jy km/s
+            set S_CII = _DeLooze2011_S_CII # mJy
+            set W_CII = _DeLooze2011_W_CII # km/s
+            set v_CII = _DeLooze2011_FreqCII # GHz
+        }
+    }
+    if($verbose) { 
+        define print_noheader 1 set _DeLooze2011_Jupper = int(_DeLooze2011_Jupper)
+        print '\ncalc_DeLooze2011_CII:\n' {}
+        print '\nL_TIR  = %15.7e  L_sun\nL_FIR  = %15.7e  L_sun\nJ_CII  = %15d\nv_CII  = %15.3f  GHz' \
+               {_DeLooze2011_LumTIR _DeLooze2011_LumFIR _DeLooze2011_Jupper _DeLooze2011_ObsFreq}
+        print 'L_CII  = %15.7e  L_sun\nL_CII  = %15.7e  K km s-1 pc2' \
+               {_DeLooze2011_LumiCII _DeLooze2011_LPrmCII}
+        print 'F_CII  = %15f  Jy km s-1\nS_CII  = %15f  mJy\n\n' \
+               {_DeLooze2011_FluxCII _DeLooze2011_PeakCII}
+        define print_noheader 0
+    }
+    set $0 = _DeLooze2011_LPrmCII
+
+calc_Gao2007_HCN 04
+    # 
+    # calculate the HCN 1-0 line luminosities for a given total IR luminosity 
+    # calc_Gao2007_HCN LTIR HCN_J_up z R70100 # all input are in linear form
+    # 
+    if($?1==0||$?2==0){print 'Usage: set L_HCN = calc_Gao2007_HCN(LTIR,J_up[,z[,TODO]]) --> L_HCN [K km s-1 pc2]\n' {} return}
+    if($2<1||$2>1){print 'calc_Gao2007_HCN: Error! we only support HCN 1-0, sorry!\n' {} return}
+    set _Gao2007_LumTIR = $1
+    set _Gao2007_LumFIR = _Gao2007_LumTIR/1.3
+    set _Gao2007_PosID = 0,dimen(_Gao2007_LumFIR)-1 set _Gao2007_PosID = _Gao2007_PosID if(_Gao2007_LumFIR>0)
+    if($?2){set _Gao2007_Jupper = float($2)} else {set _Gao2007_Jupper = _Gao2007_LumFIR*0+1.0} # default HCN transition J=1-0
+    if(dimen(_Gao2007_Jupper)!=dimen(_Gao2007_LumFIR)) {set _Gao2007_Jupper = _Gao2007_LumFIR*0+_Gao2007_Jupper}
+    if(dimen(_Gao2007_PosID)==0){print 'calc_Gao2007_HCN: Error! Input data array has no positive value!' {} return}
+    set _Gao2007_N = 0.0 set _Gao2007_A = 0.0 
+    set _Gao2007_I = 0,dimen(_Gao2007_LumFIR)-1
+    if($2==1) {set _Gao2007_N = 1.00 set _Gao2007_A = lg(750.0)} # 
+    set _Gao2007_FluxHCN = _Gao2007_LumFIR*0+0.0
+    set _Gao2007_LPrmHCN = _Gao2007_LumFIR*0+0.0
+    set _Gao2007_LPrmHCN[_Gao2007_PosID] = 10**((lg(_Gao2007_LumFIR[_Gao2007_PosID])-_Gao2007_A)/_Gao2007_N) # correlation between LineLumi and LuminTIR
+    set _Gao2007_LumiHCN = _Gao2007_LumFIR*0+0.0
+    set _Gao2007_LumiHCN[_Gao2007_PosID] = _Gao2007_LPrmHCN[_Gao2007_PosID] * (3.1814084e-11 * $(calc_line_freq(HCN,$2,0))**3)
+    if($?3) { if($3>0) { 
+        define _Gao2007_Verbose $verbose verbose 0
+        set _Gao2007_FreqHCN = _Gao2007_LumFIR*0 + calc_line_freq(HCN,$2,0) # FreqHCN is restframe
+        set _Gao2007_ObsFreq = _Gao2007_LumFIR*0 + calc_line_freq(HCN,$2,$3) # ObsFreq is obsframe
+        set _Gao2007_LumDist = calc_lumdist($3) 
+        set _Gao2007_FluxHCN[_Gao2007_PosID] = convert_lprm2flux($3,_Gao2007_LPrmHCN[_Gao2007_PosID],_Gao2007_FreqHCN,_Gao2007_LumDist)
+        verbose $_Gao2007_Verbose undef _Gao2007_Verbose
+    }}
+    if($verbose) { 
+        define print_noheader 1
+        print '\ncalc_Gao2007_HCN:\n' {}
+        print '\nL_TIR  = %15.7e  L_sun\nL_FIR  = %15.7e  L_sun\nJ_HCN  = %15.0f\nv_HCN  = %15.3f  GHz\nL_HCN  = %15.7e  K km s-1 pc2\nS_HCN  = %15f  Jy km s-1\n\n' \
+               {_Gao2007_LumTIR _Gao2007_LumFIR _Gao2007_Jupper _Gao2007_ObsFreq _Gao2007_LPrmHCN _Gao2007_FluxHCN}
+        define print_noheader 0
+    }
+    set $0 = _Gao2007_LPrmHCN
+
+calc_FIR_line_fluxes_demo
+    # Usage:
+    #    load astroSfig.sm calc_FIR_line_fluxes_demo
+    # 
+    set z = {4.055 4.055 4.055}
+    set IR = {1.5e13 8e12 0}
+    calc_FIR_line_fluxes CO 4 z IR 500 "Daddi et al. 2010"
+
+calc_FIR_line_fluxes 08
+    # New function for calculating FIR/mm line fluxes, updated on 2017-07-25
+    # Inputs: 
+    #   $1: LineName, now can be quoted by either double quotes or single quotes
+    #   $2: J_up or rest-frame wavelength in um, e.g. 158um
+    #   $3: z
+    #   $4: TIR (8-1000um)
+    #   $5: LineWidth
+    #   $6: Method
+    #   $7: Starburstiness
+    #   $8: Excitation # a constant factor, the ratio of the J_up line to the ground state line in Jy km/s scale. 
+    # 
+    if(!$?1) {print 'Usage: calc_FIR_line_fluxes CO J_up_or_um z L_IR_8_1000 LineWidth Method [starbursty [excitation]]\n' {} return}
+    if(!$?2) {print 'Usage: calc_FIR_line_fluxes CO J_up_or_um z L_IR_8_1000 LineWidth Method [starbursty [excitation]]\n' {} return}
+    if(!$?3) {print 'Usage: calc_FIR_line_fluxes CO J_up_or_um z L_IR_8_1000 LineWidth Method [starbursty [excitation]]\n' {} return}
+    if(!$?4) {print 'Usage: calc_FIR_line_fluxes CO J_up_or_um z L_IR_8_1000 LineWidth Method [starbursty [excitation]]\n' {} return}
+    if(!$?5) {print 'Usage: calc_FIR_line_fluxes CO J_up_or_um z L_IR_8_1000 LineWidth Method [starbursty [excitation]]\n' {} return}
+    if(!$?6) {print 'Usage: calc_FIR_line_fluxes CO J_up_or_um z L_IR_8_1000 LineWidth Daddi2010 [starbursty [excitation]]\n' {} return}
+    # read the first argument, FIR line name
+    if(whatis(__calc_FIR_line_fluxes_arg1)==73) {
+        set _line_name = __calc_FIR_line_fluxes_arg1
+    } else {
+        !echo $1 | sed -e 's/ /_/g' | tr '[:lower:]' '[:upper:]' > .calc_FIR_line_fluxes.line_name.txt
+        verbose 0 data .calc_FIR_line_fluxes.line_name.txt read {_line_name 1.s} verbose 1 !rm .calc_FIR_line_fluxes.line_name.txt
+    }
+    # read the 6-th argument, Method name
+    if(whatis(__calc_FIR_line_fluxes_arg6)==73) {
+        set _line_method = __calc_FIR_line_fluxes_arg6
+    } else {
+        !echo $6 | sed -e 's/ /_/g' | tr '[:upper:]' '[:lower:]' > .calc_FIR_line_fluxes.line_method.txt
+        verbose 0 data .calc_FIR_line_fluxes.line_method.txt read {_line_method 1.s} verbose 1 !rm .calc_FIR_line_fluxes.line_method.txt
+    }
+    set _line_J_up_or_um = float($2)
+    set _line_redshift = float($3)
+    set _IR_luminosity = float($4)
+    set _line_width = float($5) # km/s
+    set _line_valid = (_line_redshift>0 && _IR_luminosity>0 && _line_J_up_or_um>0) ? 1 : 0
+    set _line_juum = (_line_valid>0) ? _line_J_up_or_um : -99
+    set _line_fwhm = (_line_valid>0) ? _line_width : -99
+    set _line_flux = _line_redshift*0.0-99
+    set _line_freq = _line_redshift*0.0-99
+    set _line_peak = _line_redshift*0.0-99
+    set _line_lprm = _line_redshift*0.0-99 # L^{\prime} in unit of [K km s-1 pc2]
+    set _line_rms = _line_redshift*0.0-99
+    set _line_snr = _line_redshift*0.0-99
+    set _line_dL = calc_lumdist(_line_redshift)
+    set _line_rest_freq = _line_redshift*0.0-99
+    if($?7) {set _input_starbursty = float($7)} else {set _input_starbursty = 0.0}
+    if($?8) {set _input_excitation = float($8)} else {set _input_excitation = 1.0}
+    set _line_starbursty = (_line_valid>0 && _input_starbursty>0)? _input_starbursty : 0.0
+    set _line_excitation = (_line_valid>0 && _input_excitation>0)? _input_excitation : 1.0
+    set _line_starbursty = (_line_starbursty>1.0) ? 1.0 : _line_starbursty
+    set _line_good_index = 0,dimen(_line_redshift)-1
+    set _line_good_index = _line_good_index if(_line_valid)
+    set gid = _line_good_index
+    if(dimen(_IR_luminosity)  !=dimen(_line_redshift)) { print 'calc_FIR_line_fluxes: Error! dimen(_IR_luminosity)!=dimen(_line_redshift)!\n' {} return }
+    if(dimen(_line_fwhm)      !=dimen(_line_redshift)) { print 'calc_FIR_line_fluxes: Error! dimen(_line_fwhm)!=dimen(_line_redshift)!\n' {} return }
+    if(dimen(_line_starbursty)!=dimen(_line_redshift)) { print 'calc_FIR_line_fluxes: Error! dimen(_line_starbursty)!=dimen(_line_redshift)!\n' {} return }
+    if(dimen(_line_excitation)!=dimen(_line_redshift)) { print 'calc_FIR_line_fluxes: Error! dimen(_line_excitation)!=dimen(_line_redshift)!\n' {} return }
+    # 
+    foreach gii gid {
+        set _line_rest_freq[$gii] = calc_line_freq(_line_name,_line_juum[$gii],0.0)
+        if(_line_rest_freq[$gii]<=0) { print 'calc_FIR_line_fluxes: Error! Failed to run calc_line_freq($(_line_name),$(_line_juum[$gii]),0.0)\n!' {} exit }
+        set _line_freq[$gii] = _line_rest_freq[$gii] / (1.0+_line_redshift[$gii]) # calc obs freq
+    }
+    # 
+    !echo "\# "\$(date +'%Y-%m-%d %H:%M:%S %Z')
+    echo "# calc_FIR_line_fluxes:"
+    echo "# Line Name = "$(_line_name)
+    echo "# Calc Method = "$(_line_method)
+    set _line_method_lprm_to_flux = 0
+    set _line_method_flux_to_lprm = 0
+    if(_line_name=='CO') {
+        if(index(_line_method,'daddi')>=0 && index(_line_method,'2010')>=0) {
+            # see paper http://arxiv.org/pdf/1003.3889
+            #     equation (1) disk sequence: lg_LTIR = 1.31 * lg_MH2 - 2.09
+            #                  starburst seq: lg_LTIR = 1.31 * lg_MH2 - 2.09 + 1.1  (1.1 dex see caption of figure 1)
+            #                  and they are using alpha_CO = 3.6 for BzK, 4.6 for local spirals, 0.8 for local LRG/SMG
+            set _line_lprm_MS = _line_redshift*0.0-99
+            set _line_lprm_MS[gid] = 10**((lg(_IR_luminosity[gid]) + 2.09) / 1.31) / 4.6
+            set _line_lprm_SB = _line_redshift*0.0-99
+            set _line_lprm_SB[gid] = 10**((lg(_IR_luminosity[gid]) + 2.09 - 1.1) / 1.31) / 0.8
+            set _line_lprm[gid] = (1.0-_line_starbursty[gid])*_line_lprm_MS[gid] + (_line_starbursty[gid])*_line_lprm_SB[gid]
+            # assume BzK excitation -- Daddi2015 Fig.10 BzK-average
+            set _line_excitation[gid] = calc_co_excitation('BzK-average',_line_juum[gid]) * _line_excitation[gid]
+            # 
+            set _line_lprm[gid] = _line_lprm[gid] * _line_excitation[gid] # calc co excitation
+            set _line_method_lprm_to_flux = 1
+        }
+        if(index(_line_method,'genzel')>=0 && index(_line_method,'2010')>=0) {
+            # see paper http://arxiv.org/abs/1003.5180
+            #     Figure 2. annotation, MS and SB sequences have the same slope of 1.15, normalizations are 0.02 and 0.63 respectively. 
+            set _line_lprm_MS = _line_redshift*0.0-99
+            set _line_lprm_MS[gid] = 10**((lg(_IR_luminosity[gid]/1.3) - 0.02) / 1.15) # Note a factor of 1/1.3 is applied to convert IR(8-1000um) to far-IR (~50-500um)
+            set _line_lprm_SB = _line_redshift*0.0-99
+            set _line_lprm_SB[gid] = 10**((lg(_IR_luminosity[gid]/1.3) - 0.63) / 1.15) # Note a factor of 1/1.3 is applied to convert IR(8-1000um) to far-IR (~50-500um)
+            set _line_lprm[gid] = (1.0-_line_starbursty[gid])*_line_lprm_MS[gid] + (_line_starbursty[gid])*_line_lprm_SB[gid]
+            # assume BzK excitation -- Daddi2015 Fig.10 BzK-average
+            set _line_excitation[gid] = calc_co_excitation('BzK-average',_line_juum[gid]) * _line_excitation[gid]
+            # 
+            set _line_lprm[gid] = _line_lprm[gid] * _line_excitation[gid] # calc co excitation
+            set _line_method_lprm_to_flux = 1
+        }
+        if(index(_line_method,'sargent')>=0 && index(_line_method,'2014')>=0) {
+            # see paper http://arxiv.org/abs/1303.4392
+            #     Equation 1, lg(LPrmCO10) = (0.54 ± 0.02) + (0.81 ± 0.03) * lg(LIR) for MS
+            #              or lg(LPrmCO10) = (0.08 +0.15-0.08) + (0.81) * lg(LIR) for SB
+            #     assumed R31 = 2.0 [Jy km s-1 (Jy km s-1)^{-1}]
+            set _line_lprm_MS = _line_redshift*0.0-99
+            set _line_lprm_MS[gid] = 10**((lg(_IR_luminosity[gid]) * 0.81) + 0.54)
+            set _line_lprm_SB = _line_redshift*0.0-99
+            set _line_lprm_SB[gid] = 10**((lg(_IR_luminosity[gid]) * 0.81) + 0.08)
+            set _line_lprm[gid] = (1.0-_line_starbursty[gid])*_line_lprm_MS[gid] + (_line_starbursty[gid])*_line_lprm_SB[gid]
+            # assume BzK excitation -- Daddi2015 Fig.10 BzK-average
+            set _line_excitation[gid] = calc_co_excitation('BzK-average',_line_juum[gid]) * _line_excitation[gid]
+            # 
+            set _line_lprm[gid] = _line_lprm[gid] * _line_excitation[gid] # calc co excitation
+            set _line_method_lprm_to_flux = 1
+        }
+        if(index(_line_method,'liu')>=0 && index(_line_method,'2015')>=0) {
+            # see paper https://arxiv.org/abs/1504.05897
+            #     table 1
+            set _Liu2015_Jupper = _line_juum[gid]
+            set _Liu2015_LumFIR = _IR_luminosity[gid] / 1.3 # convert IR (8-1000um) to FIR (~50-500um)
+            set _Liu2015_N = _line_redshift[gid]*0.0-99
+            set _Liu2015_A = _line_redshift[gid]*0.0-99
+            set _Liu2015_N = (_Liu2015_Jupper==1)  ? 1.06 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==1)  ? 1.49-lg(1.2*1.2*1.2) : _Liu2015_A #<TODO># using non-linear slope #<TODO># using CO(4-3) as a lower limit for now
+            set _Liu2015_N = (_Liu2015_Jupper==2)  ? 1.06 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==2)  ? 1.49-lg(1.2*1.2) : _Liu2015_A #<TODO># using non-linear slope #<TODO># using CO(4-3) as a lower limit for now
+            set _Liu2015_N = (_Liu2015_Jupper==3)  ? 1.06 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==3)  ? 1.49-lg(1.2) : _Liu2015_A #<TODO># using non-linear slope #<TODO># using CO(4-3) as a lower limit for now
+            set _Liu2015_N = (_Liu2015_Jupper==4)  ? 1.06 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==4)  ? 1.49 : _Liu2015_A #<TODO># using non-linear slope
+            set _Liu2015_N = (_Liu2015_Jupper==5)  ? 1.07 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==5)  ? 1.71 : _Liu2015_A #<TODO># using non-linear slope
+            set _Liu2015_N = (_Liu2015_Jupper==6)  ? 1.10 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==6)  ? 1.79 : _Liu2015_A #<TODO># using non-linear slope
+            set _Liu2015_N = (_Liu2015_Jupper==7)  ? 1.03 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==7)  ? 2.62 : _Liu2015_A #<TODO># using non-linear slope
+            #set _Liu2015_N = (_Liu2015_Jupper==1)  ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==1)  ? 1.96 : _Liu2015_A #<TODO># using linear slope #<TODO># using CO(4-3) as a lower limit for now
+            #set _Liu2015_N = (_Liu2015_Jupper==2)  ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==2)  ? 1.96 : _Liu2015_A #<TODO># using linear slope #<TODO># using CO(4-3) as a lower limit for now
+            #set _Liu2015_N = (_Liu2015_Jupper==3)  ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==3)  ? 1.96 : _Liu2015_A #<TODO># using linear slope #<TODO># using CO(4-3) as a lower limit for now
+            #set _Liu2015_N = (_Liu2015_Jupper==4)  ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==4)  ? 1.96 : _Liu2015_A #<TODO># using linear slope
+            #set _Liu2015_N = (_Liu2015_Jupper==5)  ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==5)  ? 2.27 : _Liu2015_A #<TODO># using linear slope
+            #set _Liu2015_N = (_Liu2015_Jupper==6)  ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==6)  ? 2.56 : _Liu2015_A #<TODO># using linear slope
+            #set _Liu2015_N = (_Liu2015_Jupper==7)  ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==7)  ? 2.86 : _Liu2015_A #<TODO># using linear slope
+            set _Liu2015_N = (_Liu2015_Jupper==8)  ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==8)  ? 3.04 : _Liu2015_A
+            set _Liu2015_N = (_Liu2015_Jupper==9)  ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==9)  ? 3.20 : _Liu2015_A
+            set _Liu2015_N = (_Liu2015_Jupper==10) ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==10) ? 3.38 : _Liu2015_A
+            set _Liu2015_N = (_Liu2015_Jupper==11) ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==11) ? 3.56 : _Liu2015_A
+            set _Liu2015_N = (_Liu2015_Jupper==12) ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==12) ? 3.77 : _Liu2015_A
+            set _Liu2015_N = (_Liu2015_Jupper==13) ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==13) ? 3.98 : _Liu2015_A #<TODO># STILL NEEDS TEST
+            set _Liu2015_N = (_Liu2015_Jupper==14) ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==14) ? 4.19 : _Liu2015_A #<TODO># STILL NEEDS TEST
+            set _Liu2015_N = (_Liu2015_Jupper==15) ? 1.00 : _Liu2015_N set _Liu2015_A = (_Liu2015_Jupper==15) ? 4.40 : _Liu2015_A #<TODO># STILL NEEDS TEST
+            set _Liu2015_L = (_Liu2015_A!=-99 && _Liu2015_N!=-99) ? 10**((lg(_Liu2015_LumFIR)-_Liu2015_A)/_Liu2015_N) : -99
+            # 
+            set _line_lprm[gid] = _Liu2015_L * _line_excitation[gid] # apply additional excitation if user has input that
+            set _line_method_lprm_to_flux = 1
+        }
+    }
+    if(_line_name=='CI') {
+        if(index(_line_method,'dzliu')>=0 && index(_line_method,'2017')>=0) {
+            # dzliu own fitting
+            #   y: log_L_FIR_50_500um
+            #   x: log_LPrime_3P1_3P0
+            #   y = 0.065 * x**3 - 1.921 * x**2 + 19.866 * x - 59.322
+            set _dzliu_CI_x = 6.0,11.5,0.05
+            set _dzliu_CI_y = 0.0653741952625 * _dzliu_CI_x**3 - 1.92089044289 * _dzliu_CI_x**2 + 19.8655338987 * _dzliu_CI_x - 59.3221991296
+            set _dzliu_CI_LFIR = lg(_IR_luminosity[gid]/1.3)
+            interp_dzliu _dzliu_CI_y _dzliu_CI_x _dzliu_CI_LFIR _dzliu_CI_LPrm
+            set _line_lprm[gid] = 10**_dzliu_CI_LPrm
+            set _line_lprm[gid] = _line_lprm[gid] * _line_excitation[gid] # calc excitation if user-given
+            set _line_method_lprm_to_flux = 1
+        }
+    }
+    if(_line_name=='CII') {
+        if(index(_line_method,'dzliu')>=0 && index(_line_method,'2017')>=0) {
+            # dzliu own fitting
+            #   y: log_L_FIR_50_500um
+            #   x: log_LPrime_3P1_3P0
+            #   calculate the CII 158um line luminosities for a given total IR luminosity 
+            #   when L_TIR < 1e11, we use calc_DeLooze2011_CII(), 
+            #   otherwise we consider a redshift/luminosity-dependent decaying, which can fit WangRan2013 data
+            set _dzliu_CII_x = 6.0,11.5,0.05
+            set _dzliu_CII_y = 0.983 * _dzliu_CI_x + lg(194.55575172665547)
+            set _dzliu_CII_LFIR = lg(_IR_luminosity[gid]/1.3)
+            interp2 _dzliu_CI_y _dzliu_CI_x _dzliu_CI_LFIR _dzliu_CI_LPrm
+            set _line_lprm[gid] = 10**_dzliu_CI_LPrm
+            set _line_lprm[gid] = _line_lprm[gid] * _line_excitation[gid] # calc excitation if user-given
+            set _line_method_lprm_to_flux = 1
+        }
+    }
+    if(_line_method_lprm_to_flux) {
+        verbose 0
+        set _line_flux[gid] = convert_lprm2flux(_line_redshift[gid],_line_lprm[gid],_line_rest_freq[gid],_line_dL[gid]) # convert [K kms/s pc2] to [Jy km/s]
+        set _line_peak[gid] = _line_flux[gid] / _line_fwhm[gid] * 1e3 # convert [Jy km/s] to [mJy]
+        define print_noheader 1
+        echo "# J_up_or_um       z       dL       L_IR   FWHM   restfreq   obsfreq     L_line     S_line    P_line    SBs    Exc"
+        echo "#                       [Mpc]     [L_sun] [km/s]     [GHz]     [GHz] [K km/s pc2] [Jy km/s]    [mJy]              "
+        print '%12g %7.4f %8.1f %10.3e %6.1f %10.6f %9.6f %10.3e %10.6f %9.6f %6.3g %6.3g\n' \
+            {_line_juum _line_redshift _line_dL _IR_luminosity _line_fwhm _line_rest_freq _line_freq _line_lprm _line_flux _line_peak _line_starbursty _line_excitation}
+        define print_noheader 0
+        verbose 1
+    }
+
+
+
+
+
+
+calc_co_excitation 02
+    # aim: 
+    #   calc CO excitation
+    # inputs:
+    #   $1: method
+    #   $2: J_up
+    if(!$?2) {print 'Usage: calc_co_excitation \'BzK-average\' J_up\n' {} return}
+    #echo $(whatis(__calc_co_excitation_arg1))
+    if(whatis(__calc_co_excitation_arg1)==73) {
+        set _input_co_exc_type = __calc_co_excitation_arg1
+    } else {
+        !echo $1 | sed -e 's/ /_/g' | tr '[:lower:]' '[:upper:]' > .calc_co_excitation.co_exc_type.txt
+        verbose 0 data .calc_co_excitation.co_exc_type.txt read {_input_co_exc_type 1.s} verbose 1 !rm .calc_co_excitation.co_exc_type.txt
+    }
+    if(_input_co_exc_type=='BzK-average') {
+        set _input_J_up = float($2)
+        set _co_exc_Jy_km_s = _input_J_up*0.0-99
+        set _co_exc_Jy_km_s = (_input_J_up==1)  ? 0.193/0.193 : _co_exc_Jy_km_s # _Daddi2010_excitation is K km/s. _Jscale is Jy km/s. 
+        set _co_exc_Jy_km_s = (_input_J_up==2)  ?  0.59/0.193 : _co_exc_Jy_km_s # 0.59/0.193/2**2=0.76 see Daddi2015 Fig.10 BzK-average
+        set _co_exc_Jy_km_s = (_input_J_up==3)  ?  0.73/0.193 : _co_exc_Jy_km_s # 0.73/0.193/3**2=0.42 see Daddi2015 Fig.10 BzK-average
+        set _co_exc_Jy_km_s = (_input_J_up==4)  ?  1.00/0.193 : _co_exc_Jy_km_s # 1.00/0.193/4**2=0.32 see Daddi2015 Fig.10 BzK-average
+        set _co_exc_Jy_km_s = (_input_J_up==5)  ?  1.12/0.193 : _co_exc_Jy_km_s # 1.12/0.193/5**2=0.23 see Daddi2015 Fig.10 BzK-average
+        set _co_exc_Jy_km_s = (_input_J_up==6)  ?  0.85/0.193 : _co_exc_Jy_km_s # 0.85/0.193/6**2=0.12 see Daddi2015 Fig.10 BzK-average
+        set _co_exc_Jy_km_s = (_input_J_up==7)  ?  0.50/0.193 : _co_exc_Jy_km_s # 0.50/0.193/7**2=0.0528709
+        set _co_exc_Jy_km_s = (_input_J_up==8)  ?  0.20/0.193 : _co_exc_Jy_km_s # 0.20/0.193/8**2=0.0161917
+        set _co_exc_K_km_s = (_co_exc_Jy_km_s>0) ? _co_exc_Jy_km_s/_input_J_up**2 : -99
+        set $0 = _co_exc_Jy_km_s
+    }
+    if(_input_co_exc_type=='FTS-average') {
+        # see 
+        # '/Users/dzliu/Cloud/Nutstore/SpireLines/Plots/SLED_CO_FTS-average/plot_ir_normalized_co_sleds_20150315/ir_normalized_co_sled.BestFitSLED.txt'
+        set _input_J_up = float($2)
+        set _co_exc_Jy_km_s = _input_J_up*0.0-99
+        set _co_exc_Jy_km_s = (_input_J_up==1)  ? 0.02388/0.02388 : _co_exc_Jy_km_s
+        set _co_exc_Jy_km_s = (_input_J_up==2)  ? 0.08651/0.02388 : _co_exc_Jy_km_s
+        set _co_exc_Jy_km_s = (_input_J_up==3)  ?    0.15/0.02388 : _co_exc_Jy_km_s
+        set _co_exc_Jy_km_s = (_input_J_up==4)  ?  0.1666/0.02388 : _co_exc_Jy_km_s
+        set _co_exc_Jy_km_s = (_input_J_up==5)  ?  0.1328/0.02388 : _co_exc_Jy_km_s
+        set _co_exc_Jy_km_s = (_input_J_up==6)  ? 0.09078/0.02388 : _co_exc_Jy_km_s
+        set _co_exc_Jy_km_s = (_input_J_up==7)  ? 0.06317/0.02388 : _co_exc_Jy_km_s
+        set _co_exc_Jy_km_s = (_input_J_up==8)  ? 0.05279/0.02388 : _co_exc_Jy_km_s
+        set _co_exc_Jy_km_s = (_input_J_up==9)  ? 0.04528/0.02388 : _co_exc_Jy_km_s
+        set _co_exc_Jy_km_s = (_input_J_up==10) ? 0.03672/0.02388 : _co_exc_Jy_km_s
+        set _co_exc_Jy_km_s = (_input_J_up==11) ? 0.02877/0.02388 : _co_exc_Jy_km_s
+        set _co_exc_Jy_km_s = (_input_J_up==12) ? 0.02082/0.02388 : _co_exc_Jy_km_s
+        set _co_exc_Jy_km_s = (_input_J_up==13) ? 0.01346/0.02388 : _co_exc_Jy_km_s
+        set _co_exc_K_km_s = (_co_exc_Jy_km_s>0) ? _co_exc_Jy_km_s/_input_J_up**2 : -99
+        set $0 = _co_exc_Jy_km_s
+    }
+    return
+
+
+
+
+
+
+convert_flux2lprm 04
+    # convert flux [Jy km/s] to lumin prime [K km s-1 pc2]
+    if($?1==0||$?2==0||$?3==0){print 'Usage: set lprm = convert_flux2lprm(z,LineFPrm,restfreq[,lumdist])' {}
+                               print ' => output: LPrmCO in unit of K km s-1 pc2\n' {} return}
+    set _lprm2flux_z = $1
+    set _lprm2flux_fff = $2
+    set _lprm2flux_nu = $3
+    if(sum(_lprm2flux_z<=0)>0) {print 'Error! Input redshift is non-positive!\n' {} return}
+    if(sum(_lprm2flux_nu<=0)>0) {print 'Error! Input rest frequency is non-positive!\n' {} return}
+    declare _lprm2flux_dL 0
+    if($?4) { if(is_vector($4)) {if(dimen($4)==dimen(_lprm2flux_z)) {set _lprm2flux_dL = $4}} \
+              else {if($4>0) {set _lprm2flux_dL = _lprm2flux_z*0.0+$4}} }
+    if(dimen(_lprm2flux_dL)==0) { 
+        define _lprm2flux_verbose $verbose verbose 0
+        !echo "\# lumdist " > ".lprm2flux.lumdist.tmp"
+        do _lprm2flux_i=0,dimen(_lprm2flux_z)-1 {
+        !lumdist -simple $(_lprm2flux_z[$_lprm2flux_i]) >> ".lprm2flux.lumdist.tmp"
+        }
+        data ".lprm2flux.lumdist.tmp" read {_lprm2flux_dL 1} verbose $_lprm2flux_verbose
+        !rm ".lprm2flux.lumdist.tmp"
+    }
+    set _lprm2flux_LLL = _lprm2flux_fff * 3.25e7 * _lprm2flux_dL**2 / _lprm2flux_nu**2 / (1.0+_lprm2flux_z)
+    if($verbose&&is_vector(LineLPrm)){
+        print 'astroSfig::convert_lprm2flux: Warning! Overwriting LineLPrm (backuped existing LineLPrm as LineLPrm_backup\n' {} 
+        set LineLPrm_backup = LineLPrm
+    }
+    if($verbose&&is_vector(LineFlux)){
+        print 'astroSfig::convert_lprm2flux: Warning! Overwriting LineFlux (backuped existing LineFlux as LineFlux_backup\n' {} 
+        set LineFlux_backup = LineFlux
+    }
+    set LineLPrm = _lprm2flux_LLL
+    set LineFlux = _lprm2flux_fff
+    set lumdist = _lprm2flux_dL
+    set $0 = LineLPrm
+    return
+
+convert_lprm2flux 04
+    # convert lumin prime [K km s-1 pc2] to flux [Jy km/s]
+    if($?1==0||$?2==0||$?3==0){print 'Usage: set flux = convert_lprm2flux(z,LineLPrm_Kkmspc2,restfreq_GHz[,lumdist_Mpc])' {}
+                               print ' => output: fCO [require command lumdist]\n' {} return}
+    set _lprm2flux_z = $1
+    set _lprm2flux_L = $2
+    set _lprm2flux_nu = $3
+    if(sum(_lprm2flux_z<=0)>0) {print 'Error! Input redshift is non-positive!\n' {} return}
+    if(sum(_lprm2flux_nu<=0)>0) {print 'Error! Input rest frequency is non-positive!\n' {} return}
+    declare _lprm2flux_dL 0
+    if($?4) { if(is_vector($4)) {if(dimen($4)==dimen(_lprm2flux_z)) {set _lprm2flux_dL = $4}} \
+              else {if($4>0) {set _lprm2flux_dL = _lprm2flux_z*0.0+$4}} }
+    if(dimen(_lprm2flux_dL)==0) { 
+        define _lprm2flux_verbose $verbose verbose 0
+        !echo "\# lumdist " > ".lprm2flux.lumdist.tmp"
+        do _lprm2flux_i=0,dimen(_lprm2flux_z)-1 {
+            if(_lprm2flux_z[$_lprm2flux_i]>0.0) {
+                !lumdist -simple $(_lprm2flux_z[$_lprm2flux_i]) >> ".lprm2flux.lumdist.tmp"
+            } else {
+                !echo "0.0" >> ".lprm2flux.lumdist.tmp"
+            }
+        }
+        data ".lprm2flux.lumdist.tmp" read {_lprm2flux_dL 1} verbose $_lprm2flux_verbose
+        !rm ".lprm2flux.lumdist.tmp"
+    }
+    set _lprm2flux_i=0,dimen(_lprm2flux_z)-1
+    set _lprm2flux_i=_lprm2flux_i if(_lprm2flux_z>0.0)
+    set _lprm2flux_f = _lprm2flux_L * 0.0
+    set _lprm2flux_f[_lprm2flux_i] = _lprm2flux_L[_lprm2flux_i] / 3.25e7 / _lprm2flux_dL[_lprm2flux_i]**2 * _lprm2flux_nu[_lprm2flux_i]**2 * (1.0+_lprm2flux_z[_lprm2flux_i])
+    if($verbose&&is_vector(LineLPrm)){
+        print 'astroSfig::convert_lprm2flux: Warning! Overwriting LineLPrm (backuped existing LineLPrm as LineLPrm_backup\n' {} 
+        set LineLPrm_backup = LineLPrm
+    }
+    if($verbose&&is_vector(LineFlux)){
+        print 'astroSfig::convert_lprm2flux: Warning! Overwriting LineFlux (backuped existing LineFlux as LineFlux_backup\n' {} 
+        set LineFlux_backup = LineFlux
+    }
+    set LineLPrm = _lprm2flux_L
+    set LineFlux = _lprm2flux_f
+    set lumdist = _lprm2flux_dL
+    set $0 = LineFlux
+    return
+
+convert_flux2lumi 03
+    # convert flux [mJy] to luminosity [Lsun]
+    if($?1==0||$?2==0){print 'Usage: set lumi = convert_flux2lumi(z,flux_mJy[,lumdist])' {}
+                       print ' => output: Luminosity in unit of Lsun\n' {} return}
+    set _lprm2flux_z = $1
+    set _lprm2flux_fff = $2
+    if(sum(_lprm2flux_z<=0)>0) {print 'Error! Input redshift is non-positive!\n' {} return}
+    declare _lprm2flux_dL 0
+    if($?4) { if(is_vector($3)) {if(dimen($3)==dimen(_lprm2flux_z)) {set _lprm2flux_dL = $3}} \
+              else {if($3>0) {set _lprm2flux_dL = _lprm2flux_z*0.0+$3}} }
+    if(dimen(_lprm2flux_dL)==0) { 
+        define _lprm2flux_verbose $verbose verbose 0
+        !echo "\# lumdist " > ".lprm2flux.lumdist.tmp"
+        do _lprm2flux_i=0,dimen(_lprm2flux_z)-1 {
+        !lumdist -simple $(_lprm2flux_z[$_lprm2flux_i]) >> ".lprm2flux.lumdist.tmp"
+        }
+        data ".lprm2flux.lumdist.tmp" read {_lprm2flux_dL 1} verbose $_lprm2flux_verbose
+        !rm ".lprm2flux.lumdist.tmp"
+    }
+    set _lprm2flux_LLL = _lprm2flux_fff * 1e-26 * 4 * pi * (_lprm2flux_dL*1e6*3.085677e18)**2 / (1.0+_lprm2flux_z) # erg s-1 Hz-1
+    set _lprm2flux_LLLsun = _lprm2flux_LLL / 3.839e33 # Lsun Hz-1
+    if($verbose){
+        if($?print_noheader) {
+            define prev_print_noheader $print_noheader
+        } else {
+            define prev_print_noheader 0
+        }
+        define print_noheader 1
+        print 'flux = %e [mJy]' {_lprm2flux_fff}
+        print 'lumdist = %e [Mpc]' {_lprm2flux_dL}
+        print 'luminosity = %e [erg s-1 Hz-1]' {_lprm2flux_LLL}
+        print 'luminosity = %e [Lsun]' {_lprm2flux_LLLsun}
+        define print_noheader $prev_print_noheader
+    }
+    set $0 = _lprm2flux_LLLsun
+    return
+
+convert_MAB2mAB 02
+    # convert MAB to mAB 
+    # mAB - MAB = 5 * lg(dL_pc/10)
+    if($?1==0||$?2==0){print 'Usage: set mAB = convert_MAB2mAB(z,MAB[,lumdist])' {}
+                       print ' => input: absolute AB magnitude; output: apparent AB magnitude\n' {} return}
+    set _MAB2mAB_z = float($1)
+    set _MAB2mAB_absmag = float($2)
+    if(sum(_MAB2mAB_z<=0)>0) {print 'Error! Input redshift is non-positive!\n' {} return}
+    declare _MAB2mAB_dL 0
+    if($?4) { if(is_vector($3)) {if(dimen($3)==dimen(_MAB2mAB_z)) {set _MAB2mAB_dL = $3}} \
+              else {if($3>0) {set _MAB2mAB_dL = _MAB2mAB_z*0.0+$3}} }
+    if(dimen(_MAB2mAB_dL)==0) { 
+        define _MAB2mAB_verbose $verbose verbose 0
+        !echo "\# lumdist " > ".MAB2mAB.lumdist.tmp"
+        do _MAB2mAB_i=0,dimen(_MAB2mAB_z)-1 {
+        !lumdist -simple $(_MAB2mAB_z[$_MAB2mAB_i]) >> ".MAB2mAB.lumdist.tmp"
+        }
+        data ".MAB2mAB.lumdist.tmp" read {_MAB2mAB_dL 1} verbose $_MAB2mAB_verbose
+        !rm ".MAB2mAB.lumdist.tmp"
+    }
+    set _MAB2mAB_appmag = _MAB2mAB_absmag + 5.0 * lg(_MAB2mAB_dL*1e6 / 10) # 1e6 converts Mpc to pc
+    if($verbose){
+        if($?print_noheader) {
+            define prev_print_noheader $print_noheader
+        } else {
+            define prev_print_noheader 0
+        }
+        define print_noheader 1
+        print 'MAB = %g [absolute magnitude]' {_MAB2mAB_absmag}
+        print 'mAB = %g [apparent magnitude]' {_MAB2mAB_appmag}
+        print 'dL = %e [Mpc]' {_MAB2mAB_dL}
+        define print_noheader $prev_print_noheader
+    }
+    set $0 = _MAB2mAB_appmag
+    return
+
+convert_MAB2mJy 02
+    # convert MAB to mJy 
+    # mAB - MAB = 5 * lg(dL_pc/10)
+    if($?1==0||$?2==0){print 'Usage: set flux_mJy = convert_MAB2mJy(z,MAB[,lumdist])' {}
+                       print ' => input: absolute AB magnitude; output: flux in units of mJy.\n' {} return}
+    set _MAB2mJy_z = float($1)
+    set _MAB2mJy_absmag = float($2)
+    if(sum(_MAB2mJy_z<=0)>0) {print 'Error! Input redshift is non-positive!\n' {} return}
+    declare _MAB2mJy_dL 0
+    if($?4) { if(is_vector($3)) {if(dimen($3)==dimen(_MAB2mJy_z)) {set _MAB2mJy_dL = $3}} \
+              else {if($3>0) {set _MAB2mJy_dL = _MAB2mJy_z*0.0+$3}} }
+    if(dimen(_MAB2mJy_dL)==0) { 
+        define _MAB2mJy_verbose $verbose verbose 0
+        !echo "\# lumdist " > ".MAB2mJy.lumdist.tmp"
+        do _MAB2mJy_i=0,dimen(_MAB2mJy_z)-1 {
+        !lumdist -simple $(_MAB2mJy_z[$_MAB2mJy_i]) >> ".MAB2mJy.lumdist.tmp"
+        }
+        data ".MAB2mJy.lumdist.tmp" read {_MAB2mJy_dL 1} verbose $_MAB2mJy_verbose
+        !rm ".MAB2mJy.lumdist.tmp"
+    }
+    set _MAB2mJy_appmag = _MAB2mJy_absmag + 5.0 * lg(_MAB2mJy_dL*1e6 / 10) # 1e6 converts Mpc to pc
+    set _MAB2mJy_flux = 10**(_MAB2mJy_appmag / (-2.5)) * 3630.780548 * 1e3 # mJy
+    if($verbose){
+        if($?print_noheader) {
+            define prev_print_noheader $print_noheader
+        } else {
+            define prev_print_noheader 0
+        }
+        define print_noheader 1
+        print 'MAB = %g [absolute magnitude]' {_MAB2mJy_absmag}
+        print 'mAB = %g [apparent magnitude]' {_MAB2mJy_appmag}
+        print 'flux = %g [mJy]' {_MAB2mJy_flux}
+        print 'dL = %e [Mpc]' {_MAB2mJy_dL}
+        define print_noheader $prev_print_noheader
+    }
+    set $0 = _MAB2mJy_appmag
+    return
+    
+    
+
+convert_GHz2kms 02
+    # 
+    if($?1==0||$?2==0){print 'Usage: convert_GHz2kms GHz0 GHz => output: kms\n' {} return}
+    set _GHz2kms_GHz0 = $1
+    set _GHz2kms_GHz = $2
+    set _GHz2kms_kms = (_GHz2kms_GHz)/(_GHz2kms_GHz0)*2.99792458e5
+    echo "convert_GHz2kms: "$(_GHz2kms_GHz) GHz at $(_GHz2kms_GHz0) GHz is $(_GHz2kms_kms) km/s
+    set $0 = _GHz2kms_kms
+
+convert_MJysr2Jypixel 02
+    #<20170919># 
+    if($?1==0||$?2==0){print 'Usage: convert_MJysr2Jypixel flux_MJysr pixsc_arcsec => output: XXX_Jy\n' {} return}
+    set _MJysr2Jy_MJysr = $1
+    set _MJysr2Jy_Pixsc = $2
+    set _MJysr2Jy_Jysr = _MJysr2Jy_MJysr * 1e6
+    set _MJysr2Jy_Jy = _MJysr2Jy_Jysr * (_MJysr2Jy_Pixsc/3600.0/180.0*pi)**2
+    echo "convert_MJysr2Jypixel: "$(_MJysr2Jy_MJysr)" MJy/sr is "$(_MJysr2Jy_Jy)" Jy*pixel."
+    set $0 = _MJysr2Jy_Jy
+
+calc_Gladders2013_CSFRD 03
+    # input z
+    # input arg2 T0 -- an age parameter in unit of Gyr
+    # input arg3 tau -- an age width parameter in unit of Gyr
+    # output cosmic SFR Density, in Salpeter IMF
+    # paper: http://adsabs.harvard.edu/abs/2013ApJ...770...64G  Eq(1) Sec2.1
+    # example: set CSFRD = calc_Gladders2013_CSFRD(z,1.64,0.66)
+    # 20170312 -- same as "calc_Abramson2016_CSFRD"
+    set _cosmic_z = float($1)
+    !rm .cosmic.comoving.distance.tmp 2>/dev/null
+    do _cosmic_j=0,dimen(_cosmic_z)-1 {
+        #if($verbose) {echo Computing lumdist $(_cosmic_z[$_cosmic_j]) -verbose}
+        !lumdist $(_cosmic_z[$_cosmic_j]) -verbose | grep 'lumdist t_age=' | sed -e 's/=/ /g' >> .cosmic.comoving.distance.tmp
+    }
+    if(is_file(.cosmic.comoving.distance.tmp)) {
+        verbose 0
+        data .cosmic.comoving.distance.tmp read {_cosmic_t_age 3} # Gyr
+        verbose 1
+    } else { print 'Error! Failed to run lumdist!\n' {} return }
+    set Gladders2013_t0 = 1.64 # Gyr
+    set Gladders2013_tau = 0.66 # Gyr
+    if($?2) {set Gladders2013_t0 = float($2)}
+    if($?3) {set Gladders2013_tau = float($3)}
+    set Gladders2013_SFR_1 = 1.0/(_cosmic_t_age*sqrt(2*pi*Gladders2013_tau**2))
+    set Gladders2013_SFR_2 = exp(-(ln(_cosmic_t_age)-Gladders2013_t0)**2/(2*Gladders2013_tau**2))
+    set _cosmic_SFR = Gladders2013_SFR_1 * Gladders2013_SFR_2
+    set $0 = _cosmic_SFR
+    return
+
+calc_Abramson2016_CSFRD 03
+    # input z
+    # input arg2 T0 -- an age parameter in unit of Gyr
+    # input arg3 tau -- an age width parameter in unit of Gyr
+    # output cosmic SFR Density, in Salpeter IMF
+    # paper: Abramson - 2016 - lognormalcy Rethinking Quenching SF-MS and More - 1604.00016.pdf  Eq.(1)
+    # example: set CSFRD = calc_Abramson2016_CSFRD(z,1.64,0.66)
+    set _cosmic_z = float($1)
+    !rm .cosmic.comoving.distance.tmp 2>/dev/null
+    do _cosmic_j=0,dimen(_cosmic_z)-1 {
+        #if($verbose) {echo Computing lumdist $(_cosmic_z[$_cosmic_j]) -verbose}
+        !lumdist $(_cosmic_z[$_cosmic_j]) -verbose | grep 'lumdist t_age=' | sed -e 's/=/ /g' >> .cosmic.comoving.distance.tmp
+    }
+    if(is_file(.cosmic.comoving.distance.tmp)) {
+        verbose 0
+        data .cosmic.comoving.distance.tmp read {_cosmic_t_age 3} # Gyr
+        verbose 1
+    } else { print 'Error! Failed to run lumdist!\n' {} return }
+    set Abramson2016_t0 = 1.64 # Gyr
+    set Abramson2016_tau = 0.66 # Gyr
+    if($?2) {set Abramson2016_t0 = float($2)}
+    if($?3) {set Abramson2016_tau = float($3)}
+    set Abramson2016_SFR_1 = 1.0/(_cosmic_t_age*sqrt(2*pi*Abramson2016_tau**2))
+    set Abramson2016_SFR_2 = exp(-(ln(_cosmic_t_age)-Abramson2016_t0)**2/(2*Abramson2016_tau**2))
+    set _cosmic_SFR = Abramson2016_SFR_1 * Abramson2016_SFR_2
+    set $0 = _cosmic_SFR
+    return
+
+calc_MadauDickinson2014_CSFRD_old 01
+    # input z
+    # output cosmic SFR Density, in Salpeter IMF
+    # ref: https://ned.ipac.caltech.edu/level5/March14/Madau/Madau5.html#Table%201 Eq(15)
+    if($?1==0){print 'Usage: set CSFRD = calc_MadauDickinson2014_CSFRD(z)\n' {} return}
+    set _cosmic_z = float($1)
+    set _cosmic_SFR = 0.015 * (1+_cosmic_z)**2.7 / (1.0 + ((1+_cosmic_z)/2.9)**5.6 )
+    set $0 = _cosmic_SFR
+    return
+
+calc_MadauDickinson2014_CSFRD 04
+    # input z
+    # output cosmic SFR Density, in Salpeter IMF
+    # ref: https://ned.ipac.caltech.edu/level5/March14/Madau/Madau5.html#Table%201 Eq(15)
+    if($?1==0){print 'Usage: set CSFRD = calc_MadauDickinson2014_CSFRD(z)\n' {} return}
+    set MadauDickinson2014_z = float($1)
+    set MadauDickinson2014_a = 2.7
+    set MadauDickinson2014_b = 2.9
+    set MadauDickinson2014_c = 5.6
+    if($?2) {set MadauDickinson2014_a = float($2)}
+    if($?3) {set MadauDickinson2014_b = float($3)}
+    if($?4) {set MadauDickinson2014_c = float($4)}
+    set MadauDickinson2014_SFR = 0.015 * (1+MadauDickinson2014_z)**MadauDickinson2014_a / (1.0 + ((1+MadauDickinson2014_z)/MadauDickinson2014_b)**MadauDickinson2014_c )
+    set $0 = MadauDickinson2014_SFR
+    return
+
+calc_Liu2017_CSFRD 04
+    # input z
+    # output cosmic SFR Density, in Chabrier IMF
+    # ref: https://ned.ipac.caltech.edu/level5/March14/Madau/Madau5.html#Table%201 Eq(15)
+    if($?1==0){print 'Usage: set CSFRD = calc_Liu2017_CSFRD(z)\n' {} return}
+    set Liu2017_z = float($1)
+    set Liu2017_a = 3.45
+    set Liu2017_b = 2.70
+    set Liu2017_c = 5.60
+    if($?2) {set Liu2017_a = float($2)}
+    if($?3) {set Liu2017_b = float($3)}
+    if($?4) {set Liu2017_c = float($4)}
+    set Liu2017_SFR = 0.0071 * (1+Liu2017_z)**Liu2017_a / (1.0 + ((1+Liu2017_z)/Liu2017_b)**Liu2017_c )
+    set $0 = Liu2017_SFR
+    return
+
+calc_Liu2017_CSFRD_lognormal 04
+    # input z
+    # input arg2 T0 -- an age parameter in unit of Gyr
+    # input arg3 tau -- an age width parameter in unit of Gyr
+    # output cosmic SFR Density, in Chabrier IMF
+    # paper: Abramson - 2016 - lognormalcy Rethinking Quenching SF-MS and More - 1604.00016.pdf  Eq.(1)
+    if($?1==0){print 'Usage: set CSFRD = calc_Liu2017_CSFRD_lognormal(z)\n' {} return}
+    set _cosmic_z = float($1)
+    !rm .cosmic.comoving.distance.tmp 2>/dev/null
+    do _cosmic_j=0,dimen(_cosmic_z)-1 {
+        #if($verbose) {echo Computing lumdist $(_cosmic_z[$_cosmic_j]) -verbose}
+        !lumdist $(_cosmic_z[$_cosmic_j]) -verbose | grep 'lumdist t_age=' | sed -e 's/=/ /g' >> .cosmic.comoving.distance.tmp
+    }
+    if(is_file(.cosmic.comoving.distance.tmp)) {
+        verbose 0
+        data .cosmic.comoving.distance.tmp read {_cosmic_t_age 3} # Gyr
+        verbose 1
+    } else { print 'Error! Failed to run lumdist!\n' {} return }
+    set Liu2017_t0 = 1.60 # Gyr
+    set Liu2017_tau = 0.70 # Gyr
+    if($?2) {set Liu2017_t0 = float($2)}
+    if($?3) {set Liu2017_tau = float($3)}
+    set Liu2017_SFR_1 = 0.624/(_cosmic_t_age*sqrt(2*pi*Liu2017_tau**2))
+    set Liu2017_SFR_2 = exp(-(ln(_cosmic_t_age)-Liu2017_t0)**2/(2*Liu2017_tau**2))
+    set _cosmic_SFR = Liu2017_SFR_1 * Liu2017_SFR_2
+    set $0 = _cosmic_SFR
+    return
+
+calc_comoving_volume 03
+    # http://www.astro.ufl.edu/~guzman/ast7939/projects/project01.html Eq(27)
+    # https://ned.ipac.caltech.edu/level5/Hogg/Hogg9.html Eq(27)
+    # usage: set dVc = calc_comoving_volume(z_bin_center,z_bin_wdith,survey_area_square_arcmin)
+    # usage: set dVc = calc_comoving_volume($((1.5+2.5)/2),$(2.5-1.5),165)
+    #        set dVc = calc_comoving_volume($((2.5+4.0)/2),$(4.0-2.5),165)
+    #        set dVc = calc_comoving_volume($((5.0+3.5)/2),$(5.0-3.5),165) # http://arxiv.org/pdf/0901.3341.pdf
+    #        set dVc = calc_comoving_volume(5.7,0.1,320) # http://arxiv.org/pdf/astro-ph/0510672.pdf
+    #        set dVc = calc_comoving_volume(4.5,0.5,134)
+    # 
+    if(!$?3) {
+        print 'Usage: set dVc = calc_comoving_volume(z_bin_center,z_bin_wdith,survey_area_square_arcmin)\n' {}
+        return
+    }
+    # 
+    set _cosmic_H0 = 73.0
+    set _cosmic_OmeM = 0.27
+    set _cosmic_Omek = 0
+    set _cosmic_OmeL = 0.73
+    set _cosmic_z = float($1)
+    set _cosmic_dz = float($2)
+    set _cosmic_area = float($3) # arcmin^2
+    # 
+    if(is_file(".cosmic.comoving.distance.tmp")) {
+        !rm ".cosmic.comoving.distance.tmp"
+    }
+    #set _cosmic_DL = 15301.8 #<TODO># dzliu tool lumdist
+    #set _cosmic_DH = 5100.6 #<TODO># dzliu tool lumdist
+    #set _cosmic_DA = 1700.2 #<TODO># dzliu tool lumdist
+    # 
+    # Method 1 -- rough assume
+    # 
+    ### set _cosmic_Sz = _cosmic_z
+    ### set _cosmic_Ez = sqrt(_cosmic_OmeM*(1+_cosmic_Sz)**3+_cosmic_Omek*(1+_cosmic_Sz)**2+_cosmic_OmeL)
+    ### do _cosmic_j=0,dimen(_cosmic_Sz)-1 {
+    ###     !lumdist $(_cosmic_Sz[$_cosmic_j]) -h0 $(_cosmic_H0) -verbose | grep 'lumdist d_L=' | sed -e 's/=/ /g' >> .cosmic.comoving.distance.tmp
+    ### }
+    ### if(is_file(.cosmic.comoving.distance.tmp)) {
+    ###     data .cosmic.comoving.distance.tmp read {_cosmic_DL 3 _cosmic_DC 6 _cosmic_DA 9}
+    ### } else { print 'Error! Failed to run lumdist!\n' {} return }
+    ### set _cosmic_DH = 2.997902458e5/_cosmic_H0
+    ### set _cosmic_Az = _cosmic_DA**2*(1+_cosmic_Sz)**2*(_cosmic_area)*3600/4.25451703e10 # Mpc^2 #<TODO># GOODS-North (165) (11*17)
+    ### set _cosmic_Vz = _cosmic_DH/_cosmic_Ez * _cosmic_Az
+    ### set _cosmic_Vc = _cosmic_Vz * _cosmic_dz # Mpc^3
+    ### if($verbose) {print {_cosmic_z _cosmic_dz _cosmic_Az _cosmic_Vc}} # _cosmic_DA _cosmic_DC _cosmic_DL _cosmic_Ez
+    # 
+    # Method 2 -- fine grid
+    # 
+    set dimen(_cosmic_Vc) = dimen(_cosmic_z)
+    do _cosmic_i=0,dimen(_cosmic_z)-1 {
+        if(_cosmic_dz[$_cosmic_i]>0) {
+            set _cosmic_Sz = _cosmic_z[$_cosmic_i]-0.5*_cosmic_dz[$_cosmic_i],_cosmic_z[$_cosmic_i]+0.5*_cosmic_dz[$_cosmic_i],$(_cosmic_dz[$_cosmic_i]/10.)
+            set _cosmic_Ez = sqrt(_cosmic_OmeM*(1+_cosmic_Sz)**3+_cosmic_Omek*(1+_cosmic_Sz)**2+_cosmic_OmeL)
+            do _cosmic_j=0,dimen(_cosmic_Sz)-1 {
+                !lumdist -verbose $(_cosmic_Sz[$_cosmic_j]) | grep 'lumdist d_L=' | sed -e 's/=/ /g' >> .cosmic.comoving.distance.tmp
+            }
+            if(is_file(.cosmic.comoving.distance.tmp)) {
+                verbose 0
+                data .cosmic.comoving.distance.tmp read {_cosmic_DL 3 _cosmic_DC 6 _cosmic_DA 9}
+                !rm .cosmic.comoving.distance.tmp
+                verbose 1
+            } else {
+                print 'Error! Failed to run lumdist!\n' {}
+                return
+            }
+            ##define aaa ?
+            set _cosmic_DH = 2.997902458e5/_cosmic_H0
+            set _cosmic_Az = _cosmic_DA**2*(1+_cosmic_Sz)**2*(_cosmic_area)*3600/4.25451703e10 # Mpc^2 #<TODO># GOODS-North (165) (11*17)
+            set _cosmic_Vz = _cosmic_DH/_cosmic_Ez * _cosmic_Az * $(_cosmic_dz[$_cosmic_i]/10.)
+            set _cosmic_Vc[$_cosmic_i] = sum(_cosmic_Vz) # Mpc^3
+        } else {
+            # if input zero redshift range
+            set _cosmic_Vc[$_cosmic_i] = 0.0 # Mpc^3
+        }
+        
+        #if(_cosmic_z[$_cosmic_i]==2.5) {
+        #    print {_cosmic_Sz _cosmic_Az _cosmic_Vz} # _cosmic_DA _cosmic_DC _cosmic_DL _cosmic_Ez
+        #    define aaa ?
+        #}
+    }
+    #if($verbose) {print {_cosmic_z _cosmic_dz _cosmic_Vc _cosmic_Vz _cosmic_Az _cosmic_DH}} # _cosmic_DA _cosmic_DH _cosmic_DL _cosmic_Ez
+    # 
+    # Examples
+    # 
+    # dVc = 5.267e+05 Mpc**3 at z=2.00 dz=1.0 area=165
+    # dVc = 7.880e+05 Mpc**3 at z=3.25 dz=1.5 area=165
+    # dVc = 7.212e+05 Mpc**3 at z=4.25 dz=1.5 area=165 # http://arxiv.org/pdf/0901.3341.pdf got 0.725e6
+    # dVc = 7.979e+04 Mpc**3 at z=5.7 dz=0.1 area=320 # http://arxiv.org/pdf/astro-ph/0510672.pdf got ~8e4 Mpc3
+    set $0 = _cosmic_Vc
+    return
+
+calc_cosmic_age 04
+    # use lumdist (dzliu's software) to compute cosmic age
+    if($?1==0) {
+        print 'Usage: set t = calc_cosmic_age(z)\n' {} 
+        print '       set t = calc_cosmic_age(z,67.74,0.3089,0.6911) \# Planck Collaboration, et al., 2016, A\&A, 594, A13\n' {} 
+        return
+    }
+    set _calc_cosmic_age_z = float($1)
+    !rm .cosmic.comoving.distance.tmp 2>/dev/null
+    define _calc_cosmic_age_j 0
+    do _calc_cosmic_age_j=0,dimen(_calc_cosmic_age_z)-1 {
+        #if($verbose) {
+        #    echo lumdist $(_calc_cosmic_age_z[$_calc_cosmic_age_j])
+        #}
+        if($?4) {
+            #e.g.
+            !lumdist -h0 $2 -matter $3 -vaccum $4 $(_calc_cosmic_age_z[$_calc_cosmic_age_j]) -verbose | grep 'lumdist t_age=' | sed -e 's/=/ /g' >> .cosmic.comoving.distance.tmp
+        } else {
+            !lumdist $(_calc_cosmic_age_z[$_calc_cosmic_age_j]) -verbose | grep 'lumdist t_age=' | sed -e 's/=/ /g' >> .cosmic.comoving.distance.tmp
+        }
+    }
+    if(is_file(.cosmic.comoving.distance.tmp)) {
+        verbose 0
+        data .cosmic.comoving.distance.tmp read {_calc_cosmic_age_age 3} # Gyr
+        verbose 1
+    } else { print 'Error! Failed to run lumdist!\n' {} return }
+    set $0 = _calc_cosmic_age_age
+    return
+
+calc_cosmic_lookbacktime 01
+    # use lumdist (dzliu's software) to compute cosmic age
+    if($?1==0) {print 'Usage: set t = calc_cosmic_lookbacktime(z)\n' {} return}
+    set _calc_cosmic_age_z = float($1)
+    !rm .cosmic.comoving.distance.tmp 2>/dev/null
+    define _calc_cosmic_age_j 0
+    do _calc_cosmic_age_j=0,dimen(_calc_cosmic_age_z)-1 {
+        #echo lumdist $(_calc_cosmic_age_z[$_calc_cosmic_age_j])
+        !lumdist $(_calc_cosmic_age_z[$_calc_cosmic_age_j]) -verbose | grep 'lumdist t_age=' | sed -e 's/[=,]/ /g' >> .cosmic.comoving.distance.tmp
+    }
+    if(is_file(.cosmic.comoving.distance.tmp)) {
+        verbose 0
+        data .cosmic.comoving.distance.tmp read {_calc_cosmic_age_lookbacktime 6} # Gyr
+        verbose 1
+    } else { print 'Error! Failed to run lumdist!\n' {} return }
+    set $0 = _calc_cosmic_age_lookbacktime
+    return
+
+calc_lumdist 01
+    # use spline to calc lumdist
+    set _calc_lumdist_z = 0.00,10.00,0.25
+    set _calc_lumdist_dL = {0.00000 1215.03 2745.16 4510.80 6452.30 8527.46 10706.9 12970.0 15301.8 17691.5 \
+                            20130.7 22613.1 25133.5 27687.9 30272.8 32885.3 35523.2 38184.2 40866.7 43569.1 \
+                            46289.9 49028.1 51782.5 54552.0 57336.0 60133.5 62943.8 65766.3 68600.4 71445.5 \
+                            74301.2 77166.8 80042.1 82926.6 85819.9 88721.7 91631.6 94549.3 97474.6 100407.0 \
+                            103347.0 }
+    # print '%10.1f %12.3f\n' {_calc_lumdist_z _calc_lumdist_dL}
+    set _calc_lumdist_iz = $1
+    spline _calc_lumdist_z _calc_lumdist_dL _calc_lumdist_iz _calc_lumdist_oL 
+    set $0 = _calc_lumdist_oL
+    return
+
+calc_angdist 01
+    # use spline to calc angular distance
+    set _calc_angdist_z = 0.00,10.00,0.25
+    set _calc_angdist_dL = {0.00000 777.622 1220.07 1472.91 1613.07 1684.44 1713.11 1715.04 1700.20 1674.93 \
+                            1643.33 1608.04 1570.85 1532.89 1494.95 1457.52 1420.93 1385.37 1350.97 1317.78 \
+                            1285.83 1255.12 1225.62 1197.30 1170.12 1144.04 1119.00 1094.96 1071.88 1049.70 \
+                            1028.39 1007.89 988.174 969.193 950.913 933.298 916.316 899.934 884.123 868.855 \
+                            854.105 }
+    # print '%10.1f %12.3f\n' {_calc_angdist_z _calc_angdist_dL}
+    set _calc_angdist_iz = $1
+    spline _calc_angdist_z _calc_angdist_dL _calc_angdist_iz _calc_angdist_oL 
+    set $0 = _calc_angdist_oL
+    return
+
+calc_sint 06
+    # calc any 1D numerical integration
+    if($?1==0||$?2==0) {print 'usage: set sint = calc_sint(x,y[,x1,x2,step])' {} return}
+    set _csint_x = $1
+    set _csint_y = $2
+    vecminmax _csint_x _csint_xMIN _csint_xMAX
+    if($?3) {set _csint_x1 = $3} else {set _csint_x1 = $_csint_xMIN}
+    if($?4) {set _csint_x2 = $4} else {set _csint_x2 = $_csint_xMAX}
+    if($?5) {set _csint_dx = $5} else {set _csint_dx = (_csint_x2-_csint_x1)/1000.0}
+    set _csint_xgo = $(_csint_x1),$(_csint_x2),$(_csint_dx)
+    interp2 _csint_x _csint_y _csint_xgo _csint_ygo
+    set _csint_int = sum(_csint_ygo*_csint_dx) #/lg(exp(1.0))
+    set $0 = _csint_int
+
+calc_ltir 06
+    # calc Luminosity TIR
+    if($?1==0||$?2==0) {print 'usage: set ltir = calc_ltir(wave_um,flux_mJy,z[,w1_um,w2_um,step_GHz]) # [Lsun Mpc-2]' {} return}
+    # wave flux z
+    set _clir_w = $1 # um -- obs wave
+    set _clir_f = $2 # mJy -- obs flux 
+    if($?3){set _clir_z = $3 set _clir_dL = calc_lumdist(_clir_z)} else {set _clir_z=0.0 set _clir_dL=0.0}
+    set _clir_opz = 1.0+_clir_z # 
+    set _clir_vfv = _clir_f * 2.99792458e5 / _clir_w # mJy GHz -- monochromatic luminosity
+    set _clir_rsw = _clir_w / _clir_opz                # um -- restframe wavelength
+    set _clir_rsf = _clir_vfv / 2.99792458e5 * _clir_rsw # mJy -- restframe flux density
+    if($?4){set _clir_ww1 = $4} else {set _clir_ww1 = 8.0} # where to begin integration
+    if($?5){set _clir_ww2 = $5} else {set _clir_ww2 = 1000.0} # where to begin integration
+    if($?6){set _clir_itu = $6} else {set _clir_itu = 0.005} # -_clir_itu GHz interval [GHz]
+    set _clir_itv = lg(2.99792458e5/_clir_ww1),lg(2.99792458e5/_clir_ww2),-(_clir_itu) # -_clir_itu GHz interval
+    set _clir_itv = 10**_clir_itv # GHz
+    set _clir_itw = 2.99792458e5/_clir_itv # um
+    set _clir_rsw_int = 2.99792458e5/_clir_itv # um
+    ##spline _clir_rsw _clir_rsf _clir_itw _clir_itf
+    ##spline _clir_rsw _clir_vfv _clir_rsw_int _clir_vfv_int
+    ##echo $(sum(_clir_vfv_int))
+    ##echo $(sum(_clir_itf*_clir_itv))
+    spline _clir_rsw _clir_vfv _clir_rsw_int _clir_vfv_int
+    set _clir_int_lumin = sum(_clir_vfv_int)*_clir_itu/lg(exp(1.0)) # integrated mJy GHz
+    # echo calc_ltir: L_IR_8_1000 = $(_clir_int_lumin) mJy GHz
+    set _clir_int_lumin = _clir_int_lumin / 40.31970 # integrated Lsun Mpc-2
+    if(_clir_dL>0) {
+        set _clir_int_lumin = _clir_int_lumin * 4*pi*_clir_dL**2
+        if($verbose) {echo calc_ltir: L_IR_$(_clir_ww1)_$(_clir_ww2) = $(_clir_int_lumin) Lsun}
+    } else {
+        if($verbose) {echo calc_ltir: L_IR_$(_clir_ww1)_$(_clir_ww2) = 4*pi*dL**2 * $(_clir_int_lumin) Lsun}
+    }
+    set $0 = _clir_int_lumin
+
+calc_L_IR 07
+    # calc Luminosity TIR
+    if($?1==0||$?2==0) {print 'usage: set L_IR_w1_w2 = calc_L_IR(wave_um,flux_mJy,z[,dL[,w1_um,w2_um[,step_GHz]]])' {} return}
+    # wave flux z
+    set _calc_L_IR_w = $1 # um -- obs wave
+    set _calc_L_IR_f = $2 # mJy -- obs flux 
+    if($?3){set _calc_L_IR_z = $3} else {set _calc_L_IR_z=0.0 set _calc_L_IR_dL=0.0}
+    if($?4){set _calc_L_IR_dL = $4} else {set _calc_L_IR_dL = calc_lumdist(_calc_L_IR_z)}
+    if(_calc_L_IR_dL<0) {set _calc_L_IR_dL = calc_lumdist(_calc_L_IR_z)}
+    set _calc_L_IR_opz = 1.0+_calc_L_IR_z # 
+    set _calc_L_IR_vfv = _calc_L_IR_f * 2.99792458e5 / _calc_L_IR_w # mJy GHz -- monochromatic luminosity
+    set _calc_L_IR_rsw = _calc_L_IR_w / _calc_L_IR_opz                # um -- restframe wavelength
+    set _calc_L_IR_rsf = _calc_L_IR_vfv / 2.99792458e5 * _calc_L_IR_rsw # mJy -- restframe flux density
+    if($?5){set _calc_L_IR_ww1 = $5} else {set _calc_L_IR_ww1 = 8.0} # where to begin integration
+    if($?6){set _calc_L_IR_ww2 = $6} else {set _calc_L_IR_ww2 = 1000.0} # where to begin integration
+    if($?7){set _calc_L_IR_itu = $7} else {set _calc_L_IR_itu = 0.005} # -_calc_L_IR_itu GHz interval [GHz]
+    set _calc_L_IR_itv = lg(2.99792458e5/_calc_L_IR_ww1),lg(2.99792458e5/_calc_L_IR_ww2),-(_calc_L_IR_itu) # -_calc_L_IR_itu GHz interval
+    set _calc_L_IR_itv = 10**_calc_L_IR_itv # GHz
+    set _calc_L_IR_itw = 2.99792458e5/_calc_L_IR_itv # um
+    set _calc_L_IR_rsw_int = 2.99792458e5/_calc_L_IR_itv # um
+    ##spline _calc_L_IR_rsw _calc_L_IR_rsf _calc_L_IR_itw _calc_L_IR_itf
+    ##spline _calc_L_IR_rsw _calc_L_IR_vfv _calc_L_IR_rsw_int _calc_L_IR_vfv_int
+    ##echo $(sum(_calc_L_IR_vfv_int))
+    ##echo $(sum(_calc_L_IR_itf*_calc_L_IR_itv))
+    spline _calc_L_IR_rsw _calc_L_IR_vfv _calc_L_IR_rsw_int _calc_L_IR_vfv_int
+    set _calc_L_IR_int_lumin = sum(_calc_L_IR_vfv_int)*_calc_L_IR_itu/lg(exp(1.0)) # integrated mJy GHz
+    set _calc_L_IR_int_lumin = _calc_L_IR_int_lumin / 40.31970 # integrated Lsun Mpc-2
+    if(_calc_L_IR_dL>0) {
+        set _calc_L_IR_int_lumin = _calc_L_IR_int_lumin * 4*pi*_calc_L_IR_dL**2
+        if($verbose) {echo "calc_L_IR:" L_IR_$(_calc_L_IR_ww1)_$(_calc_L_IR_ww2) = $(_calc_L_IR_int_lumin) Lsun}
+    } else {
+        # echo calc_ltir: L_IR_8_1000 = $(_calc_L_IR_int_lumin) mJy GHz
+        if($verbose) {echo "calc_L_IR:" L_IR_$(_calc_L_IR_ww1)_$(_calc_L_IR_ww2) = 4*pi*dL**2 * $(_calc_L_IR_int_lumin) Lsun}
+    }
+    set $0 = _calc_L_IR_int_lumin
+
+calc_line_z 07
+    # calc line redshift
+    # e.g. load astroSfig.sm calc_line_z oiii 88 freq0 # central observing frequency
+    # e.g. load astroSfig.sm calc_line_z oiii 88 freq1 freq2 # lower and upper observing frequency
+    # e.g. load astroSfig.sm calc_line_z oiii 88 ch1 ch2 chan_width freq_resol freq_centre 
+    # e.g. load astroSfig.sm calc_line_z oiii 88 73 106 128 0.015625 477.255823
+    if($?1==0||$?2==0||$?3==0){print 'Usage: set z = calc_line_z(oiii,88,ch1,ch2,chan_width,freq_resol,freq_centre) => output: z\n' {} return}
+    set _line_freq_res = calc_line_freq($1,$2)
+    if($?4==0) { set _line_freq_obs = $3 } else { set _line_freq_obs = 0.5*(($3)+($4)) }
+    if($?5!=0&&$?6!=0&&$?7!=0) { set _line_chan_obs = (0.5*(($3)+($4))) set _line_chan_cen = (($5)/2)+1
+        set _line_freq_resol = $6
+        set _line_velo_resol = _line_freq_resol/($7)*2.99792458e5
+        set _line_velo_width = float(($4)-($3)+1.0)*(_line_velo_resol)
+        set _line_freq_width = float(($4)-($3)+1.0)*(_line_freq_resol)
+        set _line_freq_obs = float(_line_chan_obs-_line_chan_cen)*($6) + ($7)
+        echo astroSfig::calc_line_z: velocity resolution = $(_line_velo_resol) km/s
+        echo astroSfig::calc_line_z: frequency resolution = $(_line_freq_resol) GHz
+        echo astroSfig::calc_line_z: line width (FWZM) = $(_line_velo_width) km/s
+        echo astroSfig::calc_line_z: freq width (FWZM) = $(_line_freq_width) GHz
+        # echo astroSfig::calc_line_z: observing channel of line center is $(_line_chan_obs) 
+    }
+    set _line_redshift = (_line_freq_res/_line_freq_obs) - 1.0
+    echo astroSfig::calc_line_z: observing frequency of line center is $(_line_freq_obs) GHz
+    echo astroSfig::calc_line_z: restframe frequency of line center is $(_line_freq_res) GHz
+    echo astroSfig::calc_line_z: z = $(sprintf('%0.7f',_line_redshift))
+    echo 
+    echo z = $(sprintf('%0.7f',_line_redshift))
+    echo 
+    return
+
+calc_line_chan 07
+    # calc line channels
+    # e.g. load astroSfig.sm calc_line_chan(oiii,88,z,linewidth,chan_width,freq_resol,freq_centre) # assuming chan_center = chan_width/2+1
+    # e.g. load astroSfig.sm calc_line_chan oiii 88 6.1037098 333.7093764 # --> frequency range
+    # e.g. load astroSfig.sm calc_line_chan oiii 88 6.1037098 333.7093764 128 0.015625 477.255823
+    # e.g. load astroSfig.sm calc_line_chan cii 158 6.1037098 333.7093764 128 0.01562395 267.3126003
+    if($?1==0||$?2==0||$?3==0||$?4==0){print 'Usage: set range = calc_line_chan(oiii,88,z,fwhm,chan_width,freq_resol,freq_centre) => output: line_channel_range\n' {} return}
+    set _line_freq_obs = calc_line_freq($1,$2,$3)
+    set _line_velo_width = $4
+    set _line_freq_lower = _line_freq_obs - (_line_velo_width/2.0/2.99792458e5)*(_line_freq_obs)
+    set _line_freq_upper = _line_freq_obs + (_line_velo_width/2.0/2.99792458e5)*(_line_freq_obs)
+    echo astroSfig::calc_line_chan: line frequency center $(_line_freq_obs) GHz
+    echo astroSfig::calc_line_chan: line frequency range $(_line_freq_lower) $(_line_freq_upper) GHz
+    if($?5!=0&&$?6!=0&&$?7!=0) { set _line_chan_cen = (($5)/2)+1
+        set _line_freq_resol = $6
+        set _line_velo_resol = _line_freq_resol/($7)*2.99792458e5
+        set _line_chan_lower = ((_line_freq_lower-($7))/_line_freq_resol)+0.5 + _line_chan_cen # the 0.5 channel considers half channel 
+        set _line_chan_upper = ((_line_freq_upper-($7))/_line_freq_resol)-0.5 + _line_chan_cen
+        set _line_chan_width = ((_line_chan_upper)-(_line_chan_lower)+1.0) # here 1.0 considers two half channel
+        set _line_chan_obs = 0.5*(_line_chan_lower+_line_chan_upper)
+        echo astroSfig::calc_line_chan: obs- channel center $(_line_chan_cen)
+        echo astroSfig::calc_line_chan: line channel center $(_line_chan_obs)
+        echo astroSfig::calc_line_chan: line channel width $(_line_chan_width)
+        echo astroSfig::calc_line_chan: line channel range $(_line_chan_lower) $(_line_chan_upper)
+    }
+    return
+
+calc_line_freq 03
+    # calc line frequency in observing frame
+    if($?1==0||$?2==0) {
+        print 'Usage: set line_freq = calc_line_freq(line_name,line_J_up,line_z) => output: line_freq in GHz (at line_z, optional).\n' {} 
+        return
+    }
+    set _line_freq_cclf = 0.0 # GHz
+    if(is_vector($1)) {set _line_name_cclf = string($1)} else {set _line_name_cclf = '$1'}
+    if(is_vector($2)) {set _line_Jup_cclf = string($2)} else {set _line_Jup_cclf = '$2'}
+    if(dimen(_line_name_cclf)!=dimen(_line_Jup_cclf)) {
+        print 'Errot! The input line_name and line_J_up have different dimension!\n' {}
+        if($?0) {set $0 = _line_freq_cclf} return
+    }
+    if(_line_name_cclf=='CO'||_line_name_cclf=='co') {
+        if(_line_Jup_cclf=='1')  {set _line_freq_cclf = 115.2712018}
+        if(_line_Jup_cclf=='2')  {set _line_freq_cclf = 230.5380000}
+        if(_line_Jup_cclf=='3')  {set _line_freq_cclf = 345.7959899}
+        if(_line_Jup_cclf=='4')  {set _line_freq_cclf = 461.0407682}
+        if(_line_Jup_cclf=='5')  {set _line_freq_cclf = 576.2679305}
+        if(_line_Jup_cclf=='6')  {set _line_freq_cclf = 691.4730763}
+        if(_line_Jup_cclf=='7')  {set _line_freq_cclf = 806.6518060}
+        if(_line_Jup_cclf=='8')  {set _line_freq_cclf = 921.7997000}
+        if(_line_Jup_cclf=='9')  {set _line_freq_cclf = 1036.9123930}
+        if(_line_Jup_cclf=='10') {set _line_freq_cclf = 1151.9854520}
+        if(_line_Jup_cclf=='11') {set _line_freq_cclf = 1267.0144860}
+        if(_line_Jup_cclf=='12') {set _line_freq_cclf = 1381.9951050}
+        if(_line_Jup_cclf=='13') {set _line_freq_cclf = 1496.9229090}
+        if(_line_Jup_cclf=='14') {set _line_freq_cclf = 1611.7935180}
+        if(_line_Jup_cclf=='15') {set _line_freq_cclf = 1726.6025057}
+    }
+    if(_line_name_cclf=='HCN'||_line_name_cclf=='hcn') {
+        if(_line_Jup_cclf=='1')  {set _line_freq_cclf = 88.6316023}
+    }
+    if(_line_name_cclf=='OIII'||_line_name_cclf=='oiii') {
+        if(_line_Jup_cclf=='1'||_line_Jup_cclf=='88') {set _line_freq_cclf = 3393.00624}
+        if(_line_Jup_cclf=='2'||_line_Jup_cclf=='51') {set _line_freq_cclf = 5785.87959}
+    }
+    if(_line_name_cclf=='OI'||_line_name_cclf=='oi') {
+        if(_line_Jup_cclf=='1'||_line_Jup_cclf=='146') {set _line_freq_cclf = 2.99792458e5/145.5} #<TODO>#
+        if(_line_Jup_cclf=='2'||_line_Jup_cclf=='63') {set _line_freq_cclf = 2.99792458e5/63.18} #<TODO>#
+    }
+    if(_line_name_cclf=='CII'||_line_name_cclf=='cii') {
+        if(_line_Jup_cclf=='1'||_line_Jup_cclf=='158') {set _line_freq_cclf = 1900.53690}
+    }
+    if(_line_name_cclf=='CI'||_line_name_cclf=='ci') {
+        if(_line_Jup_cclf=='2'||_line_Jup_cclf=='2-1'||_line_Jup_cclf=='370'||_line_Jup_cclf=='3P2-3P1'||_line_Jup_cclf=='3p2-3p1') {set _line_freq_cclf = 809.34197}
+        if(_line_Jup_cclf=='1'||_line_Jup_cclf=='1-0'||_line_Jup_cclf=='609'||_line_Jup_cclf=='3P1-3P0'||_line_Jup_cclf=='3p1-3p0') {set _line_freq_cclf = 492.16065}
+    }
+    if(_line_name_cclf=='NII'||_line_name_cclf=='nii') {
+        if(_line_Jup_cclf=='2'||_line_Jup_cclf=='2-1'||_line_Jup_cclf=='122'||_line_Jup_cclf=='3P2-3P1'||_line_Jup_cclf=='3p2-3p1') {set _line_freq_cclf = 2459.38010}
+        if(_line_Jup_cclf=='1'||_line_Jup_cclf=='1-0'||_line_Jup_cclf=='205'||_line_Jup_cclf=='3P1-3P0'||_line_Jup_cclf=='3p1-3p0') {set _line_freq_cclf = 1461.13141}
+    }
+    if($?3) { set _line_z_cclf = $3
+        set _line_freq_cclf = _line_freq_cclf / (1.0+_line_z_cclf)
+    }
+    ##if($verbose&&is_vector(LineFreq)) {
+    ##    print 'astroSfig::calc_line_freq: Warning! Overwriting LineFreq (backuped existing LineFreq as LineFreq_backup\n' {} 
+    ##    set LineFreq_backup = LineFreq
+    ##}
+    ##set LineFreq = _line_freq_cclf
+    if($?0) {set $0 = _line_freq_cclf}
+    return
+
+calc_jvla_time 04
+    # calc jvla time on source to reach given LinePeak at observing LineFreq
+    # arg4 is the goal S/N
+    if($?1==0||$?2==0){print 'Usage: set oHour = calc_jvla_time(LineFreq,LineFlux,LineWidth,SNR) => output: OnSourceHour\n' {} return}
+    if($verbose&&is_vector(LineFreq)){
+        print 'astroSfig::calc_jvla_time: Warning! Overwriting LineFreq (backuped existing LineFreq as LineFreq_backup\n' {} 
+        set LineFreq_backup = LineFreq
+    }
+    if($verbose&&is_vector(LineFlux)){
+        print 'astroSfig::calc_jvla_time: Warning! Overwriting LineFlux (backuped existing LineFlux as LineFlux_backup\n' {} 
+        set LineFlux_backup = LineFlux
+    }
+    if($verbose&&is_vector(LineBand)){
+        print 'astroSfig::calc_jvla_time: Warning! Overwriting LineBand (backuped existing LineBand as LineBand_backup\n' {} 
+        set LineBand_backup = LineBand
+    }
+    set LineFreq = $1 # obs freq
+    set LineFlux = $2 # Jy km/s
+    set LineBand = 'unknown'
+    set LineBand = (LineFreq>0.058 && LineFreq<0.084) ? '4'  : LineBand
+    set LineBand = (LineFreq>0.23  && LineFreq<0.47)  ? 'P'  : LineBand
+    set LineBand = (LineFreq>1.00  && LineFreq<2.00)  ? 'L'  : LineBand
+    set LineBand = (LineFreq>2.00  && LineFreq<4.00)  ? 'S'  : LineBand
+    set LineBand = (LineFreq>4.00  && LineFreq<8.00)  ? 'C'  : LineBand
+    set LineBand = (LineFreq>8.00  && LineFreq<12.0)  ? 'X'  : LineBand
+    set LineBand = (LineFreq>12.0  && LineFreq<18.0)  ? 'Ku' : LineBand
+    set LineBand = (LineFreq>18.0  && LineFreq<26.5)  ? 'K'  : LineBand
+    set LineBand = (LineFreq>26.5  && LineFreq<40.0)  ? 'Ka' : LineBand
+    set LineBand = (LineFreq>40.0  && LineFreq<50.0)  ? 'Q'  : LineBand
+    if($?3) {set LineWidth = LineFreq * 0.0 + ($3) } else {
+             set LineWidth = LineFreq * 0.0 + 500.0 } # km/s
+    set JyK  =   0.0   # 5.62/eta_A (SEFD = 5.62*Tsys/eta_A = JyK*Tsys)
+                       # https://science.nrao.edu/facilities/vla/docs/manuals/oss/performance/sensitivity
+    set eta  =  1.00   # the correlator efficiency (~0.93 with the use of the 8-bit samplers)
+                       # https://science.nrao.edu/facilities/vla/docs/manuals/oss/performance/sensitivity
+    set Tsys =   0.0   # Tsys (SEFD = 5.62*Tsys/eta_A = JyK*Tsys)
+                       # https://science.nrao.edu/facilities/vla/docs/manuals/oss/performance/sensitivity
+    set JyK  = (LineBand=='P' ) ?   1.00 : JyK    # band P
+    set JyK  = (LineBand=='L' ) ?   1.00 : JyK    # band L
+    set JyK  = (LineBand=='S' ) ?   1.00 : JyK    # band S
+    set JyK  = (LineBand=='C' ) ?   1.00 : JyK    # band C
+    set JyK  = (LineBand=='X' ) ?   1.00 : JyK    # band X
+    set JyK  = (LineBand=='Ku') ?   1.00 : JyK    # band Ku
+    set JyK  = (LineBand=='K' ) ?   1.00 : JyK    # band K
+    set JyK  = (LineBand=='Ka') ?   1.00 : JyK    # band Ka
+    set JyK  = (LineBand=='Q' ) ?   1.00 : JyK    # band Q
+    set eta  = (LineBand=='P' ) ?   0.83 : eta    # band P
+    set eta  = (LineBand=='L' ) ?   0.83 : eta    # band L
+    set eta  = (LineBand=='S' ) ?   0.83 : eta    # band S
+    set eta  = (LineBand=='C' ) ?   0.83 : eta    # band C
+    set eta  = (LineBand=='X' ) ?   0.83 : eta    # band X
+    set eta  = (LineBand=='Ku') ?   0.83 : eta    # band Ku
+    set eta  = (LineBand=='K' ) ?   0.83 : eta    # band K
+    set eta  = (LineBand=='Ka') ?   0.50 : eta    # band Ka
+    set eta  = (LineBand=='Q' ) ?   0.50 : eta    # band Q
+    set Tsys = (LineBand=='P' ) ? 3900.0 : Tsys   # band P
+    set Tsys = (LineBand=='L' ) ?  420.0 : Tsys   # band L
+    set Tsys = (LineBand=='S' ) ?  370.0 : Tsys   # band S
+    set Tsys = (LineBand=='C' ) ?  310.0 : Tsys   # band C
+    set Tsys = (LineBand=='X' ) ?  250.0 : Tsys   # band X
+    set Tsys = (LineBand=='Ku') ?  230.0 : Tsys   # band Ku -- calibrated summer time 20-50 degree elevation -- 3 bit sampler
+    set Tsys = (LineBand=='K' ) ?  415.0 : Tsys   # band K  -- calibrated summer time 20-50 degree elevation -- 3 bit sampler
+    set Tsys = (LineBand=='Ka') ?  450.0 : Tsys   # band Ka
+    set Tsys = (LineBand=='Q' ) ?  800.0 : Tsys   # band Q
+    ### 
+    set Tsys = (LineBand=='K' ) ? Tsys+(12.0/(LineFreq-18.00)) : Tsys
+    set Tsys = (LineBand=='Ku') ? Tsys+(16.0/(18.00-LineFreq)) : Tsys
+    set Tsys = (LineBand=='Ka') ? Tsys+(700./(40.00-LineFreq)) : Tsys
+    set Tsys = (LineBand=='Q' ) ? Tsys+(1000/(49.20-LineFreq)) : Tsys
+    ### 
+    set N_antennas = 25 # use 25 instead of the full total 27 antennas to allow for 
+                        # the contingency that not all telescopes are in working order
+    set N_an = N_antennas*(N_antennas-1)  # N*(N-1)
+    set N_configs = 1     # single config
+    set N_cn = N_configs  # single config
+    set N_polariz = 2     # dual polar
+    set N_po = N_polariz  # dual polar
+    set N_bw = LineWidth/2.99792458e5*LineFreq*1e9  # Hz not GHz
+    set T_ON = LineFlux*0.0+3600.0                  # 1 hour
+    set rms_1si = LineFlux / LineWidth / 1e-3 / 1.0 # mJy
+    set rms_3si = LineFlux / LineWidth / 1e-3 / 3.0 # mJy
+    set rms_5si = LineFlux / LineWidth / 1e-3 / 5.0 # mJy
+    set rms_6si = LineFlux / LineWidth / 1e-3 / 6.0 # mJy
+    set rms_10si = LineFlux / LineWidth / 1e-3 / 10.0 # mJy
+    if($?4) {set rms_$4""sigma = LineFlux / LineWidth / 1e-3 / float($4)}
+    set rms_1hr = JyK * Tsys / (eta*sqrt(N_an*N_cn*N_po*N_bw*T_ON)) * 1e3 # mJy
+    set rms_2hr = rms_1hr / sqrt(2.0) # mJy
+    set rms_3hr = rms_1hr / sqrt(3.0) # mJy
+    if($?3) { set onsource_hr = (rms_1hr / rms_$4""sigma)**2 
+     } else { set onsource_hr = (rms_1hr / rms_10si)**2 }
+    set on_hr = onsource_hr
+    set on_min = onsource_hr * 60.0
+    set total_hr = onsource_hr * 1.885
+    set total_min = onsource_hr * 1.885 * 60.0
+    # print {JyK eta Tsys LineFreq LineFlux LineBand rms_6si rms_1hr rms_2hr rms_3hr on_hr on_min}
+    if($?3) { 
+        print <LineBand LineFreq LineFlux LineWidth rms_1si rms_$4""sigma on_hr on_min>
+    } else {
+        print {LineBand LineFreq LineFlux LineWidth rms_1si rms_6si on_hr on_min}
+    }
+    set $0 = onsource_hr
+
+calc_noema_time 04
+    # calc noema time on source to reach given LinePeak at observing LineFreq
+    # arg1 is LineFreq [GHz] (obs frame)
+    # arg2 is LineFlux [Jy km/s]
+    # arg3 is LineWidth [km/s]
+    # arg4 is the goal S/N
+    if($?1==0||$?2==0||$?3==0){
+        print 'Usage: set oHour = calc_noema_time(LineFreq,LineFlux,LineWidth,SNRatio) => output: OnSourceHour\n' {} return }
+    if($verbose&&is_vector(LineFreq)){ set LineFreq_backup = LineFreq 
+        print 'astroSfig::calc_noema_time: Warning! Overwriting LineFreq (backuped existing LineFreq as LineFreq_backup)\n' {} }
+    if($verbose&&is_vector(LineFlux)){ set LineFlux_backup = LineFlux 
+        print 'astroSfig::calc_noema_time: Warning! Overwriting LineFlux (backuped existing LineFlux as LineFlux_backup)\n' {} }
+    if($verbose&&is_vector(LineBand)){ set LineBand_backup = LineBand 
+        print 'astroSfig::calc_noema_time: Warning! Overwriting LineBand (backuped existing LineBand as LineBand_backup)\n' {} }
+    ### 
+    set LineFreq = $1 # obs freq GHz
+    set LineFlux = $2 # Jy km/s
+    set LineWidth = $3 # km/s
+    if(dimen(LineWidth)==1&&dimen(LineFreq)>1) {set LineWidth = LineFreq*0.0+$3}
+    ### 
+    set LineBand = (LineFreq*0-99) # 'band3'
+    set LineBand = (LineFreq>80  && LineFreq<116) ? 1 : LineBand
+    set LineBand = (LineFreq>129 && LineFreq<177) ? 2 : LineBand
+    set LineBand = (LineFreq>201 && LineFreq<267) ? 3 : LineBand
+    set JyK  = (LineFreq*0)
+    set eta  = (LineFreq*0-99)
+    set Tsys = (LineFreq*0)
+    
+    set JyK  = (LineBand==1) ? 22.0  : JyK   # 2015-08: band 1 80-116 GHz (3mm)
+    set eta  = (LineBand==1) ? 0.9   : eta   # 2015-08: band 1 80-116 GHz (3mm)
+    set Tsys = (LineBand==1) ? 110.0 : Tsys  # 2015-08: band 1 80-116 GHz (3mm) <TODO> varies from 100K to 170K within band
+    set JyK  = (LineBand==1) ? 22.0  : JyK   # 2016-03: band 1 80-116 GHz (3mm)
+    set eta  = (LineBand==1) ? 0.9   : eta   # 2016-03: band 1 80-116 GHz (3mm)
+    set Tsys = (LineBand==1) ? 110.0 : Tsys  # 2016-03: band 1 80-116 GHz (3mm) <TODO> varies from 100K to 170K within band
+    set Tsys = (LineBand==1 && LineFreq>110) ? Tsys+(170-110)/(116-110)*(LineFreq-110) : Tsys
+    
+    set JyK  = (LineBand==2) ? 29.0  : JyK   # 2015-08: band 2 129-177 GHz (2mm)
+    set eta  = (LineBand==2) ? 0.85  : eta   # 2015-08: band 2 129-177 GHz (2mm)
+    set Tsys = (LineBand==2) ? 140.0 : Tsys  # 2015-08: band 2 129-177 GHz (2mm) <TODO> varies from 130K to 160K within band
+    set JyK  = (LineBand==2) ? 29.0  : JyK   # 2016-03: band 2 129-177 GHz (2mm)
+    set eta  = (LineBand==2) ? 0.8   : eta   # 2016-03: band 2 129-177 GHz (2mm)
+    set Tsys = (LineBand==2) ? 140.0 : Tsys  # 2016-03: band 2 129-177 GHz (2mm) <TODO> varies from 130K to 160K within band
+    set Tsys = (LineBand==1 && LineFreq>150) ? Tsys+(200-140)/(177-150)*(LineFreq-150) : Tsys
+    
+    set JyK  = (LineBand==3) ? 35.0  : JyK   # 2015-08: band 3 201-267 GHz (1.3mm)
+    set eta  = (LineBand==3) ? 0.8   : eta   # 2015-08: band 3 201-267 GHz (1.3mm)
+    set Tsys = (LineBand==3) ? 200.0 : Tsys  # 2015-08: band 3 201-267 GHz (1.3mm) <TODO> seems steady within band
+    set JyK  = (LineBand==3) ? 35.0  : JyK   # 2016-03: band 3 201-267 GHz (1.3mm)
+    set eta  = (LineBand==3) ? 0.6   : eta   # 2016-03: band 3 201-267 GHz (1.3mm)
+    set Tsys = (LineBand==3) ? 250.0 : Tsys  # 2016-03: band 3 201-267 GHz (1.3mm) <TODO> seems steady within band
+    ### 
+    set N_antennas = 7 # 2015-08: NOEMA has 7 antenaae
+    set N_antennas = 6 # 2016-03: NOEMA has 6 antenaae if unlucky or 7 if lucky
+    set N_an = N_antennas*(N_antennas-1)  # N*(N-1)
+    set N_configs = 1     # single config
+    set N_cn = N_configs  # single config
+    set N_polariz = 2     # dual polar
+    set N_po = N_polariz  # dual polar
+    set N_bw = LineWidth/2.99792458e5*LineFreq*1e9  # Hz not GHz
+    set T_ON = LineFlux*0.0+3600.0                  # 1 hour
+    set rms_1si = LineFlux / LineWidth / 1e-3 / 1.0 # mJy
+    set rms_3si = LineFlux / LineWidth / 1e-3 / 3.0 # mJy
+    set rms_5si = LineFlux / LineWidth / 1e-3 / 5.0 # mJy
+    set rms_6si = LineFlux / LineWidth / 1e-3 / 6.0 # mJy
+    set rms_10si = LineFlux / LineWidth / 1e-3 / 10.0 # mJy
+    if($?4) {set rms_$4""sigma = LineFlux / LineWidth / 1e-3 / float($4)}
+    set rms_1hr = JyK * Tsys / (eta*sqrt(N_an*N_cn*N_po*N_bw*T_ON)) * 1e3 # mJy
+    set rms_2hr = rms_1hr / sqrt(2.0) # mJy
+    set rms_3hr = rms_1hr / sqrt(3.0) # mJy
+    if($?4) { set onsource_hr = (rms_1hr / rms_$4""sigma)**2 
+     } else { set onsource_hr = (rms_1hr / rms_10si)**2 }
+    set on_hr = onsource_hr
+    set on_min = onsource_hr * 60.0
+    set total_hr = onsource_hr * 1.6
+    set total_min = onsource_hr * 1.6 * 60.0
+    # print {JyK eta Tsys LineFreq LineFlux LineBand rms_6si rms_1hr rms_2hr rms_3hr on_hr on_min}
+    if($verbose) {
+      if($?4) { 
+        print <LineBand LineFreq LineFlux LineWidth rms_1si rms_$4""sigma on_hr on_min>
+      } else {
+        print {LineBand LineFreq LineFlux LineWidth rms_1si rms_6si on_hr on_min}
+      }
+    }
+    set $0 = onsource_hr
+
+calc_iram_30m_time
+    echo "http://www.iram.es/nte/"
+
+
+
+
+
+
+calc_FIR_lines 01
+    # input redshift, output FIR line frequencies
+    do _calc_i=1,13 {
+        set _calc_v = calc_line_freq(co,$_calc_i,$1)
+        echo CO($_calc_i-$($_calc_i-1)) @ $(_calc_v) GHz
+    }
+    do _calc_i=1,2 {
+        set _calc_v = calc_line_freq(ci,$_calc_i,$1)
+        echo [CI]($_calc_i-$($_calc_i-1)) @ $(_calc_v) GHz
+    }
+    do _calc_i=1,2 {
+        set _calc_v = calc_line_freq(nii,$_calc_i,$1)
+        echo [NII]($_calc_i-$($_calc_i-1)) @ $(_calc_v) GHz
+    }
+    do _calc_i=1,1 {
+        set _calc_v = calc_line_freq(cii,$_calc_i,$1)
+        echo [CII]($_calc_i-$($_calc_i-1)) @ $(_calc_v) GHz
+    }
+    do _calc_i=1,2 {
+        set _calc_v = calc_line_freq(oiii,$_calc_i,$1)
+        echo [OIII]($_calc_i-$($_calc_i-1)) @ $(_calc_v) GHz
+    }
+    do _calc_i=1,2 {
+        set _calc_v = calc_line_freq(oi,$_calc_i,$1)
+        echo [OI]($_calc_i-$($_calc_i-1)) @ $(_calc_v) GHz
+    }
+    do _calc_i=1,1 {
+        #set _calc_v = 448.00108  / (1.0+($1))      echo o-H2O(423-330) @ $(_calc_v) GHz
+        set _calc_v = 556.93599  / (1.0+($1))      echo o-H2O(110-101) @ $(_calc_v) GHz
+        set _calc_v = 752.03314  / (1.0+($1))      echo p-H2O(211-202) @ $(_calc_v) GHz
+        set _calc_v = 916.17158  / (1.0+($1))      echo p-H2O(422-331) @ $(_calc_v) GHz
+        set _calc_v = 970.31505  / (1.0+($1))      echo o-H2O(524-431) @ $(_calc_v) GHz
+        set _calc_v = 987.92676  / (1.0+($1))      echo p-H2O(202-111) @ $(_calc_v) GHz
+        set _calc_v = 1097.36479 / (1.0+($1))      echo o-H2O(312-303) @ $(_calc_v) GHz
+        set _calc_v = 1113.34301 / (1.0+($1))      echo p-H2O(111-000) @ $(_calc_v) GHz
+        set _calc_v = 1153.12682 / (1.0+($1))      echo o-H2O(312-221) @ $(_calc_v) GHz
+        set _calc_v = 1162.91160 / (1.0+($1))      echo o-H2O(321-312) @ $(_calc_v) GHz
+        set _calc_v = 1207.63873 / (1.0+($1))      echo p-H2O(422-413) @ $(_calc_v) GHz
+        set _calc_v = 1228.78872 / (1.0+($1))      echo p-H2O(220-211) @ $(_calc_v) GHz
+        set _calc_v = 1410.61807 / (1.0+($1))      echo o-H2O(523-514) @ $(_calc_v) GHz
+        #set _calc_v = 1602.21937 / (1.0+($1))      echo o-H2O(413-404) @ $(_calc_v) GHz
+        #set _calc_v = 1661.00764 / (1.0+($1))      echo o-H2O(221-212) @ $(_calc_v) GHz
+        #set _calc_v = 1669.90477 / (1.0+($1))      echo o-H2O(212-101) @ $(_calc_v) GHz
+        #set _calc_v = 1713.88297 / (1.0+($1))      echo o-H2O(432-505) @ $(_calc_v) GHz
+        #set _calc_v = 1716.76963 / (1.0+($1))      echo o-H2O(302-212) @ $(_calc_v) GHz
+        #set _calc_v = 1893.68651 / (1.0+($1))      echo o-H2O(331-404) @ $(_calc_v) GHz
+        #set _calc_v = 1918.48535 / (1.0+($1))      echo o-H2O(523-432) @ $(_calc_v) GHz
+        #set _calc_v = 1919.35953 / (1.0+($1))      echo p-H2O(322-313) @ $(_calc_v) GHz
+    }
+    do _calc_i=1,1 {
+        set _calc_v = 1232.47622 / (1.0+($1))      echo HF(1-0) @ $(_calc_v) GHz
+        set _calc_v = 835.07895 / (1.0+($1))       echo CH+(1-0) @ $(_calc_v) GHz
+        set _calc_v = 909.1588 / (1.0+($1))        echo OH+(101-012) @ $(_calc_v) GHz
+        set _calc_v = 971.8053 / (1.0+($1))        echo OH+(122-011) @ $(_calc_v) GHz
+        set _calc_v = 1033.118 / (1.0+($1))        echo OH+(112-012) @ $(_calc_v) GHz
+    }
+    do _calc_i=1,1 {
+        set _calc_v = 88.6316023 / (1.0+($1))      echo HCN(1-0) @ $(_calc_v) GHz
+        set _calc_v = 177.2611115 / (1.0+($1))     echo HCN(2-1) @ $(_calc_v) GHz
+        set _calc_v = 265.8864343 / (1.0+($1))     echo HCN(3-2) @ $(_calc_v) GHz
+        set _calc_v = 354.5054779 / (1.0+($1))     echo HCN(4-3) @ $(_calc_v) GHz
+        set _calc_v = 443.1161493 / (1.0+($1))     echo HCN(5-4) @ $(_calc_v) GHz
+    }
+
+
+
+
+
+
+calc_nebular_lines 02
+    #  line wavelengths are from http://classic.sdss.org/dr7/products/spectra/vacwavelength.html
+    #  
+    #  usage: 
+    #    (1) calc lines given z
+    #        load astroSfig.sm calc_nebular_lines 3.044133302
+    #    (2) calc z given lines
+    #        load astroSfig.sm calc_nebular_lines oiii4959 19481
+    #  
+    #  for ds9: ds9 -title ds9 -tile mode row -lock frame image GN_15a_maskC1_K_RH_7966_eps.fits GN_15a_maskC1_K_RH_7966_snrs.fits
+    #  
+    #  
+    set _calc_nblines_nom = {"H-beta" "[OIII]4959" "[OIII]5007" "[NII]6548" "H-alpha" "[NII]6583" "[SII]"   "[SII]"   "[OII]"   "[OII]"   "[MgII]"   "Ly-alpha" "Lyman-break"}
+    set _calc_nblines_al1 = {"Hbeta"  "OIII4959"   "OIII5007"   "NII6548"   "Halpha"  "NII6583"   "SII6716" "SII6731" "OII3727" "OII3727" "MgII2798" "Lyalpha"  "Lymanbreak" }
+    set _calc_nblines_al2 = {"hbeta"  "oiii4959"   "oiii5007"   "nii6548"   "halpha"  "nii6583"   "sii6716" "sii6731" "oii3727" "oii3727" "mgii2798" "lyalpha"  "lymanbreak" }
+    set _calc_nblines_wav = {4861.363 4958.911     5006.843     6548.050    6562.801  6583.450    6716.440  6730.820  3726.03   3728.82   2798.      912.0      1216.0       } # Angstrom
+    # 
+    # -- see "Optical (nebular) spectral lines" --- http://www.star.ucl.ac.uk/~msw/lines.html
+    # 
+    if($?1 && $?2) {
+      do _calc_nblines_k=0,dimen(_calc_nblines_nom)-1 {
+        set _calc_nblines_srt = sprintf('%s',_calc_nblines_nom[$_calc_nblines_k])
+        set _calc_nblines_sr1 = sprintf('%s',_calc_nblines_al1[$_calc_nblines_k])
+        set _calc_nblines_sr2 = sprintf('%s',_calc_nblines_al2[$_calc_nblines_k])
+        if(index(_calc_nblines_srt,'$1')>=0 || index(_calc_nblines_sr1,'$1')>=0 || index(_calc_nblines_sr2,'$1')>=0) {
+            set _calc_nblines_z = float($2) / _calc_nblines_wav[$_calc_nblines_k] - 1.0
+            if(_calc_nblines_z<=0.0){print 'Error! Got non-positive redshift when calc_nebular_lines $1 $2\n' {} return}
+        }
+      }
+    } else {
+        if($?1) { set _calc_nblines_z = float($1) } else { 
+            print 'Error! Usage: load astroSfig.sm calc_nebular_lines 3.044133302\n' {} return }
+    }
+    set _calc_nblines_opz = 1.0+_calc_nblines_z
+    echo ""
+    do _calc_nblines_i=0,dimen(_calc_nblines_z)-1 {
+      echo "z = "$(sprintf('%0.5f',_calc_nblines_z[$_calc_nblines_i]))
+      do _calc_nblines_k=0,dimen(_calc_nblines_nom)-1 {
+        set _calc_nblines_srt = sprintf('%-13s',_calc_nblines_nom[$_calc_nblines_k])
+        set _calc_nblines_str = sprintf('%0.5f',_calc_nblines_wav[$_calc_nblines_k]*_calc_nblines_opz[$_calc_nblines_i])
+        echo $(_calc_nblines_srt)"  = "$(_calc_nblines_str)
+      }
+    }
+    do _calc_nblines_i=0,dimen(_calc_nblines_z)-1 {
+      do _calc_nblines_k=0,dimen(_calc_nblines_nom)-1 {
+        set _calc_nblines_srt = sprintf('%s',_calc_nblines_nom[$_calc_nblines_k])
+        set _calc_nblines_str = sprintf('%0.5f',_calc_nblines_wav[$_calc_nblines_k]*_calc_nblines_opz[$_calc_nblines_i])
+        #echo "echo \"fk5; circle "$(_calc_nblines_str)" 0 10 # text={"$(_calc_nblines_srt)"} font={times 24}\" | xpaset ds9 regions"
+        #!     echo  "fk5';' circle "$(_calc_nblines_str)" 0 10 '#' text={"$(_calc_nblines_srt)"} font={times 24} " | xpaset ds9 regions 
+      }
+    }
+    echo ""
+
+
+
+
+
+
+calc_Calzetti2000
+    # input: lambda_um,A_V,EBV
+    # optional: when given EBV, use EBV and ignore A_V, otherwise use A_V. 
+    # output: A_lambda
+    # note: f_attenuated_lambda = f_intrinsic_lambda * 10**(-0.4*A_lambda), A_lambda is the attenuation. 
+    set Calzetti2000_A_V = 0.00 # initialize
+    set Calzetti2000_R_V = 4.05 # initialize
+    set Calzetti2000_EBV = 0.00 # initialize
+    if(!$?2) {print 'Usage: set A_lambda = calc_Calzetti2000(lambda,A_V[,EBV])' {} return}
+    if($?3) {set Calzetti2000_EBV = $3 set Calzetti2000_A_V = Calzetti2000_EBV * Calzetti2000_R_V}
+    set Calzetti2000_lambda = $1 # um
+    set Calzetti2000_A_V = $2 # A_V
+    if(Calzetti2000_lambda<0.12 || Calzetti2000_lambda>2.20) {return} #<TODO># out of valid range 
+    if(Calzetti2000_lambda<=0.63) {
+        set Calzetti2000_k_lambda = 2.659*(-2.156+(1.509/Calzetti2000_lambda)-(0.198/Calzetti2000_lambda**2)+(0.011/Calzetti2000_lambda**3))
+    } else {
+        set Calzetti2000_k_lambda = 2.659*(-1.857+(1.040/Calzetti2000_lambda))
+    }
+    set Calzetti2000_k_lambda = Calzetti2000_k_lambda + Calzetti2000_R_V
+    set Calzetti2000_A_lambda = Calzetti2000_A_V * Calzetti2000_k_lambda / Calzetti2000_R_V
+    set Calzetti2000_EBV = Calzetti2000_A_V / Calzetti2000_R_V
+    set $0 = Calzetti2000_A_lambda
+    return 
+
+
+
+
+
+
+calc_Metallicity_PP04 02
+    # Pettini & Pagel (2004, PP04) -- adsabs.harvard.edu/abs/2004MNRAS.348L..59P
+    # 12 + log(O/H) = 8.90 + 0.57 * N2
+    # Here, N2 is defined as the log of the emission line ratio between [Nii]λ6584 and Hα.
+    # The calibration is valid for −2.5 < N2 < −0.3 (Zahid 2014ApJ...792...75Z)
+    if(!$?2) {
+        print 'Usage: set output_var = calc_Metallicity_PP04(f_[Nii]λ6584, f_Halpha)\n' {}
+        print '       12 + log(O/H) = 8.90 + 0.57 * N2'
+        return
+    }
+    set _calc_metal_PP04_N2 = lg($1/$2)
+    set _calc_metal_PP04 = 8.90 + 0.57 * _calc_metal_PP04_N2
+    set $0 = _calc_metal_PP04
+    return
+
+calc_Metallicity_FMR_Zahid2014_z0 01
+    # Zahid 2014ApJ...792...75Z
+    # Eq.(6)
+    # 12 + log(O/H) = Z0 - lg(1.0 + (MStar/M0)**(-gamma)))
+    # based on z=0.08 SDSS sample
+    if(!$?1) {
+        print 'Usage: set output_var = calc_Metallicity_FMR_Zahid2014_z0(lgMStar)\n' {}
+        print '       12 + log(O/H) = Z0 - lg(1.0 + (MStar/M0)**(-gamma)))'
+        return
+    }
+    set _calc_metal_FMR_Z0 = 8.710
+    set _calc_metal_FMR_lgM0 = 8.76
+    set _calc_metal_FMR_gamma = 0.66
+    set _calc_metal_FMR = _calc_metal_FMR_Z0 - lg(1.0 + (10**(($1)-_calc_metal_FMR_lgM0))**(-_calc_metal_FMR_gamma))
+    set $0 = _calc_metal_FMR
+    return
+
+calc_Metallicity_FMR_Zahid2014_z1p5 01
+    # Zahid 2014ApJ...792...75Z
+    # Eq.(6)
+    # 12 + log(O/H) = Z0 - lg(1.0 + (MStar/M0)**(-gamma)))
+    # based on z=1.55 COSMOS sample
+    if(!$?1) {
+        print 'Usage: set output_var = calc_Metallicity_FMR_Zahid2014_z1p5(lgMStar)\n' {}
+        print '       12 + log(O/H) = Z0 - lg(1.0 + (MStar/M0)**(-gamma)))'
+        return
+    }
+    set _calc_metal_FMR_Z0 = 8.740
+    set _calc_metal_FMR_lgM0 = 9.93
+    set _calc_metal_FMR_gamma = 0.88
+    set _calc_metal_FMR = _calc_metal_FMR_Z0 - lg(1.0 + (10**(($1)-_calc_metal_FMR_lgM0))**(-_calc_metal_FMR_gamma))
+    set $0 = _calc_metal_FMR
+    return
+
+
+
+
+
+
+calc_MH2 07
+    # 
+    # calculate H_2 gas mass to (stellar + H_2 gas) mass ratio, $\mu_{\mathrm{H_2}}$
+    # Inputs can be vectors: 
+    # (1) 'CO', LCO, alphaCO, JCO
+    # (1) 'KS law', LCO, alphaCO, JCO
+    # (2) 'dust', Mdust, gas2dust
+    # (3) 'Scoville2016', Lnu850, lambda850
+    # (4) 'Groves2015', 
+    # (5) 'Popping', 
+    # check arguments
+    if(!$?2) {
+        print 'Usage: set M_H_2 = calc_MH2(\'CO\',LCO,alphaCO,JCO)\n' {}
+        print '       set M_H_2 = calc_MH2(\'KS law\',SFR,SBrst)\n' {}
+        print '       set M_H_2 = calc_MH2(\'dust\',Mdust,gas2dust)\n' {}
+        print '       set M_H_2 = calc_MH2(\'dust\',SFR,Umean,gas2dust)\n' {}
+        print '       set M_H_2 = calc_MH2(\'Scoville2016\',Lnu_rest850um)\n' {}
+        print '       set M_H_2 = calc_MH2(\'Scoville2016\',flux_Jy,lambda_um,z,beta,alpha850,GammaRJ)\n' {}
+        print '       set M_H_2 = calc_MH2(\'Groves2015\',flux_Jy,lambda_um,z)\n' {}
+        return
+    }
+    # read the first argument, method
+    if(whatis(__calc_MH2_arg1)==73) {
+        set _calc_MH2_method = __calc_MH2_arg1
+    } else {
+        !echo $1 | sed -e 's/ /_/g' | tr '[:lower:]' '[:upper:]' > .calc_MH2.method.txt
+        verbose 0 data .calc_MH2.method.txt read {_calc_MH2_method 1.s} verbose 1 !rm .calc_MH2.method.txt
+    }
+    # 
+    if(_calc_MH2_method=='CO' || _calc_MH2_method=='co') {
+        if($?2) {
+            set _calc_MH2_LCO = $2
+        } else {
+            define _calc_MH2_LCO ? <"CO integrated line luminosity in unit of [K km s-1 pc2]?">
+            set _calc_MH2_LCO = $_calc_MH2_LCO
+        }
+        if($?3) {
+            set _calc_MH2_alphaCO = _calc_MH2_LCO*0.0 + $3
+        } else {
+            define _calc_MH2_alphaCO 4.6
+            define _calc_MH2_alphaCO ? <"CO-to-H2 conversion factor (typically 4.6 for star-forming disk and 0.8 for extreme starburst)?">
+            set _calc_MH2_alphaCO = _calc_MH2_LCO*0.0 + $_calc_MH2_alphaCO
+        }
+        if($?4) {
+            set _calc_MH2_JCO = _calc_MH2_LCO*0.0 + $4
+        } else {
+            define _calc_MH2_JCO 1
+            define _calc_MH2_JCO ? <"CO upper level rotational quantum number?">
+            set _calc_MH2_JCO = _calc_MH2_LCO*0.0 + $_calc_MH2_JCO
+        }
+        if(dimen(_calc_MH2_JCO) != dimen(_calc_MH2_LCO) || dimen(_calc_MH2_alphaCO) != dimen(_calc_MH2_LCO)) {
+            print '\nError! Vectors \"_calc_MH2_LCO\", \"_calc_MH2_alphaCO\" and \"_calc_MH2_JCO\" have different dimensions!\n\n' {}
+            return
+        }
+        if(sum(_calc_MH2_JCO>1)>0) {
+            set _calc_MH2_JCO_excitation_Jykms = calc_co_excitation('BzK-average', _calc_MH2_JCO)
+            set _calc_MH2_JCO_excitation_Kkms = _calc_MH2_JCO_excitation_Jykms / float(_calc_MH2_JCO)**2
+        } else {
+            set _calc_MH2_JCO_excitation_Kkms = _calc_MH2_LCO*0.0 + 1.0
+        }
+        set _calc_MH2_lgMH2 = lg(_calc_MH2_LCO * _calc_MH2_alphaCO * _calc_MH2_JCO_excitation_Kkms) # alpha CO method
+    }
+    # 
+    if(_calc_MH2_method=='KS_LAW' || _calc_MH2_method=='KS_Law' || _calc_MH2_method=='KS_law' || \
+       _calc_MH2_method=='KS LAW' || _calc_MH2_method=='KS Law' || _calc_MH2_method=='KS law' || \
+       _calc_MH2_method=='KS-LAW' || _calc_MH2_method=='KS-Law' || _calc_MH2_method=='KS-law') {
+        if($?2) {
+            set _calc_MH2_SFR = $2
+        } else {
+            define _calc_MH2_SFR ? <"Star formation rate in unit of [Msun yr-1]?">
+            set _calc_MH2_SFR = $_calc_MH2_SFR
+        }
+        if($?3) {
+            set _calc_MH2_SB = _calc_MH2_SFR*0.0 + $3
+        } else {
+            define _calc_MH2_SB 0.0
+            define _calc_MH2_SB ? <"Is starburst (i.e. 0.6 dex above the star-forming main-sequence)?">
+            set _calc_MH2_SB = _calc_MH2_SFR*0.0 + $_calc_MH2_SB
+        }
+        if(dimen(_calc_MH2_SFR) != dimen(_calc_MH2_SB)) {
+            print '\nError! Vectors \"_calc_MH2_SFR\" and \"_calc_MH2_SB\" have different dimensions!\n\n' {}
+            return
+        }
+        set _calc_MH2_SFR = (_calc_MH2_SFR<=0.0) ? 1e-99 : _calc_MH2_SFR
+        set _calc_MH2_lgMH2_MS = (lg(_calc_MH2_SFR)+10)*0.81 + 1.14 + lg(1-0.36) # KS law, see Sargent et al. 2014 (page 7 bottom, equaiton 5), "+ lg(1-0.36)" will subtract the Helium molecule mass. 
+        set _calc_MH2_lgMH2_SB = _calc_MH2_lgMH2_MS - 1.17
+        set _calc_MH2_lgMH2 = _calc_MH2_lgMH2_MS - 1.17*_calc_MH2_SB
+    }
+    # 
+    if(_calc_MH2_method=='DUST' || _calc_MH2_method=='Dust' || _calc_MH2_method=='dust' || \
+       _calc_MH2_method=='DGR' || _calc_MH2_method=='D/G' || \
+       _calc_MH2_method=='GDR' || _calc_MH2_method=='G/D') {
+        if($?2) {
+            set _calc_MH2_Mdust = $2
+        } else {
+            define _calc_MH2_Mdust ? <"Dust mass in unit of [Msun]?">
+            set _calc_MH2_Mdust = $_calc_MH2_Mdust
+        }
+        if($?3) {
+            set _calc_MH2_gas2dust = _calc_MH2_Mdust*0.0 + $3
+        } else {
+            define _calc_MH2_gas2dust 93.0 # gas-to-dust mass ratio, adopted a value of 93, similar to Zannella et al. 2017 in prep. Note that Smolcic 2015 used ~100 for their SMGs. AzTEC-1 GDR~100. 
+            define _calc_MH2_gas2dust ? <"Gas-to-dust mass ratio (G/D, e.g. Remy-Ruyer et al. 2014 Fig.4)?">
+            set _calc_MH2_gas2dust = _calc_MH2_Mdust*0.0 + $_calc_MH2_gas2dust
+        }
+        if($?4) {
+            set _calc_MH2_SFR = $2
+            set _calc_MH2_Umean = _calc_MH2_SFR*0.0 + $3
+            set _calc_MH2_gas2dust = _calc_MH2_SFR*0.0 + $4
+            set _calc_MH2_SFR = (_calc_MH2_SFR<=0.0) ? 1e-99 : _calc_MH2_SFR
+            set _calc_MH2_Umean = (_calc_MH2_Umean<=0.0) ? 1e-99 : _calc_MH2_Umean
+            set _calc_MH2_lgMdust = lg(_calc_MH2_SFR) + 10 - lg(_calc_MH2_Umean) - lg(125.0) # Magdis et al. (2012), P0=125
+            set _calc_MH2_Mdust = 10**_calc_MH2_lgMdust
+        }
+        if(dimen(_calc_MH2_Mdust) != dimen(_calc_MH2_gas2dust)) {
+            print '\nError! Vectors \"_calc_MH2_Mdust\" and \"_calc_MH2_gas2dust\" have different dimensions!\n\n' {}
+            return
+        }
+        set _calc_MH2_Mdust = (_calc_MH2_Mdust<=0.0) ? 1e-99 : _calc_MH2_Mdust
+        set _calc_MH2_lgMH2 = lg(_calc_MH2_Mdust * _calc_MH2_gas2dust)
+    }
+    # 
+    if(_calc_MH2_method=='SCOVILLE2016' || _calc_MH2_method=='Scoville2016' || _calc_MH2_method=='scoville2016' || \
+       _calc_MH2_method=='HUGHES2017' || _calc_MH2_method=='Hughes2017' || _calc_MH2_method=='hughes2017') {
+        if($?2 && !$?3) {
+            if($?2) {
+                set _calc_MH2_Lnu = $2
+            } else {
+                define _calc_MH2_Lnu ? <"Monochromatic luminosity L_nu at wavelenth lambda=850um [Lsun]?">
+                set _calc_MH2_Lnu = $_calc_MH2_Lnu
+            }
+        } else {
+            if($?2) {
+                set _calc_MH2_Snu = $2 # must be Jy!
+            } else {
+                define _calc_MH2_Snu ? <"Flux density S_nu at wavelenth lambda [Jy]?">
+                set _calc_MH2_Snu = $_calc_MH2_Snu
+            }
+            if($?3) {
+                set _calc_MH2_lambda = _calc_MH2_Snu*0.0 + $3
+            } else {
+                define _calc_MH2_lambda 850.0
+                define _calc_MH2_lambda ? <"Wavelength lambda, obs-frame [um]?">
+                set _calc_MH2_lambda = _calc_MH2_Snu*0.0 + $_calc_MH2_lambda
+            }
+            if($?4) {
+                set _calc_MH2_z = _calc_MH2_Snu*0.0 + $4
+            } else {
+                define _calc_MH2_z 3.0
+                define _calc_MH2_z ? <"Redshift?">
+                set _calc_MH2_z = _calc_MH2_Snu*0.0 + $_calc_MH2_z
+            }
+            if($?5) {
+                set _calc_MH2_beta = _calc_MH2_Snu*0.0 + $5
+            } else {
+                define _calc_MH2_beta 1.8 # see Scoville2016 Sect. A.3.
+                define _calc_MH2_beta ? <"Dust emissivity [um]?">
+                set _calc_MH2_beta = _calc_MH2_Snu*0.0 + $_calc_MH2_beta
+            }
+            if($?6) {
+                set _calc_MH2_alpha850 = _calc_MH2_Snu*0.0 + $6
+            } else {
+                define _calc_MH2_alpha850 6.7e19 # Lν850 / Mmol according to Hughes+17 (their MH2 is already Mmol = 1.36 * M(pure H2))
+                define _calc_MH2_alpha850 ? <"850um monochromatic luminosity to gas mass ratio?">
+                set _calc_MH2_alpha850 = _calc_MH2_Snu*0.0 + $_calc_MH2_alpha850
+            }
+            if($?7) {
+                set _calc_MH2_GammaRJ = _calc_MH2_Snu*0.0 + $7
+                set _calc_MH2_Gamma0 = 0.71
+            } else {
+                set _calc_MH2_c = 2.99792458e10 # cm/s
+                set _calc_MH2_nu = 2.99792458e5/(_calc_MH2_lambda/(1+_calc_MH2_z))*1e9 # Hz, note that lamda has a unit of um. 
+                set _calc_MH2_Tdust = 25 # K
+                set _calc_MH2_Planck = 2 * 6.62606957e-27 * _calc_MH2_nu**3 / _calc_MH2_c**2
+                set _calc_MH2_Planck = _calc_MH2_Planck * 1/(exp((6.62606957e-27*_calc_MH2_nu)/(1.3806488e-16*_calc_MH2_Tdust))-1)
+                set _calc_MH2_RayleighJeans = 2 * _calc_MH2_nu**2 / _calc_MH2_c**2 * (1.3806488e-16*_calc_MH2_Tdust)
+                #define _calc_MH2_GammaRJ $(_calc_MH2_RayleighJeans/_calc_MH2_Planck)
+                #define _calc_MH2_GammaRJ ? <"Rayleigh-Jeans Correction?">
+                set _calc_MH2_GammaRJ = _calc_MH2_Snu*0.0 + (_calc_MH2_Planck/_calc_MH2_RayleighJeans)
+                set _calc_MH2_Gamma0 = 0.7054493846
+            }
+            if(dimen(_calc_MH2_Snu) != dimen(_calc_MH2_lambda) || dimen(_calc_MH2_Snu) != dimen(_calc_MH2_beta)) {
+                print '\nError! Vectors \"_calc_MH2_Snu\", \"_calc_MH2_lambda\" and \"_calc_MH2_beta\" have different dimensions!\n\n' {}
+                echo dimen(_calc_MH2_Snu) = $(dimen(_calc_MH2_Snu))
+                echo dimen(_calc_MH2_lambda) = $(dimen(_calc_MH2_lambda))
+                echo dimen(_calc_MH2_beta) = $(dimen(_calc_MH2_beta))
+                return
+            }
+            set _calc_MH2_Snu = (_calc_MH2_Snu<=0.0) ? 1e-99 : _calc_MH2_Snu
+            set _calc_MH2_Snu_rest850um = _calc_MH2_Snu * ((_calc_MH2_lambda/(1+_calc_MH2_z))/(850.0))**(2.0+_calc_MH2_beta) # convert to rest-frame 850um flux density, Jy
+            #set _calc_MH2_Snu_rest850um = _calc_MH2_Snu_rest850um * _calc_MH2_GammaRJ/_calc_MH2_Gamma0 # Scoville+2016 is wrong! Scoville+2017_ApJ_837_150 is correct!
+            set _calc_MH2_Snu_rest850um = _calc_MH2_Snu_rest850um * _calc_MH2_Gamma0/_calc_MH2_GammaRJ # Scoville+2016 is wrong! Scoville+2017_ApJ_837_150 is correct!
+            set _calc_MH2_z = (_calc_MH2_z<=0.0) ? 1e-99 : _calc_MH2_z
+            set _calc_MH2_dL = calc_lumdist(_calc_MH2_z)
+            set _calc_MH2_Lnu = 1.19e27 * _calc_MH2_Snu_rest850um / (1+_calc_MH2_z) * _calc_MH2_dL**2 # erg s-1 Hz-1, see Hughes 2017 - 1702.07350.pdf (page 3 right)
+            set _calc_MH2_lgMH2_Scoville2016 = lg(1.78 * _calc_MH2_Snu_rest850um*1e3 / (1+_calc_MH2_z) * (_calc_MH2_dL/1e3)**2 * (6.7e19/_calc_MH2_alpha850) * 1e10) # Scoville et al. 2016ApJ...820...83S (appendix and also page 16 equation 16) -- molecular gas including Helium
+        }
+        set _calc_MH2_Lnu = (_calc_MH2_Lnu<=0.0) ? 1e-99 : _calc_MH2_Lnu
+        set _calc_MH2_lgMH2 = lg(_calc_MH2_Lnu) * 0.93 - 17.74 # Hughes 2017 - 1702.07350.pdf (page 4, equation 5)
+        if(_calc_MH2_method=='SCOVILLE2016' || _calc_MH2_method=='Scoville2016' || _calc_MH2_method=='scoville2016') {
+            set _calc_MH2_lgMH2 = _calc_MH2_lgMH2_Scoville2016
+        }
+    }
+    # 
+    if(_calc_MH2_method=='SCHINNERER2016' || _calc_MH2_method=='Schinnerer2016' || _calc_MH2_method=='schinnerer2016' || \
+       _calc_MH2_method=='GROVES2015' || _calc_MH2_method=='Groves2015' || _calc_MH2_method=='groves2015') {
+        if($?2 && !$?3) {
+            if($?2) {
+                set _calc_MH2_Lnu = $2
+            } else {
+                define _calc_MH2_Lnu ? <"Monochromatic luminosity L_nu at rest-frame wavelenth lambda=250um [Lsun]?">
+                set _calc_MH2_Lnu = $_calc_MH2_Lnu
+            }
+            set _calc_MH2_W = _calc_MH2_Lnu*0.0 + 250.0 # 350.0 500.0
+            set _calc_MH2_A = _calc_MH2_Lnu*0.0 + 1.57 # 1.49 1.72 # see Groves, bibcode=2015ApJ...799...96G, Table 6
+            set _calc_MH2_B = _calc_MH2_Lnu*0.0 + 0.86 # 0.92 0.96 # see Groves, bibcode=2015ApJ...799...96G, Table 6, log(Mgas) = A + B * log(nuLnu_W)
+        } else {
+            if($?2) {
+                set _calc_MH2_Snu = $2 # must be Jy!
+            } else {
+                define _calc_MH2_Snu ? <"Flux density S_nu at wavelenth lambda [Jy]?">
+                set _calc_MH2_Snu = $_calc_MH2_Snu
+            }
+            if($?3) {
+                set _calc_MH2_lambda = _calc_MH2_Snu*0.0 + $3
+            } else {
+                define _calc_MH2_lambda 1250.0
+                define _calc_MH2_lambda ? <"Wavelength lambda [um]?">
+                set _calc_MH2_lambda = _calc_MH2_Snu*0.0 + $_calc_MH2_lambda
+            }
+            if($?4) {
+                set _calc_MH2_z = _calc_MH2_Snu*0.0 + $4
+            } else {
+                define _calc_MH2_z 3.0
+                define _calc_MH2_z ? <"Redshift?">
+                set _calc_MH2_z = _calc_MH2_Snu*0.0 + $_calc_MH2_z
+            }
+            set _calc_MH2_Brent_W = {250.0 350.0 500.0}
+            set _calc_MH2_Brent_A = {1.57 1.49 1.72} # see Groves, bibcode=2015ApJ...799...96G, Table 6
+            set _calc_MH2_Brent_B = {0.86 0.92 0.96} # see Groves, bibcode=2015ApJ...799...96G, Table 6, log(Mgas) = A + B * log(nuLnu_W)
+            set _calc_MH2_Brent_lgW = lg(_calc_MH2_Brent_W)
+            set _calc_MH2_lambda = (_calc_MH2_lambda<=0.0) ? 1e-99 : _calc_MH2_lambda
+            set _calc_MH2_lambda_rest = _calc_MH2_lambda / (1+_calc_MH2_z)
+            set _calc_MH2_lglambda_rest = lg(_calc_MH2_lambda_rest)
+            interp_dzliu _calc_MH2_Brent_lgW _calc_MH2_Brent_A _calc_MH2_lglambda_rest _calc_MH2_A
+            interp_dzliu _calc_MH2_Brent_lgW _calc_MH2_Brent_B _calc_MH2_lglambda_rest _calc_MH2_B
+            set _calc_MH2_Schinnerer2016_A = 1.57 - 8e-4 * (_calc_MH2_lambda_rest-250.0)
+            set _calc_MH2_Schinnerer2016_B = 0.86 + 6e-4 * (_calc_MH2_lambda_rest-250.0)
+            set _calc_MH2_Snu = (_calc_MH2_Snu<=0.0) ? 1e-99 : _calc_MH2_Snu
+            set _calc_MH2_z = (_calc_MH2_z<=0.0) ? 1e-99 : _calc_MH2_z
+            set _calc_MH2_dL = calc_lumdist(_calc_MH2_z)
+            set _calc_MH2_Lnu = (2.99792458e5/_calc_MH2_lambda)*(_calc_MH2_Snu*1e3)*(4*pi*_calc_MH2_dL**2)/40.31970 # "/40.31970" converts mJy GHz to Lsun Mpc-2 # 1.19e27 * _calc_MH2_Snu / (1+_calc_MH2_z) * _calc_MH2_dL**2 # erg s-1 Hz-1, see Hughes 2017 - 1702.07350.pdf (page 3 right)
+            set _calc_MH2_lgMH2_Schinnerer2016 = _calc_MH2_Schinnerer2016_A + _calc_MH2_Schinnerer2016_B * lg(_calc_MH2_Lnu) # Schinnerer et al. 2016, equation (1)
+        }
+        if(dimen(_calc_MH2_Lnu) != dimen(_calc_MH2_lambda) || dimen(_calc_MH2_Lnu) != dimen(_calc_MH2_A) || dimen(_calc_MH2_Lnu) != dimen(_calc_MH2_B)) {
+            print '\nError! Vectors \"_calc_MH2_Lnu\", \"_calc_MH2_A\" and \"_calc_MH2_B\" have different dimensions!\n\n' {}
+            return
+        }
+        set _calc_MH2_Lnu = (_calc_MH2_Lnu<=0.0) ? 1e-99 : _calc_MH2_Lnu
+        set _calc_MH2_lgMH2 = _calc_MH2_A + _calc_MH2_B * lg(_calc_MH2_Lnu) # Groves et al. 2015, page 6, right middle-to-bottom
+    }
+    if(is_vector(_calc_MH2_lgMH2)) {
+        set _calc_MH2_MH2 = 10**_calc_MH2_lgMH2
+        set $0 = _calc_MH2_MH2
+        unset _calc_MH2_lgMH2
+        unset _calc_MH2_MH2
+    }
+    return
+
+calc_gas2dust 00
+    # TODO
+
+calc_metallicity 00
+    # TODO
+
+
+
+
+
+
+
+
+
+
+
+
+calc_Popping_fH2 02
+    # 
+    # Input Sigma_gas and Sigma_star, output fH2 (the molecular to total cold gas fraction)
+    if(!$?2) {
+        print 'Usage: \n\tset fH2 = calc_Popping_fH2(Sigma_gas,Sigma_star) \# Sigma is surface density in Msun pc**(-2)\n' {}
+        print          '\tset fH2 = calc_Popping_fH2(10.0,10.0)\n' {}
+        return
+    }
+    # 
+    # Method 1 -- pressure-based
+    set Sigma_gas = ($1) * 1.98892e33 / (3.085677e18)**(2) # 1 [Msun pc**(-2)] = 1.98892e33 / (3.085677e18)**(2) [g cm**(-2)]
+    set Sigma_star = ($2) * 1.98892e33 / (3.085677e18)**(2) # 1 [Msun pc**(-2)] = 1.98892e33 / (3.085677e18)**(2) [g cm**(-2)]
+    set Constant_G = 6.67259e-8 # cm**(3) g**(-1) s**(-2)
+    set Constant_kB = 1.380658e-16 # erg K**(-1)
+    set ratio_scatter_gas_to_star = 0.1 # * sqrt(Mass_star / (2.0*pi*Radius_star**2) / Sigma_star) # empirical following Fu et al. (2010)
+    if(is_vector(Radius_star) and is_vector(Mass_star)) {
+        set Sigma_star_0 = Mass_star / (2.0*pi*Radius_star**2) # central stellar surface density of the exponential stellar disc
+        set ratio_scatter_gas_to_star = 0.1 * sqrt(Sigma_star_0 / Sigma_star) # empirical following Fu et al. (2010)
+    }
+    set Pressure_mid_plane = pi / 2.0 * Constant_G * Sigma_gas * (Sigma_gas + ratio_scatter_gas_to_star * Sigma_star) # g cm**(-1) s**(-2)
+    set Pressure_mid_plane_0 = 4.23e4 * Constant_kB # cm**(-3) * K * erg * K**(-1) = cm**(-3) * g * cm**(2) * s**(-2) = g cm**(-1) s**(-2)
+    # Leroy et al. 2008 -- Section 2.16 -- Pressure_mid_plane_0 = 4.3e4 [cm**(-3) K]
+    set ratio_mol_to_atom_gas = (Pressure_mid_plane / Pressure_mid_plane_0)**(0.8)
+    set ratio_mol_to_total_gas = ratio_mol_to_atom_gas / (1.0 + ratio_mol_to_atom_gas)
+    print {ratio_mol_to_total_gas ratio_mol_to_atom_gas Pressure_mid_plane Pressure_mid_plane_0}
+    set $0 = ratio_mol_to_total_gas
+    return
+
+
+calc_Popping_Metallicity_Based_fH2 03
+    # 
+    # Input Sigma_gas and Sigma_star, output fH2 (the molecular to total cold gas fraction)
+    if(!$?3) {
+        print 'Usage: \n\tset fH2 = calc_Popping_Metallicity_Based_fH2(Sigma_gas,Z,SFR) \# Sigma is surface density in Msun pc**(-2)\n' {}
+        print          '\tset fH2 = calc_Popping_Metallicity_Based_fH2(10.0,1.0,2.0) \# Z is metallicity in solar unit, SFR in solar unit\n' {}
+        return
+    }
+    # 
+    # Method 2 -- metallicity-ISRF-based
+    set Sigma_gas = $1 # Msun pc**(-2)
+    set Metallicity = $2 # Z/Zsun
+    set ISRF = $3 # SFR actually
+    set factor_Dstar = 1.5e-3 * ln(1+(3*ISRF)**(1.7))
+    set factor_a = (5.0*ISRF/2) / (1+(ISRF/2)**2)
+    set factor_s = 0.04 / (factor_Dstar + Metallicity)
+    set factor_g = 1.0 + factor_a * factor_s + (factor_s**2)/(1+factor_s)
+    set factor_Lambda = ln(1.0 + factor_g * Metallicity**(3.0/7.0) * (ISRF/15.0)**(4.0/7.0) )
+    set factor_Stilde = 20.0 * (factor_Lambda**(4.0/7.0) / Metallicity) / sqrt(1.0 + ISRF * Metallicity**2) # Msun pc**(-2)
+    set ratio_mol_to_total_gas = 1.0 / (1.0 + (factor_Stilde)/(Sigma_gas))**2
+    set ratio_mol_to_atom_gas = 1.0 / (1.0 / ratio_mol_to_total_gas - 1.0)
+    print {ratio_mol_to_total_gas ratio_mol_to_atom_gas}
+    set $0 = ratio_mol_to_total_gas
+    return
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+interp_dzliu 04
+    # -- dzliu -- a quiet version of supermongo original interp2
+    # Linearily interpolate $3 into ($1,$2), giving $4
+    # Note that x must be increasing. Points beyond the range of x
+    # are interpolated linearily
+    if(dimen($1) < 2) {
+       user abort Please use vectors with at least 2 elements
+    }
+    if(dimen($1) != dimen($2)) {
+       user abort $1 and $2 have different dimensions
+    }
+    #
+    set _index = ifloor($1,$3)
+    #
+    set _x1 = $1[(_index < 0 ? 0 : _index >= dimen($1) - 1 ? dimen($1) - 2 : _index)]
+    set _y1 = $2[(_index < 0 ? 0 : _index >= dimen($1) - 1 ? dimen($1) - 2 : _index)]
+    set _x2 = $1[(_index < 0 ? 1 : _index >= dimen($1) - 1 ? dimen($1) - 1 : _index + 1)]
+    set _y2 = $2[(_index < 0 ? 1 : _index >= dimen($1) - 1 ? dimen($1) - 1 : _index + 1)]
+    set $4 = _y1 + ($3 - _x1)*(_y2 - _y1)/(_x1 == _x2 ? 1 : _x2 - _x1)
+    set $4 = (($3)>(_x1)) ? $4 : _y1
+    set $4 = (($3)<(_x2)) ? $4 : _y2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,1360 @@
+astroGalfit 00
+        # 
+        # Last update: 
+        #     2015-01-24 sed -i --> sed -i '.bak'
+        # 
+        # 
+        # readGalfitInput 02
+        # loadGalfitInput 01
+        # writeGalfitInput 01
+        # readGalfitLimit 01
+        # loadGalfitLimit 01
+        # writeGalfitLimit 01
+        # initGalfitParam 02
+        # readGalfitParam 01
+        # writeGalfitParam 01
+        # readGalfitResult 01
+        print 'Bonjour!\n' {}
+        print 'Bienvenue d\'utiliser ce macro!\n' {}
+        print '\n' {}
+        print 'astroGalfit (supermongo) quick intro:\n' {}
+        print '    set PosX = 493.49\n' {}
+        print '    set PosY = 572.97\n' {}
+        print '    initGalfitParam PosX PosY [VaryX VaryY VaryMag]\n' {}
+        print '    writeGalfitParam fit.param\n' {}
+        print '    writeGalfitLimit fit.limit\n' {}
+        print '    writeGalfitInput fit.input [SciPhoto.fits OutPhoto.fits RmsPhoto.fits PsfPhoto.fits [fit.limit]]\n' {}
+        print '    !vi fit.input\n' {}
+        print '    !galfit fit.input\n' {}
+        print '\n' {}
+
+
+
+readGalfitInput 02
+        # read a galfit parameter from a galfit input file. 
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input sci_map         => (A) ParamSci\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input sci_fits        => (A) ParamSci\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input out_map         => (B) ParamOut\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input out_fits        => (B) ParamOut\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input rms_map         => (C) ParamRMS\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input rms_fits        => (C) ParamRMS\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input psf_map         => (D) ParamPSF\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input psf_fits        => (D) ParamPSF\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input resample        => (E) ParamSam\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input bad_pix         => (F) ParamBad\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input limit_file      => (G) ParamLim\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input rect            => (H) ParamLx1 ParamLx2 ParamLy1 ParamLy2\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input region          => (H) ParamLx1 ParamLx2 ParamLy1 ParamLy2\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input image_box       => (H) ParamLx1 ParamLx2 ParamLy1 ParamLy2\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input conv_box        => (I) ParamCoX ParamCoY\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input convol_box      => (I) ParamCoX ParamCoY\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input convolution_box => (I) ParamCoX ParamCoY\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input mag_zero        => (J) ParamMaz\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input pix_size        => (K) ParamPsX ParamPsY\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input pix_scale       => (K) ParamPsX ParamPsY\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input pixel_size      => (K) ParamPsX ParamPsY\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input pixel_scale     => (K) ParamPsX ParamPsY\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input regular         => (O) ParamReg\n' {}}
+        if(!$?1||!$?2) {print 'astroGalfit::readGalfitInput XXX.input normal          => (P) ParamNom\n' {}}
+        if(!$?1||!$?2) {return}
+        # which file to read?
+        set readginput_file = strStandardVector($1)
+        # which galfit parameter to read?
+        set readginput_key = ''
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i sci | grep -i map > /dev/null
+                  if($exit_status==0) { set readginput_key = 'sci_map' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i sci | grep -i fits > /dev/null
+                  if($exit_status==0) { set readginput_key = 'sci_map' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i out | grep -i map > /dev/null
+                  if($exit_status==0) { set readginput_key = 'out_map' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i out | grep -i fits > /dev/null
+                  if($exit_status==0) { set readginput_key = 'out_map' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i rms | grep -i map > /dev/null
+                  if($exit_status==0) { set readginput_key = 'rms_map' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i rms | grep -i fits > /dev/null
+                  if($exit_status==0) { set readginput_key = 'rms_map' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i psf | grep -i map > /dev/null
+                  if($exit_status==0) { set readginput_key = 'psf_map' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i psf | grep -i fits > /dev/null
+                  if($exit_status==0) { set readginput_key = 'psf_map' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i resample > /dev/null
+                  if($exit_status==0) { set readginput_key = 'resample' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i bad | grep -i pix > /dev/null
+                  if($exit_status==0) { set readginput_key = 'bad_pix' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i limit | grep -i file > /dev/null
+                  if($exit_status==0) { set readginput_key = 'limit_file' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i rect > /dev/null
+                  if($exit_status==0) { set readginput_key = 'image_box' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i region > /dev/null
+                  if($exit_status==0) { set readginput_key = 'image_box' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i image | grep -i box > /dev/null
+                  if($exit_status==0) { set readginput_key = 'image_box' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i conv | grep -i box > /dev/null
+                  if($exit_status==0) { set readginput_key = 'convol_box' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i mag | grep -i zero > /dev/null
+                  if($exit_status==0) { set readginput_key = 'mag_zero' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i pix | grep -i size > /dev/null
+                  if($exit_status==0) { set readginput_key = 'pix_scale' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i pix | grep -i scale > /dev/null
+                  if($exit_status==0) { set readginput_key = 'pix_scale' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i regular > /dev/null
+                  if($exit_status==0) { set readginput_key = 'regular' } }
+        if(strlen(readginput_key)==0) { !echo $2 | grep -i normal > /dev/null
+                  if($exit_status==0) { set readginput_key = 'normal' } }
+        if(strlen(readginput_key)==0) { set readginput_key = strStandardVector($2) }
+        # now read parameter from galfit input file
+        set readginput_tmp = {"._.AstroGalfit._.GetGalfitParam._."} # temporary file
+        astroGalfitOnMute
+        if(readginput_key=='sci_map') { 
+            if($verbose){echo Read galfit sci map parameter as vectors ParamSci}
+            !cat $(readginput_file) | grep 'A)' | sed 's/A)//g' > $(readginput_tmp)
+            data $(readginput_tmp) read {ParamSci 1.s}
+        }
+        if(readginput_key=='out_map') { 
+            if($verbose){echo Read galfit out map parameter as vectors ParamOut}
+            !cat $(readginput_file) | grep 'B)' | sed 's/B)//g' > $(readginput_tmp)
+            data $(readginput_tmp) read {ParamOut 1.s}
+        }
+        if(readginput_key=='rms_map') { 
+            if($verbose){echo Read galfit rms map parameter as vectors ParamRMS}
+            !cat $(readginput_file) | grep 'C)' | sed 's/C)//g' > $(readginput_tmp)
+            data $(readginput_tmp) read {ParamRMS 1.s}
+        }
+        if(readginput_key=='psf_map') { 
+            if($verbose){echo Read galfit psf map parameter as vectors ParamPSF}
+            !cat $(readginput_file) | grep 'D)' | sed 's/D)//g' > $(readginput_tmp)
+            data $(readginput_tmp) read {ParamPSF 1.s}
+        }
+        if(readginput_key=='resample') { 
+            if($verbose){echo Read galfit resample parameter as vectors ParamSam}
+            !cat $(readginput_file) | grep 'E)' | sed 's/E)//g' > $(readginput_tmp)
+            data $(readginput_tmp) read {ParamSam 1} # 1
+        }
+        if(readginput_key=='bad_pix') { 
+            if($verbose){echo Read galfit bad pixel mask parameter as vector ParamBad}
+            !cat $(readginput_file) | grep 'F)' | sed 's/F)//g' > $(readginput_tmp)
+            data $(readginput_tmp) read {ParamBad 1.s} # none
+        }
+        if(readginput_key=='limit_file') { 
+            if($verbose){echo Read galfit limit file parameter as vector ParamLim}
+            !cat $(readginput_file) | grep 'G)' | sed 's/G)//g' > $(readginput_tmp)
+            data $(readginput_tmp) read {ParamLim 1.s} # none
+        }
+        if(readginput_key=='image_box') { 
+            if($verbose){echo Read galfit image box parameter as vectors ParamLx1 ParamLx2 ParamLy1 ParamLy2}
+            !cat $(readginput_file) | grep 'H)' | sed 's/H)//g' > $(readginput_tmp)
+            data $(readginput_tmp) read {ParamLx1 1 ParamLx2 2 ParamLy1 3 ParamLy2 4}
+        }
+        if(readginput_key=='convol_box') { 
+            if($verbose){echo Read galfit convolution box parameter as vectors ParamCoX ParamCoY ParamCoB}
+            !cat $(readginput_file) | grep 'I)' | sed 's/I)//g' > $(readginput_tmp)
+            data $(readginput_tmp) read {ParamCoX 1 ParamCoY 2}
+            set ParamCoB = (0.5*(ParamCoX+ParamCoY))
+        }
+        if(readginput_key=='mag_zero') { 
+            if($verbose){echo Read galfit mag zeropoint parameter as vector ParamMaz}
+            !cat $(readginput_file) | grep 'J)' | sed 's/J)//g' > $(readginput_tmp)
+            data $(readginput_tmp) read {ParamMaz 1}
+        }
+        if(readginput_key=='pix_scale') { 
+            if($verbose){echo Read galfit pixel scale parameter as vectors ParamPsX ParamPsY PixScale}
+            !cat $(readginput_file) | grep 'K)' | sed 's/K)//g' > $(readginput_tmp)
+            data $(readginput_tmp) read {ParamPsX 1 ParamPsY 2}
+            set PixScale = (0.5*(ParamPsX+ParamPsY))
+        }
+        if(readginput_key=='regular') { 
+            if($verbose){echo Read galfit regular parameter as vector ParamReg}
+            !cat $(readginput_file) | grep 'O)' | sed 's/O)//g' > $(readginput_tmp)
+            data $(readginput_tmp) read {ParamReg 1.s} # regular
+        }
+        if(readginput_key=='normal') { 
+            if($verbose){echo Read galfit normal parameter as vector ParamNom}
+            !cat $(readginput_file) | grep 'P)' | sed 's/P)//g' > $(readginput_tmp)
+            data $(readginput_tmp) read {ParamNom 1} # 0
+        }
+        astroGalfitUnMute
+
+
+loadGalfitInput 01
+        # load all parameters from a galfit input file
+        if(!$?1) {print 'astroGalfit::loadGalfitInput xxx.input\n' {} return}
+        set loadginput_file = strStandardVector($1)
+        set loadginput_tmp = {"._.AstroGalfit._.GetGalfitParam._."} # temporary file
+        # ParamSci ParamPSF ParamRMS ParamPSF
+        readGalfitInput $(loadginput_file) sci_map
+        readGalfitInput $(loadginput_file) out_map
+        readGalfitInput $(loadginput_file) rms_map
+        readGalfitInput $(loadginput_file) psf_map
+        ##print {ParamSci ParamPSF ParamRMS ParamPSF}
+        # ParamSam ParamBad ParamLim 
+        readGalfitInput $(loadginput_file) resample
+        readGalfitInput $(loadginput_file) bad_pix
+        readGalfitInput $(loadginput_file) limit_file
+        ##print {ParamSam ParamBad ParamLim}
+        # ParamLx1 ParamLx2 ParamLy1 ParamLy2 ParamCoX ParamCoY
+        readGalfitInput $(loadginput_file) image_box
+        readGalfitInput $(loadginput_file) convol_box
+        ##print {ParamLx1 ParamLx2 ParamLy1 ParamLy2 ParamCoX ParamCoY}
+        # ParamMaz ParamPsX ParamPsY ParamReg ParamNom
+        readGalfitInput $(loadginput_file) mag_zero
+        readGalfitInput $(loadginput_file) pix_size
+        readGalfitInput $(loadginput_file) regular
+        readGalfitInput $(loadginput_file) normal
+        ##print {ParamMaz ParamPsX ParamPsY ParamReg ParamNom}
+        # load all fitting values from a galfit input file for all objects
+        astroGalfitOnMute
+        !awk '/0\\)/,/Z\\)/' $(loadginput_file) | grep '0)' | grep -v '[0-9]0)' > $(loadginput_tmp)
+        data $(loadginput_tmp) read {loadginput_Type 2.s}
+        !awk '/0\\)/,/Z\\)/' $(loadginput_file) | grep '1)' | grep -v '[0-9]1)' > $(loadginput_tmp)
+        data $(loadginput_tmp) read {loadginput_PosX 2 loadginput_PosY 3}
+        data $(loadginput_tmp) read {loadginput_ParamFitPosX 4 loadginput_ParamFitPosY 5}
+        !awk '/0\\)/,/Z\\)/' $(loadginput_file) | grep '3)' | grep -v '[0-9]3)' > $(loadginput_tmp)
+        data $(loadginput_tmp) read {loadginput_Mags 2 loadginput_ParamFitMags 3}
+        !awk '/0\\)/,/Z\\)/' $(loadginput_file) | grep '4)' | grep -v '[0-9]4)' > $(loadginput_tmp)
+        data $(loadginput_tmp) read {loadginput_Rads 2 loadginput_ParamFitRads 3}
+        !awk '/0\\)/,/Z\\)/' $(loadginput_file) | grep '5)' | grep -v '[0-9]5)' > $(loadginput_tmp)
+        data $(loadginput_tmp) read {loadginput_Sers 2 loadginput_ParamFitSers 3}
+        !awk '/0\\)/,/Z\\)/' $(loadginput_file) | grep '9)' | grep -v '[0-9]9)' > $(loadginput_tmp)
+        data $(loadginput_tmp) read {loadginput_Elli 2 loadginput_ParamFitElli 3}
+        !awk '/0\\)/,/Z\\)/' $(loadginput_file) | grep '10)' | grep -v '[0-9]10)' > $(loadginput_tmp)
+        data $(loadginput_tmp) read {loadginput_Roti 2 loadginput_ParamFitRoti 3}
+        astroGalfitUnMute
+        # get sky
+        # unset SkyValue unset ParamFitSkyValue
+        set loadginput_sky = 0,dimen(loadginput_PosX)-1
+        set loadginput_sky = loadginput_sky if(loadginput_Type=='sky')
+        foreach loadginput_var {SkyValue ParamFitSkyValue} {
+            set $loadginput_var = loadginput_Mags[loadginput_sky]
+        }
+        # get nonsky sources
+        set loadginput_nonsky = 0,dimen(loadginput_PosX)-1
+        set loadginput_nonsky = loadginput_nonsky if(loadginput_Type!='sky')
+        # initialize <TODO> initialize or read from *.param ?
+        astroGalfitOnMute
+        initGalfitParam loadginput_PosX[loadginput_nonsky] loadginput_PosY[loadginput_nonsky]
+        astroGalfitUnMute
+        # copy common value/param for all objects
+        foreach loadginput_var {Type PosX PosY Mags ParamFitPosX ParamFitPosY ParamFitMags} {
+            set $loadginput_var = loadginput_$loadginput_var[loadginput_nonsky]
+        }
+        # copy sersic value/param for sersic objects
+        set loadginput_i1 = 0,dimen(Type)-1
+        if(sum(Type=='sersic'||Type=='gaussian')>0) { 
+          set loadginput_i1 = loadginput_i1 if(Type=='sersic'||Type=='gaussian')
+          foreach loadginput_var {Rads Sers Elli Roti ParamFitRads ParamFitSers ParamFitElli ParamFitRoti} {
+            set $loadginput_var[loadginput_i1] = loadginput_$loadginput_var
+          }
+        }
+        ## # <Added><20161028><dzliu> excluding sky in list
+        ## set TempCoo = (Type!='sky')
+        ## foreach TempVar {Type PosX PosY Mags ParamFitPosX ParamFitPosY ParamFitMags} {
+        ##     set $TempVar = $TempVar if(TempCoo)
+        ## }
+        ## foreach TempVar {Rads Sers Elli Roti ParamFitRads ParamFitSers ParamFitElli ParamFitRoti} {
+        ##     set $TempVar = $TempVar if(TempCoo)
+        ## }
+        unset loadginput_i1 unset loadginput_nonsky unset loadginput_tmp
+        unset loadginput_PosX unset loadginput_PosY unset loadginput_Mags
+        unset loadginput_ParamFitPosX unset loadginput_ParamFitPosY unset loadginput_ParamFitMags
+        # write <TODO><DEBUG>
+        ##writeGalfitParam 1.param
+
+
+writeGalfitInput 07
+        # Input: FileName.input [SciPhoto.fits OutPhoto.fits RmsPhoto.fits PsfPhoto.fits fit.limit]
+        # Require: NAXIS0 NAXIS1 NAXIS2 SciDir SciMap RmsMap PsfMap PixScale PsfWidth PosX PosY Mags
+        # Optional: Type ParamVaryX ParamVaryY ParamFitSkyValue
+        # changeDirInBox
+        if(!$?1) {
+            print 'astroGalfit::writeGalfitInput usages: \n' {} 
+            print '  load astroGalfit.sm writeGalfitInput fit.input \n' {}
+            print '  load astroGalfit.sm writeGalfitInput fit.input sci.fits out.fits \n' {}
+            print '  load astroGalfit.sm writeGalfitInput fit.input sci.fits out.fits rms.fits psf.fits fit.limit \n' {}
+            print '  load astroGalfit.sm writeGalfitInput fit.input sci.fits out.fits rms.fits psf.fits msk.fits fit.limit \n' {}
+            print '  set ParamFitSkyValue = 1 \n' {}
+            print '  writeGalfitInput fit.input \n' {}
+            return
+        }
+        if(!is_vector(PosX)) {print 'astroGalfit::writeGalfitInput: Warning! PosX is empty! Will do nothing!\n' {} return}
+        if(!is_vector(PosY)) {print 'astroGalfit::writeGalfitInput: Warning! PosY is empty! Will do nothing!\n' {} return}
+        set wginput_tmp = {"._.AstroGalfit._.WriteGalfitInput._."} # temporary file
+        # <TODO> # 
+        # filterObjectInBox
+        # <TODO> #
+        # echo writeGalfitLimitFile 1.0 1.0 -20 20
+        # writeGalfitLimitFile 0.0 0.0 -20 20
+        astroGalfitOnMute
+        if(!is_vector(ParamSci)){set ParamSci='sci.fits'} #<TODO># ParamSci
+        if(!is_vector(ParamOut)){set ParamOut='fit.fits'} #<TODO># ParamOut
+        if(!is_vector(ParamRMS)){set ParamRMS='rms.fits'} #<TODO># ParamRMS
+        if(!is_vector(ParamPSF)){set ParamPSF='psf.fits'} #<TODO># ParamPSF
+        if(!is_vector(ParamLim)){set ParamLim='fit.limit'} #<TODO># ParamLim
+        if(!is_vector(ParamLx1)){set ParamLx1=0.0} #<TODO># ParamLx1
+        if(!is_vector(ParamLx2)){set ParamLx2=0.0} #<TODO># ParamLx2
+        if(!is_vector(ParamLy1)){set ParamLy1=0.0} #<TODO># ParamLy1
+        if(!is_vector(ParamLy2)){set ParamLy2=0.0} #<TODO># ParamLy2
+        if(!is_vector(PixScale)){set PixScale=1.0} #<TODO># PixScale
+        if(!is_vector(SkyValue)){set SkyValue=0.0} #<TODO># SkyValue
+        if(!is_vector(ParamFitSkyValue)){set ParamFitSkyValue=0} #<TODO># fit SkyValue or not
+        # Image region to fit (xmin xmax ymin ymax)
+        if(ParamLx2<=ParamLx1 || ParamLy2<=ParamLy1) { #<added><20150717><dzliu>#
+            if($?2) { !gethead $2       NAXIS1 NAXIS2 > $(wginput_tmp) } else {
+                      !gethead sci.fits NAXIS1 NAXIS2 > $(wginput_tmp) }
+            set ParamLx1 = 1 set ParamLy1 = 1
+            if(!is_file($(wginput_tmp))) {print '\n\n\nError! failed to get image NAXIS!\n\n\n' {} define break ?}
+            data $(wginput_tmp) read {ParamLx2 1 ParamLy2 2}
+            !\rm $(wginput_tmp)
+        }
+        # convolution box size (x y)
+        #if(!is_vector(ParamCoB)){set ParamCoB=(ParamLx2-ParamLx1)*0.75} #<20170303><dzliu><plang># moved after get image NAXIS, changed *0.75 to *0.99
+        if(!is_vector(ParamCoB)) { #<added><20170303><dzliu><plang>#
+            if($?5) { !gethead $5       NAXIS1 NAXIS2 > $(wginput_tmp) } else {
+                      !gethead psf.fits NAXIS1 NAXIS2 > $(wginput_tmp) }
+            set PSF_Lx1 = 1 set PSF_Ly1 = 1
+            if(!is_file($(wginput_tmp))) {print '\n\n\nError! failed to get psf image NAXIS!\n\n\n' {} define break ?}
+            data $(wginput_tmp) read {PSF_Lx2 1 PSF_Ly2 2}
+            !\rm $(wginput_tmp)
+            # 
+            #set ParamCoB = ((PSF_Lx2-PSF_Lx1)) concat ((PSF_Ly2-PSF_Ly1))
+            #set ParamCoB = 0 #<TODO># 
+            set ParamCoB = (3.0*(PSF_Lx2-PSF_Lx1)) concat (3.0*(PSF_Ly2-PSF_Ly1))
+        }
+        if(dimen(ParamCoB)==1) {
+            set ParamCoB = ParamCoB concat ParamCoB
+        }
+        set ParamCoB_x = float(ParamCoB[0]+0.5)
+        set ParamCoB_y = float(ParamCoB[1]+0.5)
+        # 
+        if($?2) { 
+            print  $1 'A) $2 \n' {} 
+        } else {
+            print  $1 'A) %s \n' {ParamSci}
+        }
+        if($?3) {
+            print +$1 'B) $3 \n' {}
+        } else {
+            print +$1 'B) %s \n' {ParamOut}
+        }
+        if($?4) {
+            print +$1 'C) $4 \n' {}
+        } else {
+            print +$1 'C) %s \n' {ParamRMS} 
+        }
+        if($?5) {
+            print +$1 'D) $5 \n' {}
+        } else {
+            print +$1 'D) %s \n' {ParamPSF} 
+        }
+        if(1) {
+            print +$1 'E) 1 \t\t\t\t\# PSF fine sampling factor relative to data\n' {}
+        }
+        if(!$?6) { 
+            print +$1 'F) none \t\t\t\# Bad pixel mask, can be FITS image or ASCII coord list\n' {}
+            print +$1 'G) %s \n' {ParamLim}
+        } else {
+            if(!$?7) {
+                print +$1 'F) none \t\t\t\# Bad pixel mask, can be FITS image or ASCII coord list\n' {}
+                print +$1 'G) $7 \n' {} 
+            } else {
+                print +$1 'F) $6 \t\t\t\# Bad pixel mask, can be FITS image or ASCII coord list\n' {}
+                print +$1 'G) $7 \n' {} 
+            }
+        }
+        print +$1 'H) %0.0f %0.0f %0.0f %0.0f \t\t\# Image region to fit (xmin xmax ymin ymax)\n' {ParamLx1 ParamLx2 ParamLy1 ParamLy2}
+        print +$1 'I) %0.0f %0.0f \t\t\# convolution box size (x y)\n' {ParamCoB_x ParamCoB_y} # convolution box size 
+        print +$1 'J) 0 \t\t\t\t\# Magnitude photometric zeropoint\n' {}
+        print +$1 'K) %0.3f %0.3f \t\t\# Pixel scale in arcsec (dx dy)\n' {PixScale PixScale}
+        print +$1 'O) regular \t\t\t\# Display type (regular, curses, both)\n' {}
+        print +$1 'P) 0 \t\t\t\t\# Choose: 0=optimize, 1=model, 2=imgblock, 3=subcomps\n\n\n' {}
+        # 
+        do sid=0,dimen(PosX)-1 {
+            if($sid<dimen(Type)) {define TypeDeSou $(Type[$sid])} else {define TypeDeSou $(Type[0])}
+            ### define TypeDeSou psf
+            ### define TypeDeSou gaussian
+            ### define TypeDeSou sersic ### sersic requires Mags Rads
+            set selX = PosX[$sid]
+            set selY = PosY[$sid]
+            set selM = Mags[$sid]
+            set selR = Rads[$sid]
+            set selS = Sers[$sid]
+            set selE = Elli[$sid]
+            set selT = Roti[$sid]
+            set selPX = ParamFitPosX[$sid]
+            set selPY = ParamFitPosY[$sid]
+            set selPM = ParamFitMags[$sid]
+            set selPR = ParamFitRads[$sid]
+            set selPS = ParamFitSers[$sid]
+            set selPE = ParamFitElli[$sid]
+            set selPT = ParamFitRoti[$sid]
+            if('$TypeDeSou'=='psf') {
+               #<below><updated><20150611><dzliu># show COMP_$($sid+1)
+                define _asfmm_  "\#) COMP_$($sid+1) \# $(Note[$sid])\n"
+                define _asfm0_  "0) psf \n"
+                define _asfm1_  "1) %.3f %.3f %.0f %.0f\n"
+                define _asfm3_  "3) %.3f %.0f \# Mags\n"
+                print +$1 \
+                '$_asfmm_""$_asfm0_""$_asfm1_""$_asfm3_""Z) 0 \n\n' \
+                {selX selY selPX selPY selM selPM}
+            }
+            if('$TypeDeSou'=='gaussian') {
+                define _asfmm_  "\#) COMP_$($sid+1) \# $(Note[$sid])\n"
+                define _asfm0_  "0) gaussian \n"
+                define _asfm1_  "1) %.3f %.3f %.0f %.0f\n"
+                define _asfm3_  "3) %.3f %.0f \# Mags\n"
+                define _asfm4_  "4) %.3f %.0f \# Rads\n"
+                define _asfm9_  "9) %.3f %.0f \# Elli\n"
+                define _asfm10_ "10) %.3f %.0f \# Roti\n"
+                print +$1 \
+                '$_asfmm_""$_asfm0_""$_asfm1_""$_asfm3_""$_asfm4_""$_asfm9_""$_asfm10_""Z) 0 \n\n' \
+                {selX selY selPX selPY selM selPM selR selPR selE selPE selT selPT}
+            }
+            if('$TypeDeSou'=='sersic') {
+                define _asfmm_  "\#) COMP_$($sid+1) \# $(Note[$sid])\n"
+                define _asfm0_  "0) sersic \n"
+                define _asfm1_  "1) %.3f %.3f %.0f %.0f\n"
+                define _asfm3_  "3) %.3f %.0f \# Mags\n"
+                define _asfm4_  "4) %.3f %.0f \# Rads\n"
+                define _asfm5_  "5) %.3f %.0f \# Sers\n"
+                define _asfm9_  "9) %.3f %.0f \# Elli\n"
+                define _asfm10_ "10) %.3f %.0f \# Roti\n"
+                define _asfmz_  "Z) 0 \n\n"
+                #<20170726><PROBLEM># -- String is too long in lexan: 
+                #<20170726><PROBLEM># print +$1 \
+                #<20170726><PROBLEM># '$_asfmm_""$_asfm0_""$_asfm1_""$_asfm3_""$_asfm4_""$_asfm5_""$_asfm9_""$_asfm10_""Z) 0 \n\n' \
+                #<20170726><PROBLEM># {selX selY selPX selPY selM selPM selR selPR selS selPS selE selPE selT selPT}
+                #<20170726><PROBLEM># -- 
+                print +$1 '$_asfmm_'  {}
+                print +$1 '$_asfm0_'  {}
+                print +$1 '$_asfm1_'  {selX selY selPX selPY}
+                print +$1 '$_asfm3_'  {selM selPM}
+                print +$1 '$_asfm4_'  {selR selPR}
+                print +$1 '$_asfm5_'  {selS selPS}
+                print +$1 '$_asfm9_'  {selE selPE}
+                print +$1 '$_asfm10_' {selT selPT}
+                print +$1 '$_asfmz_'  {}
+            }
+            unset selX 
+            unset selY 
+            unset selM 
+            unset selR 
+            unset selS 
+            unset selE 
+            unset selT 
+            unset selPX
+            unset selPY
+            unset selPM
+            unset selPR
+            unset selPS
+            unset selPE
+            unset selPT
+        }
+        # set SkyValue = 0.0 ###<TODO>### SkyValue
+        # set ParamFitSkyValue = 0 ###<TODO>### do not vary sky value
+        if(is_vector(astroGalfit_SkyValue)) {set SkyValue = astroGalfit_SkyValue} ###<TODO>### SkyValue <Added><20150402><dzliu>
+		print +$1 '\n0) sky \n1) %0.7g %0d \# sky value (flux density)\n2) 0 0 \# sky gradient in x\n3) 0 0 \# sky gradient in y\nZ) 0 \n\n' {SkyValue ParamFitSkyValue}
+		# unset
+        # unset SkyValue unset ParamFitSkyValue
+        # unset everything <fixed><20150727><dzliu>
+        if(is_vector(ParamLx1)){unset ParamLx1} #<TODO># ParamLx1
+        if(is_vector(ParamLx2)){unset ParamLx2} #<TODO># ParamLx2
+        if(is_vector(ParamLy1)){unset ParamLy1} #<TODO># ParamLy1
+        if(is_vector(ParamLy2)){unset ParamLy2} #<TODO># ParamLy2
+        if(is_vector(PixScale)){unset PixScale} #<TODO># PixScale
+        if(is_vector(SkyValue)){unset SkyValue} #<TODO># SkyValue
+        if(is_vector(ParamCoB)){unset ParamCoB} #<TODO># convolution box size 
+        if(is_vector(ParamFitSkyValue)){unset ParamFitSkyValue} #<TODO># fit SkyValue or not
+        astroGalfitUnMute
+        # 
+
+
+readGalfitLimit 01
+        # 
+
+
+loadGalfitLimit 01
+        # load all constraints from a galfit limit file
+        if(!$?1) {print 'astroGalfit::loadGalfitLimit xxx.limit\n' {} return}
+        set loadglimit_file = strStandardVector($1)
+        set loadglimit_tmp = {"._.AstroGalfit._.GetGalfitParam._."} # temporary file
+        # 
+        astroGalfitOnMute
+        !cat $(loadglimit_file) | grep ' mag ' | sed 's/ to / /g' > $(loadglimit_tmp)
+        data $(loadglimit_tmp) read {loadglimit_id 1 loadglimit_min 3 loadglimit_max 4}
+        if(is_vector(loadglimit_id)) { if(dimen(loadglimit_id)>0) {
+            set ParamMinMags[loadglimit_id-1] = loadglimit_min
+            set ParamMaxMags[loadglimit_id-1] = loadglimit_max
+           #set ParamFitMags[loadglimit_id-1] = loadglimit_id*0+1
+            print 'Read $(dimen(loadglimit_id)) mag limits into vectors ParamMinMags ParamMaxMags\n' {} } }
+        !cat $(loadglimit_file) | grep ' x ' > $(loadglimit_tmp)
+        data $(loadglimit_tmp) read {loadglimit_id 1 loadglimit_min 3 loadglimit_max 4}
+        if(is_vector(loadglimit_id)) { if(dimen(loadglimit_id)>0) {
+            set ParamMinPosX[loadglimit_id-1] = loadglimit_min
+            set ParamMaxPosX[loadglimit_id-1] = loadglimit_max
+           #set ParamFitPosX[loadglimit_id-1] = loadglimit_id*0+1
+            print 'Read $(dimen(loadglimit_id)) x limits into vectors ParamMinPosX ParamMaxPosX\n' {} } }
+        !cat $(loadglimit_file) | grep ' y ' > $(loadglimit_tmp)
+        data $(loadglimit_tmp) read {loadglimit_id 1 loadglimit_min 3 loadglimit_max 4}
+        if(is_vector(loadglimit_id)) { if(dimen(loadglimit_id)>0) {
+            set ParamMinPosY[loadglimit_id-1] = loadglimit_min
+            set ParamMaxPosY[loadglimit_id-1] = loadglimit_max
+           #set ParamFitPosY[loadglimit_id-1] = loadglimit_id*0+1
+            print 'Read $(dimen(loadglimit_id)) y limits into vectors ParamMinPosY ParamMaxPosY\n' {} } }
+        !cat $(loadglimit_file) | grep ' re ' | sed 's/ to / /g' > $(loadglimit_tmp)
+        data $(loadglimit_tmp) read {loadglimit_id 1 loadglimit_min 3 loadglimit_max 4}
+        if(is_vector(loadglimit_id)) { if(dimen(loadglimit_id)>0) {
+            set ParamMinRads[loadglimit_id-1] = loadglimit_min
+            set ParamMaxRads[loadglimit_id-1] = loadglimit_max
+           #set ParamFitRads[loadglimit_id-1] = loadglimit_id*0+1
+            print 'Read $(dimen(loadglimit_id)) re limits into vectors ParamMinRads ParamMaxRads\n' {} } }
+        !cat $(loadglimit_file) | grep ' n ' | sed 's/ to / /g' > $(loadglimit_tmp)
+        data $(loadglimit_tmp) read {loadglimit_id 1 loadglimit_min 3 loadglimit_max 4}
+        if(is_vector(loadglimit_id)) { if(dimen(loadglimit_id)>0) {
+            set ParamMinSers[loadglimit_id-1] = loadglimit_min
+            set ParamMaxSers[loadglimit_id-1] = loadglimit_max
+           #set ParamFitSers[loadglimit_id-1] = loadglimit_id*0+1
+            print 'Read $(dimen(loadglimit_id)) n limits into vectors ParamMinSers ParamMaxSers\n' {} } }
+        !cat $(loadglimit_file) | grep ' q ' | sed 's/ to / /g' > $(loadglimit_tmp)
+        data $(loadglimit_tmp) read {loadglimit_id 1 loadglimit_min 3 loadglimit_max 4}
+        if(is_vector(loadglimit_id)) { if(dimen(loadglimit_id)>0) {
+            set ParamMinElli[loadglimit_id-1] = loadglimit_min
+            set ParamMaxElli[loadglimit_id-1] = loadglimit_max
+           #set ParamFitElli[loadglimit_id-1] = loadglimit_id*0+1
+            print 'Read $(dimen(loadglimit_id)) q limits into vectors ParamMinElli ParamMaxElli\n' {} } }
+        !cat $(loadglimit_file) | grep ' pa ' | sed 's/ to / /g' > $(loadglimit_tmp)
+        data $(loadglimit_tmp) read {loadglimit_id 1 loadglimit_min 3 loadglimit_max 4}
+        if(is_vector(loadglimit_id)) { if(dimen(loadglimit_id)>0) {
+            set ParamMinRoti[loadglimit_id-1] = loadglimit_min
+            set ParamMaxRoti[loadglimit_id-1] = loadglimit_max
+           #set ParamFitRoti[loadglimit_id-1] = loadglimit_id*0+1
+            print 'Read $(dimen(loadglimit_id)) pa limits into vectors ParamMinRoti ParamMaxRoti\n' {} } }
+        # <TODO> # 
+        # -- relative constraint ? x y
+        # -- absolute constraint ? mags rads sers elli
+        unset loadglimit_file unset loadglimit_tmp
+        astroGalfitUnMute
+        # write <TODO><DEBUG>
+        #writeGalfitParam 2.param
+
+
+writeGalfitLimit 01
+        # write galfit constraint file xxx.limit
+        if(!$?1) {print 'astroGalfit::writeGalfitParam outputfile.limit\n' {} return}
+        set writeglimit_out = strStandardVector($1)
+        print $(writeglimit_out) '\# Galfit Constraint File\n\# \n' {}
+        astroGalfitOnMute
+        foreach tmpVar {Mags PosX PosY Rads Sers Elli Roti} {
+            if(is_vector(ParamFit$tmpVar) && is_vector(ParamMax$tmpVar) && is_vector(ParamMin$tmpVar) && is_vector(IObj)) {
+                if(sum(ParamFit$tmpVar)>0) {
+                    set tmpParamUid = IObj            if(ParamFit$tmpVar)
+                    set tmpParamMin = ParamMin$tmpVar if(ParamFit$tmpVar)
+                    set tmpParamMax = ParamMax$tmpVar if(ParamFit$tmpVar)
+                    if('$tmpVar'=='Mags') { print +$1 '%10d  mag    %0.3f to %0.3f\n' {tmpParamUid tmpParamMin tmpParamMax} }
+                    if('$tmpVar'=='PosX') { print +$1 '%10d    x    %0.3f    %0.3f\n' {tmpParamUid tmpParamMin tmpParamMax} }
+                    if('$tmpVar'=='PosY') { print +$1 '%10d    y    %0.3f    %0.3f\n' {tmpParamUid tmpParamMin tmpParamMax} }
+                    if('$tmpVar'=='Rads') { print +$1 '%10d   re    %0.3f to %0.3f\n' {tmpParamUid tmpParamMin tmpParamMax} }
+                    if('$tmpVar'=='Sers') { print +$1 '%10d    n    %0.3f to %0.3f\n' {tmpParamUid tmpParamMin tmpParamMax} }
+                    if('$tmpVar'=='Elli') { print +$1 '%10d    q    %0.3f to %0.3f\n' {tmpParamUid tmpParamMin tmpParamMax} }
+                    if('$tmpVar'=='Roti') { print +$1 '%10d   pa    %0.3f to %0.3f\n' {tmpParamUid tmpParamMin tmpParamMax} }
+                    unset tmpParamUid
+                    unset tmpParamMax
+                    unset tmpParamMin
+                }
+            }
+        }
+        astroGalfitUnMute
+
+
+initGalfitParam 05
+        # initialize all galfit parameters by input coordinate x,y
+        if(!$?1||!$?2) {print 'astroGalfit::initGalfitParam PosX PosY [VaryX [VaryY [VaryMag]]] => Type Mags Rads Sers Elli Roti Param*\n' {} return}
+        set PosX = $1 set PosY = $2 # x,y coordinate for all objects
+        if(dimen(PosX)!=dimen(PosY)) {print 'astroGalfit::initGalfitParam: Error! Input $1 and $2 do not have the same dimension!\n' {} return}
+        if($?3){set VaryX = $3} else{set VaryX = 0.0} # <added><20150607><dzliu> do not vary pos in default
+        if($?4){set VaryY = $4} else{set VaryY = 0.0} # <added><20150607><dzliu> do not vary pos in default
+        if($?5){set VaryM = $5} else{set VaryM = 1.0} # <added><20151216><dzliu> do vary magnitude in default
+        if(dimen(VaryX)==1) {set VaryX = float(PosX*0)+VaryX[0]}
+        if(dimen(VaryY)==1) {set VaryY = float(PosX*0)+VaryY[0]}
+        if(dimen(VaryM)==1) {set VaryM = float(PosX*0)+VaryM[0]}
+        # initialize all galfit parameters
+        set Mags = float(PosX*0)+5.0 #<TODO># Mags default value is 5.0
+        set IObj = 1,dimen(PosX)
+        foreach initgparam_ptr {Rads Sers Elli Roti} {
+            set $initgparam_ptr = float(PosX*0)
+        }
+        foreach initgparam_ptr {Rads Sers Elli Roti PosX PosY Mags} {
+            foreach initgparam_lim {ParamFit ParamMin ParamMax} {
+                set $initgparam_lim""$initgparam_ptr = float(PosX*0)
+            }
+        }
+        set dimen(Type) = $(dimen(PosX)).s
+        set dimen(Note) = $(dimen(PosX)).s
+        do initgparam_i=0,dimen(PosX)-1 {
+            set Type[$initgparam_i] = 'psf'
+            set Note[$initgparam_i] = '_'
+        }
+        # 
+        # do initgparam_i=0,dimen(PosX)-1 {
+        #     if(0==$initgparam_i) { 
+        #       set Type='psf' set Mags=5.0 set Note='_' set IObj=($initgparam_i+1) #<TODO># Mags default value is 5.0
+        #       foreach initgparam_ptr {Rads Sers Elli Roti} {set $initgparam_ptr = 0.0}
+        #       foreach initgparam_ptr {Rads Sers Elli Roti PosX PosY Mags} {foreach initgparam_lim {ParamFit ParamMin ParamMax} {
+        #       set $initgparam_lim""$initgparam_ptr = 0.0}}
+        #     } else {
+        #       set Type=Type concat Type[0] set Mags=Mags concat Mags[0] set Note=Note concat '_' set IObj=IObj concat ($initgparam_i+1)
+        #       foreach initgparam_ptr {Rads Sers Elli Roti} {set $initgparam_ptr = $initgparam_ptr concat 0.0}
+        #       foreach initgparam_ptr {Rads Sers Elli Roti PosX PosY Mags} {foreach initgparam_lim {ParamMin ParamMax ParamFit} {
+        #       set $initgparam_lim""$initgparam_ptr = $initgparam_lim""$initgparam_ptr concat 0.0}}
+        #     }
+        # }
+        do initgparam_i=0,dimen(VaryX)-1 { # <added><20150607><dzliu> 
+            set ParamFitPosX[$initgparam_i] = int(VaryX[$initgparam_i]>0) # = 1 --> = VaryX # <fixed><20151215><dzliu>
+            set ParamMinPosX[$initgparam_i] = -VaryX[$initgparam_i]
+            set ParamMaxPosX[$initgparam_i] = VaryX[$initgparam_i]
+        }
+        do initgparam_i=0,dimen(VaryY)-1 { # <added><20150607><dzliu> 
+            set ParamFitPosY[$initgparam_i] = int(VaryY[$initgparam_i]>0) # = 1 --> = VaryY # <fixed><20151215><dzliu>
+            set ParamMinPosY[$initgparam_i] = -VaryY[$initgparam_i]
+            set ParamMaxPosY[$initgparam_i] = VaryY[$initgparam_i]
+        }
+        do initgparam_i=0,dimen(VaryM)-1 { # <added><20150607><dzliu> 
+            set ParamFitMags[$initgparam_i] = int(VaryM[$initgparam_i]>0)
+        }
+        set ParamMinMags = float(PosX*0)-10.0 # <added><20150717><dzliu><20160130>
+        set ParamMaxMags = float(PosX*0)+20.0
+        set         Rads = float(PosX*0)+0.0
+        set ParamFitRads = float(PosX*0)+0
+        set ParamMinRads = float(PosX*0)+0.20
+        set ParamMaxRads = float(PosX*0)+99.0
+        set         Sers = float(PosX*0)+0.0 #<20170727># 1.0 -> 0.0
+        set ParamFitSers = float(PosX*0)+0
+        set ParamMinSers = float(PosX*0)+0.00 #<20170727># 0.10 -> 0.00
+        set ParamMaxSers = float(PosX*0)+0.00 #<20170727># 99.0 -> 0.00
+        set         Elli = float(PosX*0)+1.0 # a/b ratio
+        set ParamFitElli = float(PosX*0)+0
+        set ParamMinElli = float(PosX*0)+0.10
+        set ParamMaxElli = float(PosX*0)+99.0
+        set         Roti = float(PosX*0)+0.0
+        set ParamFitRoti = float(PosX*0)+0
+        set ParamMinRoti = float(PosX*0)-360.0
+        set ParamMaxRoti = float(PosX*0)+360.0
+        unset VaryX # <added><20150607><dzliu> 
+        unset VaryY # <added><20150607><dzliu> 
+        unset VaryM # <added><20151216><dzliu> 
+        set SkyValue = 0.0 # <added><20150718><dzliu> 
+        set ParamFitSkyValue = 0 # <added><20150718><dzliu> 
+        if($verbose) {
+            echo
+            echo Initialized value vectors with $(dimen(Type)) objects:
+            print   {IObj PosX PosY Type Mags Rads Sers Elli Roti Note}
+            echo Initialized paramter vectors with $(dimen(Type)) objects:
+            echo     ParamMinPosX ParamMaxPosX ParamFitPosX ParamMinPosY ParamMaxPosY ParamFitPosY ParamMinMags ParamMaxMags ParamFitMags
+            echo     ParamMinRads ParamMaxRads ParamFitRads ParamMinSers ParamMaxSers ParamFitSers
+            echo     ParamMinElli ParamMaxElli ParamFitElli ParamMinRoti ParamMaxRoti ParamFitRoti
+            echo Initialized paramter vectors for sky background:
+            echo     SkyValue ParamFitSkyValue
+            echo 
+        }
+
+
+readGalfitParam 01
+        # read all galfit parameters from disk file
+        if(!$?1) {print 'astroGalfit::readGalfitParam inputfile.param\n' {} return}
+        set readgparam_in = strStandardVector($1)
+        astroGalfitOnMute
+        data $(readgparam_in)
+        define rfhi 0 if(is_vector(rfvectors)) {unset rfvectors}
+        while {$?rfhc||!$rfhi} {
+            define rfhi $($rfhi+1)
+            define rfhc read 1 $rfhi
+            if($?rfhc) {
+                if($?astroGalfit_pref_verbose) {if($astroGalfit_pref_verbose) {print 'Read column $rfhi as $rfhc\n' {}}}
+                if('$rfhc'=='Type'||'$rfhc'=='Note') { #<TODO># read string parameters
+                read $rfhc $rfhi.s} else {read $rfhc $rfhi}
+                if(is_vector(rfvectors)) {set rfvectors=rfvectors concat '$rfhc'} else {set rfvectors='$rfhc'}
+            }
+        } # read the 1st row 1st column
+        astroGalfitUnMute
+
+loadGalfitParam 01
+        # read all galfit parameters from disk file (save as readGalfitParam)
+        if(!$?1) {print 'astroGalfit::loadGalfitParam inputfile.param\n' {} return}
+        readGalfitParam $1
+
+writeGalfitParam 01
+        # write all galfit parameters to disk file
+        if(!$?1) {print 'astroGalfit::writeGalfitParam outputfile.param\n' {} return}
+        set writegparam_out = strStandardVector($1)
+        set writegparam_vector = '\#'
+        if($verbose) {print 'astroGalfit::writeGalfitParam: Checked vector' {}}
+        # check all value vectors
+        foreach writegparam_ptr {IObj PosX PosY Mags Rads Sers Elli Roti Type} {
+            if(!is_vector($writegparam_ptr)) {print 'astroGalfit::writeGalfitParam: Error! $writegparam_ptr does not exist!\n' {} return}
+            set writegparam_vector = writegparam_vector concat '$writegparam_ptr'
+            if($verbose) {print ' $writegparam_ptr' {}}
+        }
+        # check all limit vectors
+        foreach writegparam_ptr {PosX PosY Mags Rads Sers Elli Roti} {foreach writegparam_lim {ParamFit ParamMin ParamMax} {
+            if(!is_vector($writegparam_lim""$writegparam_ptr)) {
+                print 'astroGalfit::writeGalfitParam: Error! $writegparam_lim""$writegparam_ptr does not exist!\n' {} return
+            }
+            set writegparam_vector = writegparam_vector concat '$writegparam_lim""$writegparam_ptr'
+            if($verbose) {print ' $writegparam_lim""$writegparam_ptr' {}}
+        }}
+        # check note
+        foreach writegparam_ptr {Note} {
+            if(!is_vector($writegparam_ptr)) {print 'astroGalfit::writeGalfitParam: Error! $writegparam_ptr does not exist!\n' {} return}
+            set writegparam_vector = writegparam_vector concat '$writegparam_ptr'
+            if($verbose) {print ' $writegparam_ptr\n' {}}
+        }
+        # begin to write
+        astroGalfitOnMute
+        set writegparam_fwidth = {10 10 10 9 9 9 9 9 9 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13}
+        set writegparam_ftype = {d .3f .3f .3f .3f .3f .3f .3f s d .3f .3f d .3f .3f d .3f .3f d .3f .3f d .3f .3f d .3f .3f d .3f .3f s}
+        do writegparam_i = 0,dimen(writegparam_vector)-1 {set writegparam_var = writegparam_vector[$writegparam_i]
+            if($writegparam_i==0) {print  $(writegparam_out) '%-2s' {writegparam_var}} # Overwrite the output file here!
+            if($writegparam_i==1) {print +$(writegparam_out) '%$(writegparam_fwidth[0]-2)s' {writegparam_var}}
+            if($writegparam_i>=2) {set writegparam_format = '%$(writegparam_fwidth[$writegparam_i-1])$(writegparam_ftype[$writegparam_i-1])'
+                                   print +$(writegparam_out) '$(writegparam_format)' {writegparam_var}}
+        } print +$(writegparam_out) '\n\#\n' {}
+        do writegparam_j = 0,dimen(IObj)-1 {do writegparam_i = 1,dimen(writegparam_vector)-1 {
+            set writegparam_var = writegparam_vector[$writegparam_i] # the first element of writegparam_vector is '#'
+            # echo $(writegparam_var)[$writegparam_j]
+            set writegparam_var = $(writegparam_var)[$writegparam_j] # now we get the $writegparam_j object
+            set writegparam_format = '%$(writegparam_fwidth[$writegparam_i-1])$(writegparam_ftype[$writegparam_i-1])'
+            print +$(writegparam_out) '$(writegparam_format)' {writegparam_var}
+        } print +$(writegparam_out) '\n' {}}
+        print +$(writegparam_out) '\n' {}
+        astroGalfitUnMute
+        if($verbose) {print 'astroGalfit::writeGalfitParam: Galfit parameters has been written into $1\n' {}}
+
+
+readGalfitResult 01
+        # read galfit fits result
+        # note that galfit store precise results in its output fits header
+        # so we need some tools to read the output info:
+        # -- CrabFitsHeader, awk
+        # 
+        if(!$?1) {print 'astroGalfit::readGalfitResult output.fits\n' {} return}
+        set readgresult_file = strStandardVector($1)
+        # macro read run_image_util.sm #<TODO># should be loaded outside!!!
+        if(!is_file($(readgresult_file))) {
+            echo astroGalfit::readGalfitResult: Error! File $(readgresult_file) not found!
+            echo astroGalfit::readGalfitResult: Error! File $(readgresult_file) not found!
+            echo astroGalfit::readGalfitResult: Error! File $(readgresult_file) not found!
+            return
+        }
+        set readgresult_tmp = {"._.AstroGalfit._.ReadGalfitResult._."}
+        if(is_file("fit.result")) {!mv "fit.result" "fit.result.backup"}
+        !read_galfit_output_fits_result $1
+        #!CrabFitsHeader $1 -ext 2 | sed -n -e '/COMP_/,/COMMENT/p' > "fit.header"
+        #!cat "fit.header" |cut -d\' -f2 |sed -E 's/\[(.*)\]/\1 0/g' |sed -e 's%+/-%%g' |sed -e 's%*%%g' > $(readgresult_tmp) #' #<20170210># |sed -e 's%*%%g'
+        #!echo "\# ResultType ResultPosX ResultPosXErr ResultPosY ResultPosYErr ResultMags ResultMagsErr " > "fit.result"
+        #!echo "\# " >> "fit.result"
+        #!cat $(readgresult_tmp) |while read line;do if [[ "\$line" != "COMMENT"* ]];then echo -n "\$line\ ";else echo "";fi;done >> "fit.result"
+        if(is_file("fit.result")) {
+            astroGalfitOnMute
+            data "fit.result" read ResultType 1.s
+            data "fit.result" read {ResultPosX 2 ResultPosXErr 3 ResultPosY 4 ResultPosYErr 5 ResultMags 6 ResultMagsErr 7}
+            declare ResultRads    0
+            declare ResultRadsErr 0
+            declare ResultSers    0
+            declare ResultSersErr 0
+            declare ResultElli    0
+            declare ResultElliErr 0
+            declare ResultRoti    0
+            declare ResultRotiErr 0
+            do readgresi = 0,dimen(ResultType)-1 {
+                set TempResultRads    = 0.0
+                set TempResultRadsErr = 0.0
+                set TempResultSers    = 0.0
+                set TempResultSersErr = 0.0
+                set TempResultElli    = 1.0
+                set TempResultElliErr = 0.0
+                set TempResultRoti    = 0.0
+                set TempResultRotiErr = 0.0
+                if(ResultType[$readgresi]!='psf' && ResultType[$readgresi]!='sky') {
+                    # Read non-psf type fitting models, which has more columns
+                    # Note that skip 2 header lines, add 1 because line number starts from 1. 
+                    #!cat "fit.result" | head -n $($readgresi+2+1) | tail -n 1 #<TODO><DEBUG><20160714><dzliu>#
+                    data "fit.result" lines $($readgresi+2+1) $($readgresi+2+1) 
+                    # <BUG><corrected><20161030> # for Gaussian model only 3 parameters are in "fit.result"
+                    if(ResultType[$readgresi]=='gaussian') {
+                        read {TempResultRads 8  TempResultRadsErr 9 }
+                        read {TempResultElli 10 TempResultElliErr 11}
+                        read {TempResultRoti 12 TempResultRotiErr 13}
+                    } else {
+                        # including sersic etc
+                        read {TempResultRads 8  TempResultRadsErr 9 }
+                        read {TempResultSers 10 TempResultSersErr 11}
+                        read {TempResultElli 12 TempResultElliErr 13}
+                        read {TempResultRoti 14 TempResultRotiErr 15}
+                    }
+                }
+                set ResultRads    = ResultRads    concat TempResultRads   
+                set ResultRadsErr = ResultRadsErr concat TempResultRadsErr
+                set ResultSers    = ResultSers    concat TempResultSers   
+                set ResultSersErr = ResultSersErr concat TempResultSersErr
+                set ResultElli    = ResultElli    concat TempResultElli   
+                set ResultElliErr = ResultElliErr concat TempResultElliErr
+                set ResultRoti    = ResultRoti    concat TempResultRoti   
+                set ResultRotiErr = ResultRotiErr concat TempResultRotiErr
+                # 
+                if(ResultType[$readgresi]=='sky') {
+                    set SkyValue = ResultMags[$readgresi]
+                    set SkyValueErr = ResultMagsErr[$readgresi]
+                }
+            }
+            ## data "fit.result" read {ResultRads 8  ResultRadsErr 9 }
+            ## data "fit.result" read {ResultSers 10 ResultSersErr 11}
+            ## data "fit.result" read {ResultElli 12 ResultElliErr 13}
+            ## data "fit.result" read {ResultRoti 14 ResultRotiErr 15}
+            # <TODO><20150222><DzLIU> supermongo complains about "No lines read from fit.result" when the column does not exist.
+            # <DONE><20160620><dzliu> now loop each source and read columns according to types
+            # 
+            # <Added><20161028><dzliu> excluding sky in list
+            set TempCoo = (ResultType!='sky')
+            foreach TempVar {ResultType ResultPosX ResultPosXErr ResultPosY ResultPosYErr ResultMags ResultMagsErr} {
+                set $TempVar = $TempVar if(TempCoo)
+            }
+            foreach TempVar {ResultRads ResultRadsErr ResultSers ResultSersErr ResultElli ResultElliErr ResultRoti ResultRotiErr} {
+                set $TempVar = $TempVar if(TempCoo)
+            }
+            # 
+            declare ResultResPix 0 #<TODO># 
+            declare ResultRmsPix 0 #<TODO># 
+            # 
+            astroGalfitUnMute
+            # now print what have been read
+            if($verbose){ print '\n' {}
+                print 'Read these vectors: ResultType ResultPosX ResultPosXErr ResultPosY ResultPosYErr ResultMags ResultMagsErr ' {}
+                if(is_vector(ResultRads)){if(dimen(ResultRads)>0){print 'ResultRads ResultRadsErr ' {}}}
+                if(is_vector(ResultSers)){if(dimen(ResultSers)>0){print 'ResultSers ResultSersErr ' {}}}
+                if(is_vector(ResultElli)){if(dimen(ResultElli)>0){print 'ResultElli ResultElliErr ' {}}}
+                if(is_vector(ResultRoti)){if(dimen(ResultRoti)>0){print 'ResultRoti ResultRotiErr ' {}}}
+                if(is_vector(ResultResPix)){if(dimen(ResultResPix)>0){print 'ResultResPix ' {}}}
+                if(is_vector(ResultRmsPix)){if(dimen(ResultRmsPix)>0){print 'ResultRmsPix ' {}}}
+                print '\n\n' {}
+            }
+            # clean 
+            if(is_file($(readgresult_tmp))) {!\rm $(readgresult_tmp)}
+        }
+
+readGalfitResult_Old_Before20150220 01
+        # read galfit fits result
+        # need IRAF
+        # need run_image_util.sm
+        # need PosX PosY PsfMap
+        # e.g. macro read run_image_util.sm load astroGalfit.sm readGalfitResult fit.fits
+        if(!$?1) {print 'astroGalfit::readGalfitResult output.fits\n' {} return}
+        set readgresult_file = strStandardVector($1)
+        # macro read run_image_util.sm #<TODO># should be loaded outside!!!
+        if(is_file($(readgresult_file))) {
+            # now get residual pixel sum from residual map
+            !\cp $(readgresult_file) ".tmp.iraf.1.fits"
+            if(is_file(".tmp.iraf.2.fits")) {!\rm ".tmp.iraf.2.fits"}
+            if($verbose){
+                !echo imcopy ".tmp.iraf.1.fits"[3] ".tmp.iraf.2.fits"';' logout | cl | grep 'vocl>' } else {
+                !echo imcopy ".tmp.iraf.1.fits"[3] ".tmp.iraf.2.fits"';' logout | cl > /dev/null
+            }
+            if(!is_vector(PsfMap)){
+                print 'astroGalfit::readGalfitResult Warning! Vector PsfMap not found, setting PsfMap = "psf.fits".\n' {}
+                set PsfMap = {"psf.fits"} }
+            if(!is_vector(PosX)){ if(is_file("fit.param")){
+                print 'astroGalfit::readGalfitResult Warning! Vector PosX not found, reading PosX from "fit.param": ' {}
+                data  "fit.param" read PosX 2 } else {
+                print 'astroGalfit::readGalfitResult Error! Vector PosX not exist!\n' {} return
+                } }
+            if(!is_vector(PosY)){ if(is_file("fit.param")){
+                print 'astroGalfit::readGalfitResult Warning! Vector PosY not found, reading PosY from "fit.param": ' {}
+                data  "fit.param" read PosY 3 } else {
+                print 'astroGalfit::readGalfitResult Error! Vector PosY not exist!\n' {} return
+                } }
+            if($verbose){
+                print 'astroGalfit::readGalfitResult running getResPixStats. this could take quite a while.\n' {}
+            }
+            getResPixStats ".tmp.iraf.2.fits" PosX PosY $(PsfMap)
+            set ResultResPix = ResPixStats_ABS
+            if(is_file(".tmp.iraf.2.fits")) {!\rm ".tmp.iraf.2.fits"}
+            !\cp "rms.fits" ".tmp.iraf.2.fits"
+            getRmsPixStats ".tmp.iraf.2.fits" PosX PosY
+            set ResultRmsPix = RmsPixStats_RMS
+            if(is_file(".tmp.iraf.2.fits")) {!\rm ".tmp.iraf.2.fits"}
+            if(is_file(".tmp.iraf.1.fits")) {!\rm ".tmp.iraf.1.fits"}
+            # define aaa ? # check point ResultResPix ResultRmsPix
+            astroGalfitOnMute
+            # now get type from the galfit output fits header
+            #!CrabFitsHeader $(readgresult_file) | grep $(TempUid[0]+1)"_MAG *= " | cut -c 12-19 > ".tmp.iraf.imhead.txt"
+            !\cp $(readgresult_file) ".tmp.iraf.1.fits"
+            !echo imhead ".tmp.iraf.1.fits"[2] 'lo+;' logout | cl | grep "COMP_[0-9]*" | sed "s/[\']/\ /g" | sed "s/=/\ =/g" > ".tmp.iraf.imhead.txt"
+            if($?astroGalfit_pref_verbose){ if($astroGalfit_pref_verbose){
+                !echo 'vocl>' imhead $(readgresult_file)[2] 'lo+;   ' # ; cat ".tmp.iraf.imhead.txt"
+            } }
+            data ".tmp.iraf.imhead.txt" read ResultType 3.s
+            !\cp ".tmp.iraf.imhead.txt" ".astroGalfit.readResults.Type.txt"
+            !\rm ".tmp.iraf.1.fits"
+            # now get posx from the galfit output fits header
+            !\cp $(readgresult_file) ".tmp.iraf.1.fits"
+            !echo imhead ".tmp.iraf.1.fits"[2] 'lo+;' logout | cl | grep "_XC\ " > ".tmp.iraf.imhead.txt"
+            !sed -i '.bak' -E 's@(.*)= *.?\[([0-9Ee.+-]*)\].?(.*)/.*@\1 = \3 \2 +/- 0@g' ".tmp.iraf.imhead.txt"
+            #<20170210># !sed -i '.bak' -E 's@(.*)= *.?([0-9Ee.+-]*) \+\/\- ([0-9Ee.+-]*).?(.*)/.*@\1 = \4 \2 +/- \3@g' ".tmp.iraf.imhead.txt" #<20170210># [*]*
+            !sed -i '.bak' -E 's@(.*)= *.?[*]*([0-9Ee.+-]*)[*]* \+\/\- [*]*([0-9Ee.+-]*)[*]*.?(.*)/.*@\1 = \4 \2 +/- \3@g' ".tmp.iraf.imhead.txt"
+            if($?astroGalfit_pref_verbose){ if($astroGalfit_pref_verbose){
+                !echo 'vocl>' imhead $(readgresult_file)[2] 'lo+;   ' # ; cat ".tmp.iraf.imhead.txt"
+            } }
+            data ".tmp.iraf.imhead.txt" read {ResultPosX 3 ResultPosXErr 5}
+            !\cp ".tmp.iraf.imhead.txt" ".astroGalfit.readResults.PosX.txt"
+            !\rm ".tmp.iraf.1.fits"
+            # now get posy from the galfit output fits header
+            !\cp $(readgresult_file) ".tmp.iraf.1.fits"
+            !echo imhead ".tmp.iraf.1.fits"[2] 'lo+;' logout | cl | grep "_YC\ " > ".tmp.iraf.imhead.txt"
+            !sed -i '.bak' -E 's@(.*)= *.?\[([0-9Ee.+-]*)\].?(.*)/.*@\1 = \3 \2 +/- 0@g' ".tmp.iraf.imhead.txt"
+            !sed -i '.bak' -E 's@(.*)= *.?[*]*([0-9Ee.+-]*)[*]* \+\/\- [*]*([0-9Ee.+-]*)[*]*.?(.*)/.*@\1 = \4 \2 +/- \3@g' ".tmp.iraf.imhead.txt" #<20170210># [*]*
+            if($?astroGalfit_pref_verbose){ if($astroGalfit_pref_verbose){
+                !echo 'vocl>' imhead $(readgresult_file)[2] 'lo+;   ' # ; cat ".tmp.iraf.imhead.txt"
+            } }
+            data ".tmp.iraf.imhead.txt" read {ResultPosY 3 ResultPosYErr 5}
+            !\cp ".tmp.iraf.imhead.txt" ".astroGalfit.readResults.PosY.txt"
+            !\rm ".tmp.iraf.1.fits"
+            # now get mags from the galfit output fits header
+            !\cp $(readgresult_file) ".tmp.iraf.1.fits"
+            !echo imhead ".tmp.iraf.1.fits"[2] 'lo+;' logout | cl | grep "_MAG\ " > ".tmp.iraf.imhead.txt"
+            !sed -i '.bak' -E 's@(.*)= *.?\[([0-9Ee.+-]*)\].?(.*)/.*@\1 = \3 \2 +/- 0@g' ".tmp.iraf.imhead.txt"
+            !sed -i '.bak' -E 's@(.*)= *.?[*]*([0-9Ee.+-]*)[*]* \+\/\- [*]*([0-9Ee.+-]*)[*]*.?(.*)/.*@\1 = \4 \2 +/- \3@g' ".tmp.iraf.imhead.txt" #<20170210># [*]*
+            if($?astroGalfit_pref_verbose){ if($astroGalfit_pref_verbose){
+                !echo 'vocl>' imhead $(readgresult_file)[2] 'lo+;   ' # ; cat ".tmp.iraf.imhead.txt"
+            } }
+            data ".tmp.iraf.imhead.txt" read {ResultMags 3 ResultMagsErr 5}
+            !\cp ".tmp.iraf.imhead.txt" ".astroGalfit.readResults.Mags.txt"
+            !\rm ".tmp.iraf.1.fits"
+            # now get rads from the galfit output fits header
+            !\cp $(readgresult_file) ".tmp.iraf.1.fits"
+            !echo imhead ".tmp.iraf.1.fits"[2] 'lo+;' logout | cl | grep "_RE\ " > ".tmp.iraf.imhead.txt"
+            !sed -i '.bak' -E 's@(.*)= *.?\[([0-9Ee.+-]*)\].?(.*)/.*@\1 = \3 \2 +/- 0@g' ".tmp.iraf.imhead.txt"
+            !sed -i '.bak' -E 's@(.*)= *.?[*]*([0-9Ee.+-]*)[*]* \+\/\- [*]*([0-9Ee.+-]*)[*]*.?(.*)/.*@\1 = \4 \2 +/- \3@g' ".tmp.iraf.imhead.txt" #<20170210># [*]*
+            if($?astroGalfit_pref_verbose){ if($astroGalfit_pref_verbose){
+                !echo 'vocl>' imhead $(readgresult_file)[2] 'lo+;   ' # ; cat ".tmp.iraf.imhead.txt"
+            } }
+            data ".tmp.iraf.imhead.txt" read {ResultRads 3 ResultRadsErr 5}
+            !\rm ".tmp.iraf.1.fits"
+            # now get sers from the galfit output fits header
+            !\cp $(readgresult_file) ".tmp.iraf.1.fits"
+            !echo imhead ".tmp.iraf.1.fits"[2] 'lo+;' logout | cl | grep "_N\ " > ".tmp.iraf.imhead.txt"
+            !sed -i '.bak' -E 's@(.*)= *.?\[([0-9Ee.+-]*)\].?(.*)/.*@\1 = \3 \2 +/- 0@g' ".tmp.iraf.imhead.txt"
+            !sed -i '.bak' -E 's@(.*)= *.?[*]*([0-9Ee.+-]*)[*]* \+\/\- [*]*([0-9Ee.+-]*)[*]*.?(.*)/.*@\1 = \4 \2 +/- \3@g' ".tmp.iraf.imhead.txt" #<20170210># [*]*
+            if($?astroGalfit_pref_verbose){ if($astroGalfit_pref_verbose){
+                !echo 'vocl>' imhead $(readgresult_file)[2] 'lo+;   ' # ; cat ".tmp.iraf.imhead.txt"
+            } }
+            data ".tmp.iraf.imhead.txt" read {ResultSers 3 ResultSersErr 5}
+            !\rm ".tmp.iraf.1.fits"
+            # now get elli from the galfit output fits header
+            !\cp $(readgresult_file) ".tmp.iraf.1.fits"
+            !echo imhead ".tmp.iraf.1.fits"[2] 'lo+;' logout | cl | grep "_AR\ " > ".tmp.iraf.imhead.txt"
+            !sed -i '.bak' -E 's@(.*)= *.?\[([0-9Ee.+-]*)\].?(.*)/.*@\1 = \3 \2 +/- 0@g' ".tmp.iraf.imhead.txt"
+            !sed -i '.bak' -E 's@(.*)= *.?[*]*([0-9Ee.+-]*)[*]* \+\/\- [*]*([0-9Ee.+-]*)[*]*.?(.*)/.*@\1 = \4 \2 +/- \3@g' ".tmp.iraf.imhead.txt" #<20170210># [*]*
+            if($?astroGalfit_pref_verbose){ if($astroGalfit_pref_verbose){
+                !echo 'vocl>' imhead $(readgresult_file)[2] 'lo+;   ' # ; cat ".tmp.iraf.imhead.txt"
+            } }
+            data ".tmp.iraf.imhead.txt" read {ResultElli 3 ResultElliErr 5}
+            !\rm ".tmp.iraf.1.fits"
+            # now get roti from the galfit output fits header
+            !\cp $(readgresult_file) ".tmp.iraf.1.fits"
+            !echo imhead ".tmp.iraf.1.fits"[2] 'lo+;' logout | cl | grep "_PA\ " > ".tmp.iraf.imhead.txt"
+            !sed -i '.bak' -E 's@(.*)= *.?\[([0-9Ee.+-]*)\].?(.*)/.*@\1 = \3 \2 +/- 0@g' ".tmp.iraf.imhead.txt"
+            !sed -i '.bak' -E 's@(.*)= *.?[*]*([0-9Ee.+-]*)[*]* \+\/\- [*]*([0-9Ee.+-]*)[*]*.?(.*)/.*@\1 = \4 \2 +/- \3@g' ".tmp.iraf.imhead.txt" #<20170210># [*]*
+            if($?astroGalfit_pref_verbose){ if($astroGalfit_pref_verbose){
+                !echo 'vocl>' imhead $(readgresult_file)[2] 'lo+;   ' # ; cat ".tmp.iraf.imhead.txt"
+            } }
+            data ".tmp.iraf.imhead.txt" read {ResultRoti 3 ResultRotiErr 5}
+            !\rm ".tmp.iraf.1.fits"
+            # now get sky from the galfit output fits header
+            !\cp $(readgresult_file) ".tmp.iraf.1.fits"
+            !echo imhead ".tmp.iraf.1.fits"[2] 'lo+;' logout | cl | grep "_SKY\ " > ".tmp.iraf.imhead.txt"
+            !sed -i '.bak' -E 's@(.*)= *.?\[([0-9Ee.+-]*)\].?(.*)/.*@\1 = \3 \2 +/- 0@g' ".tmp.iraf.imhead.txt"
+            !sed -i '.bak' -E 's@(.*)= *.?[*]*([0-9Ee.+-]*)[*]* \+\/\- [*]*([0-9Ee.+-]*)[*]*.?(.*)/.*@\1 = \4 \2 +/- \3@g' ".tmp.iraf.imhead.txt" #<20170210># [*]*
+            if($?astroGalfit_pref_verbose){ if($astroGalfit_pref_verbose){
+                !echo 'vocl>' imhead $(readgresult_file)[2] 'lo+;   ' # ; cat ".tmp.iraf.imhead.txt"
+            } }
+            data ".tmp.iraf.imhead.txt" read {SkyValue 3 SkyValueErr 5}
+            if(is_file(".tmp.iraf.1.fits")) {!\rm ".tmp.iraf.1.fits"}
+            if(is_file(".tmp.iraf.imhead.txt")) {!\rm ".tmp.iraf.imhead.txt"}
+            if(is_file(".tmp.iraf.imhead.txt.bak")) {!\rm ".tmp.iraf.imhead.txt.bak"}
+            astroGalfitUnMute
+            # now print what have been read
+            if($verbose){ print '\n' {}
+                print 'Read these vectors: ResultType ResultPosX ResultPosXErr ResultPosY ResultPosYErr ResultMags ResultMagsErr ' {}
+                if(is_vector(ResultRads)){if(dimen(ResultRads)>0){print 'ResultRads ResultRadsErr '}}
+                if(is_vector(ResultSers)){if(dimen(ResultSers)>0){print 'ResultSers ResultSersErr '}}
+                if(is_vector(ResultElli)){if(dimen(ResultElli)>0){print 'ResultElli ResultElliErr '}}
+                if(is_vector(ResultRoti)){if(dimen(ResultRoti)>0){print 'ResultRoti ResultRotiErr '}}
+                print 'ResultResPix ResultRmsPix\n\n' {}
+            }
+            # # now backup galfit output version
+            # if($?VersionGalfitOutputFile==0) {define VersionGalfitOutputFile 1} else {
+            #     define VersionGalfitOutputFile $($VersionGalfitOutputFile+1)
+            # }
+            # foreach var {"param" "input" "limit" "ofits" "out"} {
+            #     !\cp "tmpFitGalfit".$var "tmpFitGalfit".$var.$VersionGalfitOutputFile
+            # }
+            echo 
+            echo Read galfit results into vectors:
+            echo     ResultPosX ResultPosY ResultMags ResultPosXErr ResultPosYErr ResultMagsErr ResultType ResultNote
+            echo     ResultRads ResultSers ResultElli ResultRoti
+        } else {
+            echo astroGalfit::readGalfitResult: Error! File $(readgresult_file) not found!
+            echo astroGalfit::readGalfitResult: Error! File $(readgresult_file) not found!
+            echo astroGalfit::readGalfitResult: Error! File $(readgresult_file) not found!
+            return
+        }
+
+
+strStandardVector_test 00
+        #set aaa = strStandardVector("abc 123")
+        #set aaa = strStandardVector('abc 123')
+        #set aaa = strStandardVector("abc+123")
+        #set aaa = strStandardVector('abc+123')
+        #set aaa = strStandardVector("abc-123")
+        #set aaa = strStandardVector('abc-123')
+        #set aaa = strStandardVector("abc*123")
+        #set aaa = strStandardVector('abc*123')
+        #set aaa = strStandardVector("abc/123")
+        #set aaa = strStandardVector('abc/123')
+        set aaa = strStandardVector("123.0") # some problem to show float
+        set aaa = strStandardVector('123.0')
+        set aaa = strStandardVector("123")
+        set aaa = strStandardVector('123')
+        set aaa = strStandardVector(abc123)
+        set aaa = strStandardVector(123abc)
+        set aaa = strStandardVector(abc)
+        set aaa = strStandardVector(123)
+        ###set aaa = strStandardVector(abc/123) # failed! input arg cannot be accepted!
+
+strStandardVector 01
+        # <TODO> situations: "abc 123" 'abc 123' abc123 abc/123 abc.123 123
+        # convert anything to a standard str vector {"XXX XXX"}
+        if(!$?1) { return } # AND the input should be in quotes!
+        # METHOD 1
+        #!echo $1   sed s/\\^[\\\\"\']//g   sed s/[\\\\"\\']\$//g
+        #!echo $1 | sed s/\\^[\\\\"\']//g | sed s/[\\\\"\\']\$//g
+        #!echo $1 | sed s/\\^[\\\\"\']//g | sed s/[\\\\"\\']\$//g > "._.StrStandardVector._."
+        #data "._.StrStandardVector._." read strstdvec 1.s
+        #if(strstdvec=='__strStandardVector_arg1') {
+        #!echo $($1) | sed s/\\^[\\\\"\']//g | sed s/[\\\\"\\']\$//g > "._.StrStandardVector._."}
+        #!cat "._.StrStandardVector._."
+        # METHOD 2
+        !echo -n $1 | grep -v '__strStandardVector_arg1' > /dev/null
+        if($exit_status!=0) { set strstdvec1 = __strStandardVector_arg1
+                                                         #print {__strStandardVector_arg1}
+                                                         #echo $(whatis(__strStandardVector_arg1))
+                                                         #echo $(whatis(strstdvec1))
+                     } else { set strstdvec1 = <'$1'>    
+                        if(whatis(strstdvec1)==137) {
+                              set strstdvec1 = string($1)
+                        }
+                                                         #print {strstdvec1}
+                                                         #echo $(whatis(strstdvec1))                                                        
+                     }
+        #<DEBUG>#!echo -n '++++++' $exit_status '   '
+        #<DEBUG>#!echo -n $1 '   '
+        set strstdvec2 = {"} + strstdvec1[0]
+        do  strstdveci=1,dimen(strstdvec1)-1 {set strstdvec2 = strstdvec2 + ' ' + strstdvec1[$strstdveci]}
+        set strstdvec2 = strstdvec2 + {"}
+        #<DEBUG>#print {strstdvec2}
+        set $0 = strstdvec2 
+        return
+
+
+astroGalfitAddFits 03
+    # merge to map with iraf imarith
+    if($verbose) { !echo astroGalfitFitsMerge: adding $1 '+' $2 '->' $3 }
+                   !echo $3                         > iraf_add.iraf
+                   !echo "no"                      >> iraf_add.iraf
+                   !echo ""                        >> iraf_add.iraf
+                   !\$iraf/bin/x_images.e imdelete  < iraf_add.iraf
+                   !echo $1                         > iraf_add.iraf
+                   !echo "+"                       >> iraf_add.iraf
+                   !echo $2                        >> iraf_add.iraf
+                   !echo $3                        >> iraf_add.iraf
+                   !echo ""                        >> iraf_add.iraf
+                   !echo "no"                      >> iraf_add.iraf  #verbose
+                   !echo "no"                      >> iraf_add.iraf
+                   !echo ""                        >> iraf_add.iraf
+                   !echo ""                        >> iraf_add.iraf
+                   !echo ""                        >> iraf_add.iraf
+                   !\$iraf/bin/x_images.e imarith   < iraf_add.iraf
+    if($verbose) { !echo ""}
+
+astroGalfitSubFits 03
+    # merge to map with iraf imarith
+    if($verbose) { !echo astroGalfitFitsMerge: subtracting $1 '-' $2 '->' $3 }
+                   !echo $3                         > iraf_sub.iraf
+                   !echo "no"                      >> iraf_sub.iraf
+                   !echo ""                        >> iraf_sub.iraf
+                   !\$iraf/bin/x_images.e imdelete  < iraf_sub.iraf
+                   !echo $1                         > iraf_sub.iraf
+                   !echo "-"                       >> iraf_sub.iraf
+                   !echo $2                        >> iraf_sub.iraf
+                   !echo $3                        >> iraf_sub.iraf
+                   !echo ""                        >> iraf_sub.iraf
+                   !echo "no"                      >> iraf_sub.iraf  #verbose
+                   !echo "no"                      >> iraf_sub.iraf
+                   !echo ""                        >> iraf_sub.iraf
+                   !echo ""                        >> iraf_sub.iraf
+                   !echo ""                        >> iraf_sub.iraf
+                   !\$iraf/bin/x_images.e imarith   < iraf_sub.iraf
+    if($verbose) { !echo ""}
+
+
+astroGalfitOnMute 00
+        #
+        if($?print_noheader) { if($print_noheader!=1) {
+            define astroGalfit_pref_noheader $print_noheader
+            define print_noheader 1
+        } } else {
+            define astroGalfit_pref_noheader 0
+            define print_noheader 1
+        }
+        if($?verbose) { if($verbose!=0) {
+            define astroGalfit_pref_verbose $verbose
+            verbose 0
+        } }
+
+
+
+astroGalfitUnMute 00
+        #
+        if($?astroGalfit_pref_noheader) { define print_noheader $astroGalfit_pref_noheader undef astroGalfit_pref_noheader }
+        if($?astroGalfit_pref_verbose) { verbose $astroGalfit_pref_verbose undef astroGalfit_pref_verbose }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+calc_2D_Gaussian_Condon1997_errors 02
+    # Condon 1997 - Errors of Gaussian Fitting - 1997PASP..109..166C.pdf
+    # see also '/Users/dzliu/Cloud/Github/AlmaCosmos/Softwares/3rd_pybdsf/PyBDSF/bdsf/functions.py' def get_errors()
+    # 20180309: fixed the bug when maj==0 or min==0
+    if(is_vector(maj) && is_vector(min) && is_vector(convol_maj) && is_vector(convol_min) && \
+        is_vector(beam_maj) && is_vector(beam_min) && is_vector(pixscale) && is_vector(pixnoise) && \
+        is_vector(source_peak) && is_vector(source_total)) {
+        # 
+        set source_total_err = source_total*0.0 + pixnoise
+        set source_peak_err = source_total*0.0 + pixnoise
+        set source_major_err = source_total*0.0
+        set source_minor_err = source_total*0.0
+        set source_major_err_rel = source_total*0.0
+        set source_minor_err_rel = source_total*0.0
+        set source_gaussian_snr = source_total*0.0
+        # 
+        set Condon_h_area = pi/(2*ln(2))*(beam_maj/pixscale)*(beam_min/pixscale) # Condon1997 Eq(41,42)
+        set Condon_s_area = pi/(2*ln(2))*(convol_maj/pixscale)*(convol_min/pixscale) # Condon1997 Eq(41,42)
+        set Condon_h_maj = (1.0+(beam_maj**2)/(convol_maj**2)) # Condon1997 Eq(40,41)
+        set Condon_h_min = (1.0+(beam_min**2)/(convol_min**2)) # Condon1997 Eq(40,41)
+        set Condon_mu = pixnoise
+        set Condon_A = source_peak
+        set Condon_rho = calc_Condon1997_rho(1.5,1.5) # Condon1997 Eq(41)
+        #set Condon_h_e = sqrt(Condon_h_area * Condon_h_maj**(-0.5) * Condon_h_min**(-0.5)) # Condon1997 Eq(40), the effective noise correlation area
+        set source_peak_err = Condon_A * sqrt(2.0) / Condon_rho # Condon1997 Eq(21)
+        set source_major_err_rel = 1.0 * sqrt(2.0) / calc_Condon1997_rho(2.5,0.5) # Condon1997 Eq(21), source_major_err = source_major * source_major_err_rel
+        set source_minor_err_rel = 1.0 * sqrt(2.0) / calc_Condon1997_rho(0.5,2.5) # Condon1997 Eq(21), source_minor_err = source_minor * source_minor_err_rel
+        set source_total_err_item_1 = (source_peak_err/source_peak)**2
+        set source_total_err_item_2 = (Condon_h_area/Condon_s_area)*(source_major_err_rel**2)
+        set source_total_err_item_3 = (Condon_h_area/Condon_s_area)*(source_minor_err_rel**2)
+        set source_total_err = source_total * sqrt( source_total_err_item_1 + source_total_err_item_2 + source_total_err_item_3 ) # Condon1997 Eq(42)
+        set source_gaussian_snr = Condon_rho
+        # 
+        set Condon_i = 0,dimen(source_total)-1
+        set Condon_i = Condon_i if(maj>0 && min>0)
+        if(dimen(Condon_i)>0) {
+            set source_major_err[Condon_i] = maj[Condon_i] * source_major_err_rel[Condon_i] # Condon1997 Eq(21)
+            set source_minor_err[Condon_i] = min[Condon_i] * source_minor_err_rel[Condon_i] # Condon1997 Eq(21)
+        }
+    }
+
+calc_2D_Gaussian_Condon1997_rho 02
+    if($?2) {
+        # $1 is alpha_M
+        # $2 is alpha_m
+        # They are determined by Monte-Carlo simulations in Condon1997
+        set $0 = sqrt((Condon_s_area)/(4*Condon_h_area) * Condon_h_maj**($1) * Condon_h_min**($2)) * Condon_A / Condon_mu # Condon1997 Eq(21,41)
+        return
+    }
+
+
+
+
+
+
+calc_2D_Gaussian_deconvolved_sizes 06
+    # inputs: maj_convol, min_convol, PA_convol, maj_beam, min_beam, PA_beam
+    # based on the ForTran code from eva, see email on 2018-01-09, subject "deconvolution".
+    # <20180118>
+    if($?6) {
+        set calcds_Maj_convol = ($1)
+        set calcds_Min_convol = ($2)
+        set calcds_PA_convol = ($3)
+        set calcds_Maj_beam = ($4)
+        set calcds_Min_beam = ($5)
+        set calcds_PA_beam = ($6)
+        # c deconvolve the source size following AIPS
+        set calcds_PA_convol_xl = ((calcds_PA_convol + 900.0) % 180.0)
+        set calcds_PA_beam_xl = ((calcds_PA_beam + 900.0) % 180.0)
+        set calcds_Maj_beam_square = calcds_Maj_beam**2
+        set calcds_Min_beam_square = calcds_Min_beam**2
+        set calcds_Maj_convol_square = calcds_Maj_convol**2
+        set calcds_Min_convol_square = calcds_Min_convol**2
+        set calcds_PA_diff = (calcds_PA_convol_xl - calcds_PA_beam_xl) / 90.0 * pi
+        set calcds_cosc = cos(calcds_PA_diff)
+        set calcds_sinc = sin(calcds_PA_diff)
+        set calcds_rhoc = (calcds_Maj_convol_square-calcds_Min_convol_square) * calcds_cosc - (calcds_Maj_beam_square-calcds_Min_beam_square)
+        if (calcds_rhoc == 0.0) {
+           set calcds_sigic2 = 0.0
+           set calcds_rhoa = 0.0
+        } else {
+           set calcds_sigic2 = atan((calcds_Maj_convol_square-calcds_Min_convol_square)*calcds_sinc/calcds_rhoc)
+           #[dzliu]# calcds_sigic2 = atan( calcds_sinc / ( calcds_cosc - (calcds_Maj_beam_square-calcds_Min_beam_square)/(calcds_Maj_convol_square-calcds_Min_convol_square) ) )
+           set calcds_rhoa = ((calcds_Maj_beam_square-calcds_Min_beam_square) - (calcds_Maj_convol_square-calcds_Min_convol_square) * calcds_cosc) / (2.0*cos(calcds_sigic2))
+        }
+        set calcds_PA_deconv = calcds_sigic2 * 90.0 / pi + calcds_PA_beam_xl
+        set calcds_det = ((calcds_Maj_convol_square+calcds_Min_convol_square) - (calcds_Maj_beam_square+calcds_Min_beam_square)) / 2.0
+        set calcds_Maj_deconv = calcds_det - calcds_rhoa
+        set calcds_Min_deconv = calcds_det + calcds_rhoa
+        set calcds_Maj_deconv = calcds_Maj_deconv > 0.0 ? calcds_Maj_deconv : 0.0
+        set calcds_Min_deconv = calcds_Min_deconv > 0.0 ? calcds_Min_deconv : 0.0
+        set calcds_Maj_deconv = sqrt(abs(calcds_Maj_deconv))
+        set calcds_Min_deconv = sqrt(abs(calcds_Min_deconv))
+        if (calcds_Maj_deconv < calcds_Min_deconv) {
+           set calcds_Var_swap = calcds_Maj_deconv
+           set calcds_Maj_deconv = calcds_Min_deconv
+           set calcds_Min_deconv = calcds_Var_swap
+           unset calcds_Var_swap
+           set calcds_PA_deconv = calcds_PA_deconv + 90.0
+        }
+        set calcds_PA_deconv = ((calcds_PA_deconv+900.0) % 180.0)
+        if (calcds_Maj_deconv == 0.0) {
+           set calcds_PA_deconv = 0.0
+        } else {
+            if (calcds_Min_deconv == 0.0) {
+                if ((abs(calcds_PA_deconv-calcds_PA_convol_xl) > 45.0) && (abs(calcds_PA_deconv-calcds_PA_convol_xl) < 135.0)) {
+                    set calcds_PA_deconv = ((calcds_PA_deconv+450.0) % 180.0)
+                }
+           }
+        }
+        !printf \\"Maj convol, Maj beam => Maj deconv : \\033[0;31m\\t$(calcds_Maj_convol)\\033[0;0m, \\033[0;33m$(calcds_Maj_beam)\\033[0;0m => \\033[0;34m$(calcds_Maj_deconv)\\033[0;0m\\n\\"
+        !printf \\"Min convol, Min beam => Min deconv : \\033[0;31m\\t$(calcds_Min_convol)\\033[0;0m, \\033[0;33m$(calcds_Min_beam)\\033[0;0m => \\033[0;34m$(calcds_Min_deconv)\\033[0;0m\\n\\"
+        !printf \\"PA. convol, PA. beam => PA. deconv : \\033[0;31m\\t$(calcds_PA_convol)\\033[0;0m, \\033[0;33m$(calcds_PA_beam)\\033[0;0m => \\033[0;34m$(calcds_PA_deconv)\\033[0;0m\\n\\"
+    } else {
+        print 'Usage: \n' {}
+        print '    calc_2D_Gaussian_deconvolved_sizes convol_Maj convol_Min convol_PA beam_maj beam_min beam_PA\n' {}
+        print '    set deconvolved_Maj = calcds_Maj_deconv\n' {}
+        print '    set deconvolved_Min = calcds_Min_deconv\n' {}
+        print '    set deconvolved_PA = calcds_PA_deconv\n' {}
+        print '\n' {}
+    }
+
+calc_2D_Gaussian_convolved_sizes 06
+    # inputs: maj_deconv, min_deconv, PA_deconv, maj_beam, min_beam, PA_beam
+    # based on the ForTran code from Eva, see email on 2018-01-09, subject "deconvolution".
+    # reverted the process of deconvolution, so that the inputs are intrinsic sizes and outputs are convolved sizes
+    # <20180118><20180226>
+    # 
+    # Assuming beam FWHM: B_maj, B_min, B_PA
+    #     intrinsic FWHM: H_maj, H_min, H_PA
+    #     convolved FWHM: C_maj, C_min, C_PA
+    # We have
+    #     (B_maj**2 + B_min**2) + (H_maj**2 + H_min**2) = (C_maj**2 + C_min**2)   --> verified by '/Users/dzliu/Cloud/Github/AlmaCosmos/Pipeline/a3cosmos-MC-simulation-calc-Gaussian-convolved-sizes/calc_Gaussian_convolved_sizes_Test_2_PA_diff_90.pro'
+    #                                                                                         and '/Users/dzliu/Cloud/Github/AlmaCosmos/Pipeline/a3cosmos-MC-simulation-calc-Gaussian-convolved-sizes/calc_Gaussian_convolved_sizes_Test_3_PA_diff_45.pro'
+    # ......
+    # 
+    if($?6) {
+        set calcds_Maj_deconv = ($1)
+        set calcds_Min_deconv = ($2)
+        set calcds_PA_deconv = ($3)
+        set calcds_Maj_beam = ($4)
+        set calcds_Min_beam = ($5)
+        set calcds_PA_beam = ($6)
+        # 
+        set calcds_sigic2 = (((calcds_PA_deconv + 900.0) % 180.0) - ((calcds_PA_beam + 900.0) % 180.0)) * 2.0 / 180.0 * pi
+        # 
+        set calcds_PA_diff = (((calcds_PA_deconv + 900.0) % 180.0) - ((calcds_PA_beam + 900.0) % 180.0))
+        # 
+        set calcds_sconv = (calcds_Maj_deconv**2+calcds_Min_deconv**2) + (calcds_Maj_beam**2+calcds_Min_beam**2)
+        set calcds_sbeam = (calcds_Maj_beam**2+calcds_Min_beam**2)
+        set calcds_dbeam = (calcds_Maj_beam**2-calcds_Min_beam**2)
+        set calcds_dconv_times_dcos = (calcds_Maj_deconv**2-calcds_Min_deconv**2) * cos(calcds_sigic2) + calcds_dbeam
+        set calcds_dconv_times_dsin = tan(calcds_sigic2) * (calcds_dconv_times_dcos-calcds_dbeam)
+        set calcds_PA_diff = atan2(calcds_dconv_times_dsin,calcds_dconv_times_dcos) / 2.0 / pi * 180.0
+        set calcds_dcos = cos(2*calcds_PA_diff/180.0*pi)
+        set calcds_dsin = sin(2*calcds_PA_diff/180.0*pi)
+        set calcds_dconv = calcds_dconv_times_dcos / calcds_dcos
+        #if dcos != 0.0:
+        #    dconv = dconv_times_dcos / dcos
+        #else:
+        #    dconv = dconv_times_dsin / dsin
+        # 
+        set calcds_PA_convol = calcds_PA_diff + ((calcds_PA_beam + 900.0) % 180.0)
+        set calcds_Maj_convol2 = (calcds_sconv + calcds_dconv)/2.0 # dconv = (Maj_convol**2-Min_convol**2), sconv = (Maj_convol**2+Min_convol**2), so ...
+        set calcds_Min_convol2 = (calcds_sconv - calcds_dconv)/2.0 # dconv = (Maj_convol**2-Min_convol**2), sconv = (Maj_convol**2+Min_convol**2), so ...
+        set calcds_Maj_convol = (calcds_Maj_convol2 >= calcds_Min_convol2) ? sqrt(calcds_Maj_convol2) : sqrt(calcds_Min_convol2)
+        set calcds_Min_convol = (calcds_Maj_convol2 >= calcds_Min_convol2) ? sqrt(calcds_Min_convol2) : sqrt(calcds_Maj_convol2)
+        # 
+        !printf \\"Maj deconv, Maj beam => Maj convol : \\033[0;31m\\t$(calcds_Maj_deconv)\\033[0;0m, \\033[0;33m$(calcds_Maj_beam)\\033[0;0m => \\033[0;34m$(calcds_Maj_convol)\\033[0;0m\\n\\"
+        !printf \\"Min deconv, Min beam => Min convol : \\033[0;31m\\t$(calcds_Min_deconv)\\033[0;0m, \\033[0;33m$(calcds_Min_beam)\\033[0;0m => \\033[0;34m$(calcds_Min_convol)\\033[0;0m\\n\\"
+        !printf \\"PA. deconv, PA. beam => PA. convol : \\033[0;31m\\t$(calcds_PA_deconv)\\033[0;0m, \\033[0;33m$(calcds_PA_beam)\\033[0;0m => \\033[0;34m$(calcds_PA_convol)\\033[0;0m\\n\\"
+    } else {
+        print 'Usage: \n' {}
+        print '    calc_2D_Gaussian_convolved_sizes Maj Min PA beam_maj beam_min beam_PA\n' {}
+        print '    set convolved_Maj = calcds_Maj_convol\n' {}
+        print '    set convolved_Min = calcds_Min_convol\n' {}
+        print '    set convolved_PA = calcds_PA_convol\n' {}
+        print '\n' {}
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,567 @@
+crabStat
+    # 
+    crabStatistics
+
+crabStatistics
+    # 
+    print 'crabStat\n' {}
+    print 'crabStatistics\n' {}
+    print 'calc_Scatter_Sigma_within_3Sigma input_vector\n' {}
+    print 'plot_Histogram_with_GaussianCurve data_array [bin_number=20 [FitGaussianSigmaOne]]\n' {}
+
+calc_Scatter_Sigma 01
+    # input a vector
+    if($?1==0){print 'Usage: calc_Scatter_Sigma input_vector\n' {} return}
+    set crabstat_vec = $1
+    stats crabstat_vec crabstat_fMean crabstat_fSigma crabstat_fKurt
+    set $0 = $crabstat_fSigma
+    return
+
+calc_Scatter_Sigma_within_3Sigma 01
+    # input a vector
+    if($?1==0){print 'Usage: calc_Scatter_Sigma_within_3Sigma input_vector\n' {} return}
+    set crabstat_vec = $1
+    stats crabstat_vec crabstat_fMean crabstat_fSigma crabstat_fKurt
+    set crabstat_flag = (abs(crabstat_vec-$crabstat_fMean)<=3.0*$crabstat_fSigma)
+    set crabstat_sel = crabstat_vec if(crabstat_flag)
+    stats crabstat_sel crabstat_fMean crabstat_fSigma crabstat_fKurt
+    set $0 = $crabstat_fSigma
+    return
+
+test_Histogram_of_GuassianPDF
+    # if we have a bunch of data points following Gaussian distribution (normal distribution)
+    # we plot their histogram
+    # 
+    # load crabStat.sm test_Histogram_of_GuassianPDF
+    # 
+    gasdev 5000 crabstat_data_array
+    stats crabstat_data_array crabstat_stats_mean crabstat_stats_sigma crabstat_stats_kurt
+    echo crabstat_stats_mean = $crabstat_stats_mean
+    echo crabstat_stats_sigma = $crabstat_stats_sigma
+    echo crabstat_stats_kurt = $crabstat_stats_kurt
+    set crabstat_stats_sigma = calc_Scatter_Sigma(crabstat_data_array)
+    echo crabstat_stats_sigma = $(crabstat_stats_sigma) (full data)
+    set crabstat_stats_sigma = calc_Scatter_Sigma_within_3Sigma(crabstat_data_array)
+    echo crabstat_stats_sigma = $(crabstat_stats_sigma) (within 3-sigma)
+    plot_Histogram_with_GaussianCurve crabstat_data_array
+
+plot_Histogram_with_GaussianCurve 03
+    # input arguments: 
+    # $1 -- data_array 
+    # $2 -- bin number 
+    # $3 -- Guassian sigma
+    # then this code will plot the histogram with a best-fit Gaussian
+    # <TODO> plot Gaussian xrange yrange
+    if(!$?1){
+        print 'Usage: \n' {}
+        print '       plot_Histogram_with_GaussianCurve data_array [bin_number=20 [FitGaussianSigmaOne]]\n' {}
+        print '       ==> output variables: \n' {}
+        print '           crabstat_fitMean \n' {}
+        print '           crabstat_fitMode \n' {}
+        print '           crabstat_fitSigma \n' {}
+        print '           crabstat_fitNorma \n' {}
+        return
+    }
+    set crabstat_d_Array = ($1)
+    if(!is_vector(crabstat_d_Scale)) { set crabstat_d_Scale = 1.0 }
+    if(!$?crabstat_BinSize) { define crabstat_BinSize 0.20 }
+    if(!$?crabstat_BinNumb) { define crabstat_BinNumb 20 }
+    if($?2){if($2>0){define crabstat_BinNumb $2 define crabstat_BinSize 0.00}}
+    ###############################
+    # 1 - Estimate Gaussian Sigma #
+    ###############################
+    stats crabstat_d_Array crabstat_aMean crabstat_aSigma crabstat_aKurt
+    vecminmax crabstat_d_Array crabstat_aMin crabstat_aMax
+    if($crabstat_BinSize==0) {
+    define crabstat_BinSize $(($crabstat_aMax-$crabstat_aMin)/$crabstat_BinNumb) }
+    get_hist  crabstat_d_Array crabstat_hX crabstat_hY $crabstat_aMin $crabstat_aMax $crabstat_BinSize
+    vecminmax crabstat_hY crabstat_hMin crabstat_hMax
+    stats crabstat_d_Array crabstat_hMean crabstat_hSigma crabstat_hKurt
+    set crabstat_hXclip = crabstat_hX if(abs(crabstat_hX-$crabstat_hMean)<=3.5*$crabstat_hSigma) # fit only central part with gaussian function
+    set crabstat_hYclip = crabstat_hY if(abs(crabstat_hX-$crabstat_hMean)<=3.5*$crabstat_hSigma) # fit only central part with gaussian function
+    ### if($verbose) { print {crabstat_hX crabstat_hY} }
+    ### <Added><20151201><dzliu> ###
+    set crabstat_fitMode = float(-99)
+    set crabstat_fitMode = crabstat_hX if(crabstat_hY==$crabstat_hMax)
+    define crabstat_fitMode $(crabstat_fitMode) unset crabstat_fitMode
+    define crabstat_fitSigma 0.0
+    if($?3){
+        if($3==1.0){
+        fit_Histogram_with_GuassianFixedWidth crabstat_hXclip crabstat_hYclip crabstat_fitMean crabstat_fitSigma crabstat_fitNorma } \
+        else { if($3>0) {
+        fit_Histogram_with_Guassian crabstat_hXclip crabstat_hYclip crabstat_fitMean crabstat_fitSigma crabstat_fitNorma } }
+    } else {
+        fit_Histogram_with_Guassian crabstat_hXclip crabstat_hYclip crabstat_fitMean crabstat_fitSigma crabstat_fitNorma
+    }
+    ##############################
+    # 2 - Plot Gaussian Best-fit #
+    ##############################
+    if($crabstat_fitSigma>0) {
+        echo 
+        echo 
+        echo crabstat_fitSigma = $crabstat_fitSigma   (crabstat_hSigma = $crabstat_hSigma)
+        echo 
+        echo 
+        set crabstat_d_GausX = $crabstat_aMin,$crabstat_aMax,$crabstat_BinSize
+        set crabstat_d_GausY = gauss(crabstat_d_GausX,$crabstat_fitMean,$crabstat_fitSigma) * (SQRT(2*PI)*$crabstat_fitSigma)
+        set crabstat_d_GausY = crabstat_d_GausY * $crabstat_fitNorma
+        ### set crabstat_d_GausZ = gauss(crabstat_d_GausX,$crabstat_fitMean,1.0) * (SQRT(2*PI)*1.0) # standard gaussian with Sigma=1
+        ### set crabstat_d_GausZ = crabstat_d_GausZ * $crabstat_fitNorma
+        ### set crabstat_plotax = (crabstat_hX*(crabstat_hY>0.04*$crabstat_hMax)) concat (-crabstat_hX*(crabstat_hY>0.04*$crabstat_hMax))
+        set crabstat_plotax = (-4.0*$crabstat_fitSigma) concat (4.0*$crabstat_fitSigma) # show +- 4 sigma ### <TODO> ###
+        set crabstat_plotax = (-4.0*$crabstat_hSigma) concat (4.0*$crabstat_hSigma) # show +- 4 sigma ### <TODO> ###
+        set crabstat_plotay = (crabstat_hY concat crabstat_d_GausY)
+        if($crabstat_hSigma>=0.5&&$crabstat_hSigma<=2.5){set crabstat_plotax = {-5.0 5.0}} # <TODO> plot Gaussian xrange yrange
+    } else {
+        set crabstat_plotax = crabstat_hXclip concat -crabstat_hXclip
+        set crabstat_plotay = crabstat_hYclip
+    }
+    limits crabstat_plotax crabstat_plotay
+    define crabstat_plotct $ctype
+    ctype 0 box ctype $crabstat_plotct
+    ltype 0
+    hist crabstat_hX (crabstat_hY*crabstat_d_Scale)
+    ltype 0
+    if($crabstat_fitSigma>0) {
+        ctype red
+        connect crabstat_d_GausX (crabstat_d_GausY*crabstat_d_Scale)
+    }
+    ctype 0
+    ltype 0
+
+plot_Histogram_with_GaussianFixedWidth 02
+    # input arguments: 
+    # $1 -- data_array 
+    # $2 -- bin number 
+    # then this code will plot the histogram with a best-fit Gaussian of sigma=1
+    if(!$?1){print 'Usage: plot_Histogram_with_GaussianFixedWidth data_array [bin_number=20]\n' \n {} return}
+    if($?2) {
+        plot_Histogram_with_GaussianCurve $1 $2 1
+    } else {
+        plot_Histogram_with_GaussianCurve $1 20 1
+    }
+
+fit_Histogram_with_Guassian 05
+    # computing chi-square with grid Gaussian mean sigma functions
+    # find the best-fit Guassian shape
+    # $1 = phwg_HisL
+    # $2 = phwg_HisH
+    # output $3 fhwg_mean 
+    # output $4 fhwg_sigm
+    # output $4 fhwg_coea -- normalization
+    set fhwg_x = $1
+    set fhwg_h = $2
+    set fhwg_mean = -0.3,0.3,0.01 #<TODO># loop grid values
+    set fhwg_sigm  = 0.5,1.5,0.01 #<TODO># loop grid values
+    set dimen(fhwg_chi2) = $(dimen(fhwg_mean)*dimen(fhwg_sigm))
+    set fhwg_uuid = 0,dimen(fhwg_chi2)-1
+    set fhwg_uui1 = 0,dimen(fhwg_chi2)-1
+    set fhwg_uui2 = 0,dimen(fhwg_chi2)-1
+    set fhwg_coea = 0,dimen(fhwg_chi2)-1
+    define fhwg_chid 0
+    do fhwg_j=0,dimen(fhwg_mean)-1 { 
+        do fhwg_i=0,dimen(fhwg_sigm)-1 { 
+            set fhwg_y = gauss(fhwg_x,fhwg_mean[$fhwg_j],fhwg_sigm[$fhwg_i]) * (SQRT(2*PI)*fhwg_sigm[$fhwg_i])
+            set fhwg_a = sum(fhwg_h)/sum(fhwg_y)
+            set fhwg_diff = fhwg_a*fhwg_y - fhwg_h # fit gaussian
+            set fhwg_chi2[$fhwg_chid] = sum(fhwg_diff**2)/dimen(fhwg_diff)
+            set fhwg_uui1[$fhwg_chid] = $fhwg_j
+            set fhwg_uui2[$fhwg_chid] = $fhwg_i
+            set fhwg_coea[$fhwg_chid] = fhwg_a
+            define fhwg_chid $($fhwg_chid+1)
+        }
+    }
+    sort {fhwg_chi2 fhwg_uuid fhwg_uui1 fhwg_uui2}
+    define $3 $(fhwg_mean[fhwg_uui1[0]])
+    define $4 $(fhwg_sigm[fhwg_uui2[0]])
+    define $5 $(fhwg_coea[fhwg_uuid[0]])
+    # echo Best fit gaussian Mean=$(fhwg_mean[fhwg_uui1[0]]) Sigma=$(fhwg_sigm[fhwg_uui2[0]])
+
+fit_Histogram_with_GuassianFixedWidth 05
+    # computing chi-square with grid Gaussian mean sigma functions
+    # find the best-fit Guassian shape
+    # $1 = phwg_HisL
+    # $2 = phwg_HisH
+    # output $3 fhwg_mean 
+    # output $4 fhwg_sigm
+    # output $4 fhwg_coea -- normalization
+    set fhwg_x = $1
+    set fhwg_h = $2
+    set fhwg_mean = -0.3,0.3,0.01 #<TODO># loop grid values
+    set fhwg_sigm  = 1.0          #<TODO># gaussian fixed width sigma==1.0
+    set dimen(fhwg_chi2) = $(dimen(fhwg_mean)*dimen(fhwg_sigm))
+    set fhwg_uuid = 0,dimen(fhwg_chi2)-1
+    set fhwg_uui1 = 0,dimen(fhwg_chi2)-1
+    set fhwg_uui2 = 0,dimen(fhwg_chi2)-1
+    set fhwg_coea = 0,dimen(fhwg_chi2)-1
+    define fhwg_chid 0
+    do fhwg_j=0,dimen(fhwg_mean)-1 { 
+        do fhwg_i=0,dimen(fhwg_sigm)-1 { 
+            set fhwg_y = gauss(fhwg_x,fhwg_mean[$fhwg_j],fhwg_sigm[$fhwg_i]) * (SQRT(2*PI)*fhwg_sigm[$fhwg_i])
+            set fhwg_a = sum(fhwg_h)/sum(fhwg_y)
+            set fhwg_diff = fhwg_a*fhwg_y - fhwg_h # fit gaussian
+            set fhwg_chi2[$fhwg_chid] = sum(fhwg_diff**2)/dimen(fhwg_diff)
+            set fhwg_uui1[$fhwg_chid] = $fhwg_j
+            set fhwg_uui2[$fhwg_chid] = $fhwg_i
+            set fhwg_coea[$fhwg_chid] = fhwg_a
+            define fhwg_chid $($fhwg_chid+1)
+        }
+    }
+    sort {fhwg_chi2 fhwg_uuid fhwg_uui1 fhwg_uui2}
+    define $3 $(fhwg_mean[fhwg_uui1[0]])
+    define $4 $(fhwg_sigm[fhwg_uui2[0]])
+    define $5 $(fhwg_coea[fhwg_uuid[0]])
+    # echo Best fit gaussian Mean=$(fhwg_mean[fhwg_uui1[0]]) Sigma=$(fhwg_sigm[fhwg_uui2[0]])
+
+
+fit_PolyLine 04
+    # inputs: x, y, [dy,] order
+    set _fdp_x = $1
+    set _fdp_y = $2 
+    if($?4) {
+        set _fdp_si = $3**2
+        set _fdp_od = $4
+    } else {
+        set _fdp_si = _fdp_y*0.0+1.0
+        set _fdp_od = $3
+    }
+    #stats _fdp_y _fdp_me_y _fdp_si _fdp_ku
+    #set _fdp_y = _fdp_y - $_fdp_me_y
+    #stats _fdp_x _fdp_me_x _fdp_si _fdp_ku
+    #set _fdp_x = _fdp_x - $me_x
+    mdeclare _fdp_A $(_fdp_od+1)
+    declare _fdp_Y $(_fdp_od+1)
+    do _fdp_i=0,_fdp_od {
+        set _fdp_Y[$_fdp_i] = sum(_fdp_y * _fdp_x**(_fdp_od-$_fdp_i) / _fdp_si)
+        do _fdp_j=0,_fdp_od {
+            set _fdp_A_$_fdp_i[$_fdp_j] = sum(_fdp_x**(2*_fdp_od-$_fdp_i-$_fdp_j) / _fdp_si)
+        }
+    }
+    minv _fdp_A
+    mmult_v _fdp_a _fdp_A _fdp_Y
+    set _fdp_coe = reverse(_fdp_a) # coefficients
+    ##set _fdp_fit = get_PolyLine(_fdp_coe,_fdp_x)  #<TODO><DEBUG>#
+    ##print {_fdp_coe _fdp_x _fdp_y _fdp_fit} #<TODO><DEBUG>#
+    set $0 = _fdp_coe
+    return
+
+get_PolyLine 2
+    # $1 -- coeff 
+    # $2 -- xarray
+    set _getpolyline_c = $1
+    set _getpolyline_x = $2
+    set _getpolyline_y = float(_getpolyline_x * 0.0)
+    do _getpolyline_i = 0, dimen(_getpolyline_c)-1 {
+    	set _getpolyline_y = _getpolyline_y + _getpolyline_x**($_getpolyline_i) * _getpolyline_c[$_getpolyline_i]
+    }
+    set $0 = _getpolyline_y
+    return
+
+
+
+crabStat_makeBins 04
+    # set dfBinVolume = <0.1 0.2 0.3 0.3 0.3 0.2 0.1>
+    # crabStat_makeBins df dfBinVolume OutputHistogramX OutputHistogramY OutputBinEdges
+    # <note><20150610><dzliu> originally from our macro: run_simu_stats.sm run_simu_stats_v3.sm 
+    if(!$?1||!$?2){
+        print 'Usage: \n' {}
+        print '    crabStat_makeBins data_array bin_fraction OutputHistogramX OutputHistogramY OutputBinEdges\n' {}
+        print '    -- where bin_fraction is like {0.1 0.2 0.3 0.3 0.3 0.2 0.1} and no need to have a sum of 1.0\n' {}
+        print '    -- if set bin_fraction = -7, then we will make 7 uniform bins (<added><20150713><dzliu>). \n' {}
+        print '\n' {}
+        return
+    }
+    set fenBinArray = $1
+    set fenBinVolum = $2
+    define iFenBinCount $(dimen($2))
+    ### MINMAX
+    vecminmax fenBinArray vFenBinMin vFenBinMax
+    ### IF bin_fraction == -8 negative single value <added><20150713><dzliu>
+    ### THEN we make uniform bins in linear space
+    if($iFenBinCount==1) { 
+        define iFenBinCount $(-fenBinVolum)
+        define vFenBinSep $(($vFenBinMax-$vFenBinMin)/float($iFenBinCount))
+        ### PREPARE OUTPUT 
+        set dimen(fenBinCents) = $iFenBinCount
+        set dimen(fenBinHists) = $iFenBinCount
+        set dimen(fenBinEdges) = $($iFenBinCount+1)
+        ### get_hist
+        get_hist fenBinArray fenBinCents fenBinHists $vFenBinMin $vFenBinMax $vFenBinSep
+        set fenBinEdges[dimen(fenBinEdges)*0] = $vFenBinMin
+        set fenBinEdges[dimen(fenBinEdges)-1] = $vFenBinMax
+        do iFenBin=1,$iFenBinCount-1 {
+            set fenBinEdges[$iFenBin] = fenBinEdges[$iFenBin-1] + float($vFenBinSep)
+        }
+    } else {
+        ### PREPARE OUTPUT 
+        set fenBinCents = fenBinVolum*0.0
+        set fenBinHists = fenBinVolum*0.0
+        set fenBinEdges = fenBinVolum*0.0 concat 0.0
+        set fenBinEdges[dimen(fenBinEdges)*0] = $vFenBinMin
+        set fenBinEdges[dimen(fenBinEdges)-1] = $vFenBinMax
+        ### NORMALIZE fenBinVolum TO TOTAL SOURCE COUNT
+        set fenBinVolum = int(fenBinVolum*1.0/sum(fenBinVolum)*dimen(fenBinArray)+0.5)
+        do iFenBin=0,$iFenBinCount-1 {
+            define lFenBinEdge $(fenBinEdges[$iFenBin])
+            define rFenBinEdge $(fenBinEdges[$iFenBin])
+            set rFenBinFlag = (fenBinArray>=$lFenBinEdge)
+            set rFenBinArray = fenBinArray if(rFenBinFlag)
+            if(dimen(rFenBinArray)>0) {
+                vecminmax rFenBinArray rFenBinMin rFenBinMax
+                if ( $rFenBinMin == $rFenBinMax || $iFenBin == $iFenBinCount-1 ) {
+                    define rFenBinEdge $rFenBinMax
+                } else {
+                    define rFenBinEdge $lFenBinEdge
+                    define rFenBinStep $(($rFenBinMax-$rFenBinMin))
+                    define rFenBinToler 0
+                    define rFenBinCount 0
+                    while { abs(sum(rFenBinArray<$rFenBinEdge)-fenBinVolum[$iFenBin])>=$rFenBinToler } { #<TODO># tolerant 0!
+                        ## echo fenBin:sum($rFenBinEdge-$($rFenBinEdge+$rFenBinStep))=$(sum(rFenBinArray<($rFenBinEdge+$rFenBinStep))) ?> Volume=$(fenBinVolum[$iFenBin]) Step=$rFenBinStep Tolerant=$rFenBinToler
+                        if ( sum(rFenBinArray<($rFenBinEdge+$rFenBinStep)) > fenBinVolum[$iFenBin] ) {
+                            ## echo define rFenBinStep $($rFenBinStep/2.0)
+                            define rFenBinStep $($rFenBinStep/2.0)
+                        } else {
+                            ## echo define rFenBinEdge $($rFenBinEdge+$rFenBinStep)
+                            define rFenBinEdge $($rFenBinEdge+$rFenBinStep)
+                        }
+                        if ( $rFenBinCount > 30 ) {
+                            define rFenBinCount 0
+                            define rFenBinToler $($rFenBinToler+1)
+                            ## check whether we need to jump out of the while loop -- fixed this bug <20170825>
+                            if(abs(sum(rFenBinArray<$rFenBinEdge)-fenBinVolum[$iFenBin])>=$rFenBinToler) {
+                                define rFenBinEdge $($rFenBinEdge+$rFenBinStep)
+                            }
+                        } else {
+                            define rFenBinCount $($rFenBinCount+1)
+                        }
+                    }
+                    #<20170513><dzliu># what if failed to make that bin with desired fenBinVolum?
+                    if($rFenBinEdge==$lFenBinEdge) {
+                        define rFenBinStep $(($rFenBinMax-$rFenBinMin)/100.0)
+                        define rFenBinEdge $($rFenBinEdge+$rFenBinStep)
+                    }
+                }
+            } else {
+                 define rFenBinEdge $vFenBinMax
+            }
+            ### echo TRACKING i=$iFenBin $(fenBinEdges[$iFenBin])~$rFenBinEdge $(sum(TempBinFlag))<$(fenBinVolum[$iFenBin])
+            set TempBinFlag = ( fenBinArray>=$lFenBinEdge && fenBinArray<$rFenBinEdge )
+            set fenBinEdges[$iFenBin+1] = $rFenBinEdge
+            set fenBinCents[$iFenBin] = (fenBinEdges[$iFenBin]+fenBinEdges[$iFenBin+1])/2.0
+            set fenBinHists[$iFenBin] = sum(TempBinFlag)
+            ### echo $iFenBin -- $lFenBinEdge - $rFenBinEdge : $(sum(TempBinFlag)) \# $(int(fenBinVolum[$iFenBin]))
+            ### define aaa ?
+        }
+    }
+    # 
+    set $3 = fenBinCents
+    set $4 = fenBinHists
+    ### print " " {}
+    ### print {fenBinCents fenBinHists fenBinVolum}
+    ### print " " {}
+    # end
+
+crabStat_vecBins 09
+    if(!$?1||!$?2||!$?3||!$?4||!$?5||!$?6||!$?7||!$?8) {
+        print 'Usage: \n' {}
+        print '    crabStat_vecBins DataArray BinFraction OutputHistX OutputHistY SomeVector' {}
+        print ' OutputMeanArray OutputMedianArray OutputSigmaArray OutputRMSArray\n' {}
+        print '    -- where BinFraction is like {0.1 0.2 0.3 0.3 0.3 0.2 0.1} \n' {}
+        print '       and no need to have a sum of 1.0 \n' {}
+        print '    -- if set bin_fraction = -7, then we will make 7 uniform bins \n' {}
+        print '       (<added><20150713><dzliu>). \n' {}
+        print '    -- we will distribute SomeVector into the bins divided by DataArray, \n' {}
+        print '       assuming each item of SomeVector corresponds to each in DataArray, \n' {}
+        print '       the histogram of DataArray is stored in (OutputHistX,OutputHistY) \n' {}
+        print '       and the mean, median, sigma, and rms of the SomeVector in each bin \n' {}
+        print '       are calculated and stored in OutputMeanArray, OutputMedianArray, \n' {}
+        print '       OutputSigmaArray and OutputRMSArray \n' {}
+        print '\n' {}
+        return
+    }
+    if(dimen($1)!=dimen($5)) {
+        print 'crabStat_vecBins: Error! Input DataArray (\$1) and SomeVector (\$5) must have same dimension!\n' {}
+    }
+    # 
+    crabStat_makeBins $1 $2 $3 $4
+    set vecBinArray = $5
+    set vecBinMeans = fenBinHists*0.0
+    set vecBinMedians = fenBinHists*0.0
+    set vecBinSigmas = fenBinHists*0.0
+    set vecBinRMS = fenBinHists*0.0
+    do iFenBin=1,$iFenBinCount {
+        define lFenBinEdge $(fenBinEdges[$iFenBin-1])
+        define rFenBinEdge $(fenBinEdges[$iFenBin])
+        set TempBinFlag = ( fenBinArray>=$lFenBinEdge && fenBinArray<$rFenBinEdge )
+        if(sum(TempBinFlag)>0) {
+            set TempBinItem = vecBinArray if(TempBinFlag)
+            stats TempBinItem TempBinMean TempBinSigma TempBinKurtosis 
+            stats_med TempBinItem TempBinMedian TempBinSIQR
+            define TempBinRMS $(sqrt(sum(TempBinItem**2)/dimen(TempBinItem)))
+            set vecBinMeans[$iFenBin-1] = $TempBinMean
+            set vecBinMedians[$iFenBin-1] = $TempBinMedian
+            set vecBinSigmas[$iFenBin-1] = $TempBinSigma
+            set vecBinRMS[$iFenBin-1] = $TempBinRMS
+        }
+    }
+    set vecBinEdges = fenBinEdges
+    set $6 = vecBinMeans
+    set $7 = vecBinMedians
+    set $8 = vecBinSigmas
+    if($?9) { set $9 = vecBinRMS }
+    # end
+
+
+
+crabStat_makeBins_UniformInLogSpace 04
+    if(!$?1||!$?2||!$?3||!$?4) {
+        print 'Usage: \n' {}
+        print '    crabStat_makeBins_UniformInLogSpace DataArray BinNumber OutputHistX OutputHistY\n' {}
+        print '\n' {}
+        return
+    }
+    # make uniform bins in log space
+    set fenBinArray = $1
+    set fenBinNumber = $2
+    # convert to log space
+    set fenBinNonNeg = 0,dimen(fenBinArray)-1 set fenBinNonNeg = fenBinNonNeg if(fenBinArray>0)
+    set fenBinArray = lg(fenBinArray[fenBinNonNeg])
+    ### MINMAX
+    vecminmax fenBinArray vFenBinMin vFenBinMax
+    ### IF BinNumber>0
+    if(fenBinNumber>0) {
+        define iFenBinCount $(fenBinNumber)
+        define vFenBinSep $(($vFenBinMax-$vFenBinMin)/float($iFenBinCount))
+        ### PREPARE OUTPUT 
+        set dimen(fenBinCents) = $iFenBinCount
+        set dimen(fenBinHists) = $iFenBinCount
+        set dimen(fenBinEdges) = $($iFenBinCount+1)
+        ### get_hist
+        get_hist fenBinArray fenBinCents fenBinHists $vFenBinMin $vFenBinMax $vFenBinSep
+        set fenBinEdges[dimen(fenBinEdges)*0] = $vFenBinMin
+        set fenBinEdges[dimen(fenBinEdges)-1] = $vFenBinMax
+        do iFenBin=1,$iFenBinCount-1 {
+            set fenBinEdges[$iFenBin] = fenBinEdges[$iFenBin-1] + float($vFenBinSep)
+        }
+    }
+    # convert back to linear space
+    set fenBinEdges = 10**fenBinEdges
+    set fenBinArray = $1
+    # return
+    set $3 = fenBinCents
+    set $4 = fenBinHists
+    return
+
+
+
+crabStat_vecBins_ULog 09
+    if(!$?1||!$?2||!$?3||!$?4||!$?5||!$?6||!$?7||!$?8||!$?9) {
+        crabStat_vecBins_UniformInLogSpace
+        return
+    }
+    crabStat_vecBins_UniformInLogSpace $1 $2 $3 $4 $5 $6 $7 $8 $9
+
+
+
+crabStat_vecBins_UniformInLogSpace 09
+    if(!$?1||!$?2||!$?3||!$?4||!$?5||!$?6||!$?7||!$?8) {
+        print 'Usage: \n' {}
+        print '    crabStat_vecBins_UniformInLogSpace DataArray BinNumber OutputHistX OutputHistY SomeVector' {}
+            print 'OutputMeanArray OutputMedianArray OutputSigmaArray OutputRMSArray\n' {}
+        print '    -- where BinNumber is like the Number of Bins \n' {}
+        print '    -- we will distribute SomeVector into the bins divided by DataArray, \n' {}
+        print '       assuming each item of SomeVector corresponds to each in DataArray, \n' {}
+        print '       the histogram of DataArray is stored in (OutputHistX,OutputHistY) \n' {}
+        print '       and the mean, median, sigma, and rms of the SomeVector in each bin \n' {}
+        print '       are calculated and stored in OutputMeanArray, OutputMedianArray, \n' {}
+        print '       OutputSigmaArray and OutputRMSArray \n' {}
+        print '\n' {}
+        return
+    }
+    if(dimen($1)!=dimen($5)) {
+        print 'crabStat_vecBins_UniformInLogSpace: Error! Input DataArray (\$1) and SomeVector (\$5) must have same dimension!\n' {}
+    }
+    # 
+    crabStat_makeBins_UniformInLogSpace $1 $2 $3 $4
+    set vecBinArray = $5
+    set vecBinMeans = fenBinHists*0.0
+    set vecBinMedians = fenBinHists*0.0
+    set vecBinSigmas = fenBinHists*0.0
+    set vecBinRMS = fenBinHists*0.0
+    do iFenBin=1,$iFenBinCount {
+        define lFenBinEdge $(fenBinEdges[$iFenBin-1])
+        define rFenBinEdge $(fenBinEdges[$iFenBin])
+        set TempBinFlag = ( fenBinArray>=$lFenBinEdge && fenBinArray<$rFenBinEdge )
+        ## echo Bin:$lFenBinEdge:$rFenBinEdge N:$(sum(TempBinFlag)) #<TODO># DEBUG
+        if(sum(TempBinFlag)>1) {
+            set TempBinItem = vecBinArray if(TempBinFlag)
+            stats TempBinItem TempBinMean TempBinSigma TempBinKurtosis 
+            stats_med TempBinItem TempBinMedian TempBinSIQR
+        } else {
+            define TempBinMean 0.0
+            define TempBinSigma 0.0
+            define TempBinKurtosis 0.0
+            define TempBinMedian 0.0
+        }
+        if(sum(TempBinFlag)>0) {
+            define TempBinRMS $(sqrt(sum(TempBinItem**2)/dimen(TempBinItem)))
+        } else {
+            define TempBinRMS 0.0
+        }
+        set vecBinMeans[$iFenBin-1] = $TempBinMean
+        set vecBinMedians[$iFenBin-1] = $TempBinMedian
+        set vecBinSigmas[$iFenBin-1] = $TempBinSigma
+        set vecBinRMS[$iFenBin-1] = $TempBinRMS
+    }
+    ## define aaa ? #<TODO># DEBUG
+    set vecBinEdges = fenBinEdges
+    set $6 = vecBinMeans
+    set $7 = vecBinMedians
+    set $8 = vecBinSigmas
+    if($?9) { set $9 = vecBinRMS }
+    # end
+
+
+
+gasdev 2
+    # SM implementation of algorithm used by Press et al. for deriving 
+    # random numbers with gaussian distribution from random numbers with
+    # uniform distribution, here the SM built-in function.  - bjw, December 2004
+    # returns a vector of N randoms with rms=1.
+    # 
+    # Copyright 2004, Benjamin Weiner, licensed under GPL.
+    # You may use or redistribute this code freely, please retain this
+    # notice.  If you incorporate it into a package, you can use the
+    # package freely for your own research.  (You can't sell it without
+    # distributing the source freely.)
+    # 
+    # usage: 
+    # gasdev <dimen> <random vector>
+    # 
+    set dimen($2) = $1
+    set _v1 = 2*random($1)-1
+    set _v2 = 2*random($1)-1
+    set _rsq = _v1**2 + _v2**2
+    set _ifgood = (_rsq<1 && _rsq>0) ? 1 : 0
+    set _fac = (_ifgood==1) ? (-2*ln(_rsq)/_rsq) : 0
+    set _fac = sqrt(_fac)
+    set _g1 = _v1 * _fac
+    set _g2 = _v2 * _fac
+    # try to fill up with good numbers from the two random vectors
+    # if the entry wasn't good, we get a number from the second vector.
+    # because more than half of the numbers fall in the unit circle,
+    # this should work for any reasonably large N.
+    define _j 0
+    do _i = 0, $1-1 {
+      if ( _ifgood[$_i]==1 ) { 
+         set $2[$_i] = _g1[$_i] } \
+      else { 
+         while { _ifgood[$_j]==0 } {define _j ($_j+1) }
+         set $2[$_i] = _g2[$_j] 
+         define _j ($_j+1) }
+    }
+
+
+
+
+
