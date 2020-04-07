@@ -14,7 +14,7 @@ if [[ $(type sm 2>/dev/null | wc -l) -eq 0 ]]; then
 fi
 
 CURRENTPATH=$(dirname "${BASH_SOURCE[0]}")
-SMMACROPATH=$(dirname "$CURRENTPATH")
+SMMACROPATH=$(dirname "$CURRENTPATH")/Supermongo_macro
 echo "CURRENTPATH = $CURRENTPATH"
 echo "SMMACROPATH = $SMMACROPATH"
 
