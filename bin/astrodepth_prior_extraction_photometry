@@ -58,7 +58,7 @@ AstroDepth_CurrentDir=$(pwd -P)
 fi
 
 # Check necessary commands
-if [[ $(type sm 2>/dev/null | wc -l) -eq 0 ]]; then
+if [[ $(type smdl 2>/dev/null | wc -l) -eq 0 ]]; then
     echo "Error! Supermongo was not found! Please contact dzliu@mpia-hd.mpg.de for the complete code!"
     exit 1
 fi

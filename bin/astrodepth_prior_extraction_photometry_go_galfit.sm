@@ -1354,6 +1354,63 @@ go_fix_bug_20171221
 
 
 
+go_fix_bug_20200428_go_galfit 01
+    # 
+    # this subroutine prepare necessary files for running galfit 
+    # 
+    # the first argument is the step code, 
+    # 0 for fixed position PSF fitting, 
+    # 1 for varied position PSF fitting, 
+    # 2 for varied position gaussian fitting, 
+    # 3 for varied position sersic n=1 (exponential disk) fitting. 
+    # 
+    if(!$?1) {
+        print 'Usage: go_galfit 0\n' {}
+        return
+    }
+    read_data
+    read_pixscale
+    read_pixnoise
+    calc_fluxconv
+    # 
+    # mask prior sources (20171221: fixed bug: mask_prior_sources_on_negative_image)
+    if(index('$1','n')==0) {
+        mask_prior_sources_on_negative_image
+    } else {
+        mask_prior_sources
+    }
+    # --> px, py, id, cat_index, cat_id, pb_corr, pb_corr_from_pb_image
+    # 
+    #<20171221># print fit_$1.cat_index.txt '%15.0f %20s\n' {cat_index cat_id}
+    #<20171221># print fit_$1.pbcorr.txt '%15g %15.0f %20s\n' {pb_corr cat_index cat_id}
+    #<20171221># print fit_$1.pbcorr.from.pb.image.txt '%22g %15.0f %20s\n' {pb_corr_from_pb_image cat_index cat_id}
+    #<20171221># print fit_$1.result.pbc.txt '%25g %15g %15.0f %20s\n' {pb_corr_from_pb_image pb_corr cat_index cat_id}
+    #<20171221># echo "Writing "$(dimen(cat_id))" lines to "fit_$1.cat_index.txt
+    #<20171221># echo "Writing "$(dimen(cat_id))" lines to "fit_$1.pbcorr.txt
+    #<20171221># echo "Writing "$(dimen(cat_id))" lines to "fit_$1.pbcorr.from.pb.image.txt
+    #<20171221># echo "Writing "$(dimen(cat_id))" lines to "fit_$1.result.pbc.txt
+    #<20171221># -- we can not name it "fit_$1.result.pbc.txt" otherwise it will get deleted at the begining of "print_result" by the code "!rm $1.result*"!!!
+    !rm fit_$1.pbcorr* 2>/dev/null
+    print fit_$1.cat_index.txt              '%15.0f %20s\n'             {cat_index cat_id}
+    print fit_$1.pb_corr_from_calc.txt      '%15g %15.0f %20s\n'        {pb_corr cat_index cat_id}
+    print fit_$1.pb_corr_from_pb_image.txt  '%22g %15.0f %20s\n'        {pb_corr_from_pb_image cat_index cat_id}
+    print fit_$1.pb_corr.txt                '%25g %15g %15.0f %20s\n'   {pb_corr_from_pb_image pb_corr cat_index cat_id}
+    echo "Writing "$(dimen(cat_id))" lines to "fit_$1.cat_index.txt
+    echo "Writing "$(dimen(cat_id))" lines to "fit_$1.pb_corr_from_calc.txt
+    echo "Writing "$(dimen(cat_id))" lines to "fit_$1.pb_corr_from_pb_image.txt
+    echo "Writing "$(dimen(cat_id))" lines to "fit_$1.pb_corr.txt
+
+
+go_fix_bug_20200428
+    go_fix_bug_20200428_go_galfit fit_1
+    go_fix_bug_20200428_go_galfit fit_2
+    go_fix_bug_20200428_go_galfit fit_3
+
+
+
+
+
+
 
 
 
