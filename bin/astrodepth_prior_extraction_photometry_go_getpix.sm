@@ -416,11 +416,11 @@ read_primary_beam_correction_from_pb_image 00
         #<20180109>#    !rm "image_pba_primary_beam_correction.getpix.input.txt"
         #<20180109>#    !rm "image_pba_primary_beam_correction.getpix.output.txt"
         #<20180109>#}
-        set primary_beam_attenuation_str2 = (primary_beam_attenuation_str=='nan') ? '-99' : primary_beam_attenuation_str
+        set primary_beam_attenuation_str2 = (primary_beam_attenuation_str=='nan' || primary_beam_attenuation_str=='-nan') ? '-99' : primary_beam_attenuation_str
         set primary_beam_attenuation = float(primary_beam_attenuation_str2)
         set primary_beam_attenuation = (primary_beam_attenuation==0) ? 1e-99 : primary_beam_attenuation #<20180109>#
         unset primary_beam_attenuation_str2
-        set primary_beam_correction = (primary_beam_attenuation_str=='nan') ? -99 : 1.0 / primary_beam_attenuation
+        set primary_beam_correction = (primary_beam_attenuation_str=='nan' || primary_beam_attenuation_str=='-nan') ? -99 : 1.0 / primary_beam_attenuation
         print "image_pba_primary_beam_correction.txt" '%26g %26g\n' {primary_beam_correction primary_beam_attenuation}
         if(sum(primary_beam_correction==1.0)==dimen(primary_beam_correction)) {
             print "image_pba_primary_beam_correction.warning.txt" 'Warning! The PBA image \"image_pba.fits\" is invalid with pixel value 1.0 everywhere!\n' {}
