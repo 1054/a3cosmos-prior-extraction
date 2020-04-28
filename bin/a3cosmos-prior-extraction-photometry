@@ -50,19 +50,30 @@ fi
 #    exit 1
 #fi
 
+if [[ -f "$HOME/Softwares/Supermongo/bin_setup.bash" ]]; then
+    source "$HOME/Softwares/Supermongo/bin_setup.bash"
+fi
+
 
 
 # 
 # Check software dependancies
 # 
+if [[ $(type sm 2>/dev/null | wc -l) -eq 0 ]]; then
+    echo "Error! \"sm\" is not in the \$PATH! Please install Supermongo and add its path to the \$PATH then re-run this code!"
+    exit 255
+fi
 if [[ $(type sky2xy 2>/dev/null | wc -l) -eq 0 ]]; then
     echo "Error! \"sky2xy\" is not in the \$PATH! Please add its path to the \$PATH then re-run this code!"
+    exit 255
 fi
 if [[ $(type galfit 2>/dev/null | wc -l) -eq 0 ]]; then
     echo "Error! \"galfit\" is not in the \$PATH! Please add its path to the \$PATH then re-run this code!"
+    exit 255
 fi
 if [[ $(type astrodepth_prior_extraction_photometry 2>/dev/null | wc -l) -eq 0 ]]; then
     echo "Error! \"astrodepth_prior_extraction_photometry\" is not in the \$PATH! Please add its path to the \$PATH then re-run this code!"
+    exit 255
 fi
 
 
