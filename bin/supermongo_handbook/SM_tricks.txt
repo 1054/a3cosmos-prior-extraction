@@ -1,0 +1,387 @@
+#######################
+#######################
+# SM INSIDER'S GUIDE###
+#######################
+ Table of Contents:   
+ 1. Introduction to SM
+ 2. SM Tricks         
+ 3. SM Quick Reference
+#######################
+#######################
+
+1. INTRODUCTION TO SM 
+
+- The SM Manual
+
+ o Electronic version
+  Lee's web page has an electronic version of the manual for 
+  SM v.2.4.0 (which is the actual version we're running).  
+
+ o Hardcopy version
+  If you'd like a hardcopy version of the manual, you can print out the
+  version2.3.2x manual, which is not very different from the current
+  version of SM (if you're interested in the differences you can look
+  at the version notes)
+	Manual: /opt/sm/docs/sm2.3.2x_manual.ps
+	Version notes: /opt/sm/docs/sm_notes.ps
+
+- The SM deal:  Vectors vs. Scalars
+
+  o The SM mindset
+  SM reads in vectors from your file, and so thinks in vectors.  When
+  it plots points, it plots two vectors (e.g. all your x values in
+  vector x, and all your corresponding y values in vector y). The
+  vectors clearly must be the same length, and each in the appropriate
+  order for the coordinates to match up.
+
+  o A simple example
+  You have a file (called datafile) that reads:
+1 5
+2 3
+3 5
+
+  You can then write a macro that reads:
+newplot		#plot up a series of 3 points
+		data datafile
+		read {x 1 y 2}
+		lim x y
+		box
+		points x y
+		xlabel x
+		ylabel y
+
+  This will read in column 1 as all your x values, and column 2 as all
+  your y values.  Then, the first value in each vector constitutes one
+  point, etc.  To plot them, we set the limits of the plot to
+  automatically scale the x and y axes to the range of x and y,
+  respectively. We then draw a box with those limits.  We then draw
+  3 points, corresponding to x[0],y[0] x[1],y[1] x[2],y[2]
+  Lastly, we give the xaxis and the yaxis the labels x and y,
+  respectively. 
+
+ o Manipulating vectors
+  To manipulate vectors you use the set command, and can use any
+  arithmetic operation you like (for a list, see the command
+  arithmetic in the manual)
+example:
+  set x = 2*y
+
+  This sets each value in the vector x to 2x the corresponding value
+  in the vector y.
+
+  SM can also deal with the vector on an individual element basis by
+  using a do loop (although if you can avoid doing this, I would
+  because SM do loops tend to not be as stable).
+
+example:
+  do i = 0, 2 {
+    set x[$i] = 2*y[$i]
+  }
+ 
+  This do loop does the same thing as the previous example, just with
+  more typing.  Note that the vector takes on C-like syntax -- use
+  square brackets, and start with 0 not 1.  Also, note that i is not a 
+  vector, but a scalar (see next section).  
+
+  Another cautionary note on do loops: you can't dynamically create a
+  new vector inside a do loop (i.e. suddenly assign set a[$i] = x[$i],
+  if a doesn't already exist).  So, a do loop is not a good way to
+  create a new vector, like it is in other programming languages.
+
+ o SM also uses scalars
+  SM does deal in scalars as well.  Whenever you use a scalar value,
+  you have to add a $.  So, in the previous example, we used x[$i] 
+  To manipulate scalars, you don't use set, you use define.
+
+example:
+  : define a (3.0)
+  : echo $a
+    3.0
+  : define b (DIMEN(x))
+  : echo $b
+    3.0
+
+
+- The .sm file
+
+ o What is the .sm file
+ SM needs a customization file called .sm It usually can take the
+ system version of the file from /opt/sm/lib/sm/.sm, but if you'd like
+ to configure it yourself (which I strongly recommend!) you can copy it
+ to your home directory and modify it from there.
+
+ o .sm file tricks
+  I highly recommend changing the system .sm file to include the
+  following line:
+
+TeX_strings     1
+
+  This line will allow you to use TeX labels and fonts problem free
+
+
+
+2. SM TRICKS
+
+- Emacs SM Mode 
+
+ o sm.el
+ If you use Emacs as your editor, you might be interested in the Emacs
+ tool for editing your SM macros. It does all the spacing and checking of
+ syntax for you (like what Emacs does for Fortran and TeX files).
+
+ o To use sm.el, append the file /opt/sm/sm2_4_0/sm.el to your
+ .local_emacs file.  Then, at the beginning of all your SM macro files
+ include the line
+##-*-SM-*-
+ then when you load the macro file to edit, emacs will automatically
+ go into SM-mode
+
+
+- Point types
+
+  o Ptype syntax is always something I forget, so I keep a note next
+  to my computer.
+
+ ptype n s
+    n = # of sides of the shape
+    s = style of shape
+      = 0 open
+      = 1 skeletal
+      = 2 starred
+      = 3 solid
+
+  o For TINY, tiny scattering of dots, use ptype 1 1.  For finitely
+  sized, little filled circles use a shape of some large number of
+  sides and make it solid (e.g. ptype 70 3)
+
+
+- Formatted read & write statements
+
+  o Generally SM uses the nice, C-like white space separated read
+  statement, and so understands columns by number (starting with 1),
+  and reads everything in as a number.
+
+  o To read in string data:  
+  Add '.s' to the column number you want to read in as a string, and
+  you'll get a vector of strings of variable  size.    
+  e.g. read {name 1.s magnitude 2 velocity 3} 
+
+  o To read in (or write out) complicated, formatted data:  
+  Again, you can use C-like format statements,
+  %f = real or double, %d = integer, %s = string, then get the spacing
+  right, but you don't need a return at the end.
+  e.g.
+
+  data file:
+   11 57 29.70   +08 27 38.0  14.29  6137
+
+  read statement:
+  read ' %d %d %f   %1s%d %d %f  %f  %d' {hr min \
+                       sec gsign deg amin asec bmag vel0}
+
+  You can also do the same for writing to a file (now with the return,
+  \n, like in C):
+  e.g.
+  print lumfunR.dat '   %5.3f   %5.3f\n' {xx lyy}
+  
+  o Formatting labels!!  SM often gives a ridiculous number of
+  significant digits when you print out a variable (i.e. label $var)
+  To avoid this, use the string command, where you can control the
+  number of siginificant digits.
+  e.g.
+  define limsub (string($mulim))
+  ylabel D_{$limsub}
+
+  You can also use the sprintf(format,expr) command.  Type help
+  strings for more operations with strings. 
+  e.g. 
+  putlabel 6 N=$(dimen(dmag1)) <\Delta M>=$(sprintf('%4.3f',$(avdm1)))
+
+
+- Logarithmic axes
+  
+  o How to do log axes is never explained well in the manual, but
+  check out the command ticksize.
+
+  1) Take log of your vector  (set lx = lg(x))
+  2) Take log of your limits  (i.e. if x direction is logged, and
+     former limits were 1 to 100, your new limits are 0 to 2; 
+     e.g. > limits 0 2 y)
+  3) Command is  > ticksize -1 0 -1 0   for x & y logged
+                 > ticksize  0 0 -1 0   for only y logged
+                 > ticksize -1 0  0 0   for only x logged
+
+     The zeroes mean it will autoscale the tick spacings.
+
+
+- Getting fonts right (machine font vs. TeX fonts)
+
+  o SM does an irritating thing -- it uses machine fonts versus nice
+  (TeX fonts) in the vertical vs. horizontal direction -- unless you
+  tell it not to.  To do this, 
+
+  1) Add the following line to your .sm file:
+  TeX_strings     1
+  
+  2) At the beginning of any macro, before you plot anything set
+  expand equal to something not quite 1
+  e.g. 
+  expand 1.0001
+
+
+- Histograms
+
+  o To plot a histogram of vector x, whose values ALL fall between a
+  high value of hi and a low value of lo (they *must* be bracketed by
+  these numbers), and whose binsize is bin, type the following:
+
+  SM-> get_hist x xx yy lo hi bin
+  SM-> lim xx yy
+  SM-> box
+  SM-> hi xx yy
+
+  get_hist creates a binned distribution whose bincenters are in the
+  vector xx, and the number of values in each bin are in yy.  Then,
+  you set the limits of your box to the binned distribution, and then
+  hi xx yy draws the actual histogram.
+
+
+- Postscript and encapsulated postscript files
+ 
+  o Postscript file of plot named filename.ps:
+  SM-> dev postscript :SY@: :OF@: filename.ps
+  SM-> <run all your plotting commands, run your macro, whatever you
+        want in the postscript file>
+  SM-> hardcopy
+
+  o Encapsulated postscript file named filename.eps:
+  SM-> dev postencap filename.eps
+  SM-> <plotting commands>
+  SM-> hardcopy
+
+
+- Writing your own macros
+  
+  o You can input your commands line by line, or put them in a file
+  and input that. 
+
+  o One macro per file:  file.sm
+example file.sm:
+data mydata.dat
+read {x 1 y 2}
+lim x y
+box
+points x y
+  
+  Then, at the command line type:
+  SM-> dev x11
+  SM-> input file.sm
+
+  This will execute all the commands in file.sm in the x11 window.
+
+  o All your macros in one file (up to ~10,000 lines) file.sm:
+example file.sm:
+#-*-SM-*-
+macro1  1       #comment for plot has #
+                #the one means it takes one argument
+		#that argument is referred to as $1
+		#in this case, the argument will will the data file
+		data $1
+		read {x 1 y 2}
+		lim x y
+		box
+		points x y
+####################
+macro2		#next macro goes here, same thing, yada yada
+
+  With this format, at the command line type:
+  SM-> dev x11
+  SM-> re file.sm
+  SM-> macro1
+  SM-> era
+  SM-> macro2
+
+  You can now call any of the macros listed in file.sm, and plot all
+  the commands at once.
+
+
+- Creating your own SM Macro library
+  
+  o If you have SM macros of your own you use frequently, you can put
+  them in your own library directory, called macro2 in your .sm file.
+
+  Add the line to .sm file:
+  macro2		/e/flint/sm_macros/  (insert your own pathname)
+
+  o To have your macro file automatically loaded at start up from that
+  directory, call the file default
+
+  o To add other files, call them what you want, then use the command
+  load2 file.sm to load a new file (sm_macros/file.sm in this case).
+  
+
+- Typing command characters as labels
+
+  o The ^ key is usually used for recalling history commands, so if
+  you want to use it for superscripts in LaTeX, you need a special
+  command sequence CTRL[q:
+  
+  To type p^2 (p squared) in a label:
+  label pCTRL[q^2
+
+
+
+3. SM QUICK REFERENCE:
+
+  + Remember syntax for Math commands type: help arithmetic
+
+  + Create a quick vector that increments by 1:  set x = 2,20,1 
+
+  + Boxes with ticks and #s on different sides  
+    Command: box 1 2 n1 n2   1=lower axis,  2=left axis,
+			    n1=upper axis, n2=right axis,
+	1 = label parallel to axis
+        2 = label perpendicular to axis
+        0 = omit label
+        3 = omit label and tickmark
+    Default: box 1 2
+
+  + Remember: - SM vector index starts with 0, not 1 !!
+              - vector indices are scalars, not vectors
+              - use square brackets, not parentheses
+              usage: vector[$i] not vector[i] 
+
+  + if/do syntax: 
+    - "if x then y=a, else y=2a"
+	if (x) {
+		set y=a
+	} else {
+		set y=2*a
+	}  
+    -or-    
+	set y = (x) ? (a) : (2*a)
+
+    - "do (set y=2a), 1 to N times"
+	do $i=1,N {
+		set y[$i] = 2*a[$i]
+	}
+    
+  + log axes: 
+	> set lx = lg(x)
+	> lim lx y
+	> ticksize -1 0 0 0
+	> box
+
+  + histogram
+	> get_hist x xx yy lo hi bin
+	> lim xx yy
+	> hi xx yy
+
+  + postscript file
+	> dev postscript :SY@: :OF@: filename.ps
+
+  + encapsulated postscript file
+	> dev postencap filename.eps
+
+  + label superscripts (e.g. p^2):
+	> label pCTRL[q^2

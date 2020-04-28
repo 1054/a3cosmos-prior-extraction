@@ -1,0 +1,25 @@
+supermongo_go
+    #  
+    # Usage: 
+    #      macro read supermongo_go.sm supermongo_go
+    #  
+    # 
+    # Additional Notes:
+    #      fonts -- please modify /usr/local/lib/sm/fonts.bin
+    # 
+    device postencap supermongo_go.eps
+    # 
+    define TeX_strings 1
+    # 
+    # define default_font oe
+    # 
+    limits 0 1 0 1
+    erase
+    expand 1.25
+    # box
+    # 
+    expand 0.75
+    relocate (31000 32000) putlabel 4 Installation
+    expand 1.25
+    # 
+    device nodevice

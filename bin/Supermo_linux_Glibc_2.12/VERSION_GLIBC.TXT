@@ -1,0 +1,3 @@
+ldd --version
+ldd (GNU libc) 2.12
+

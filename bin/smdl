@@ -1,5 +1,40 @@
 #!/bin/bash
 #
 
-$(dirname "${BASH_SOURCE[0]}")/Supermongo_portable/sm_portable $@
+#
+# readlink for Mac (because Mac readlink does not accept "-f" option)
+#if [[ $(uname) == *"Darwin"* ]]; then
+#    function readlink() {
+#        if [[ $# -gt 1 ]]; then if [[ "$1" == "-f" ]]; then shift; fi; fi
+#        DIR="$1"; if [[ "$DIR" != *"/"* ]]; then DIR="./$DIR"; fi # 20170228: fixed bug: path without "/"
+#        DIR=$(echo "${DIR%/*}") # 20160410: fixed bug: source SETUP just under the Softwares dir
+#        if [[ -d "$DIR" ]]; then cd "$DIR" && echo "$(pwd -P)/$(basename ${1})"; 
+#        else echo "$(pwd -P)/$(basename ${1})"; fi
+#    }
+#fi
+
+#type readlink > /dev/null
+#type basename > /dev/null
+#type dirname > /dev/null
+#type date > /dev/null
+#type perl > /dev/null
+
+# 
+# sm in system path
+#SMPATHS=$(echo $PATH | sed -e "s%$(dirname $(readlink -f $0)):%%g")
+#SMDATES=$(date +%s.$(date +%N|cut -b 1,2,3,4)) # SMDATE=$(date +%Y%m%d.%H%M%S.%N.%Z)
+
+#
+# Mac or Linux
+if [[ $(uname) == *"Darwin"* ]]; then
+    $(dirname "${BASH_SOURCE[0]}")/Supermo_mac_10.8.2/bin/sm_portable $@
+else
+    if [[ $(bc <<< "$(ldd --version | head -n 1 | tr -s ' ' | cut -d ' ' -f 4 | cut -d '.' -f 2)<14") -eq 1 ]]; then
+        # the supercomputer planer has an old GLIBC version 2.5
+        $(dirname "${BASH_SOURCE[0]}")/Supermo_linux_Glibc_2.12/bin/sm_portable $@
+    else
+        $(dirname "${BASH_SOURCE[0]}")/Supermo_linux_Glibc_2.14/bin/sm_portable $@
+    fi
+fi
+
 

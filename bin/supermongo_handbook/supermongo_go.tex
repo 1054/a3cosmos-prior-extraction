@@ -1,0 +1,144 @@
+%------------------------------------------------------------------------------
+% This is a LaTeX template for the Article 
+%------------------------------------------------------------------------------
+% 
+% Hello world
+%
+%------------------------------------------------------------------------------
+%
+\documentclass[11pt,a4paper,twoside,graphicx,color]{article}
+%
+\usepackage[margin=2cm]{geometry}
+\usepackage{fontspec}
+\usepackage{xcolor}
+\usepackage{multicol}
+\usepackage{enumitem}
+\usepackage{adjustbox}
+\usepackage{anyfontsize}
+\usepackage[english]{babel}
+\usepackage{blindtext}
+\usepackage{tcolorbox}
+\usepackage{mdframed}
+\usepackage{calc}
+\usepackage{verbatimbox}
+\usepackage{xstring}
+%
+% Page size and text dimensions
+\textheight 260mm
+\textwidth 178mm
+\oddsidemargin -8mm
+\evensidemargin -8mm
+\marginparwidth 50pt
+\topmargin -22mm
+\brokenpenalty=10000
+\sloppy
+\setmainfont{Gentium Book Basic}
+\definecolor{dzBlueColor}{rgb}{0.122,0.435,0.698} % rgb 0-1 RGB 0-255 HTML 00-FF
+%
+%-------------------------------------------------------------------
+\begin{document}
+%
+%
+\begin{center}{\huge \bf
+%-------------------------------------------------------------------
+\definecolor{Foo}{rgb}{0.741,0.000,0.149}
+\fontspec[Color=Foo]{Roman Antique}
+SUPERMONGO
+%-------------------------------------------------------------------
+}\end{center}
+%
+
+\centerline{Some Notes}
+
+
+
+% \begin{multicols}{2}[\textbf{Example for a two column text}]
+%     \blindtext
+% \end{multicols}
+% \begin{multicols}{2}
+%     \blindtext[10]
+% \end{multicols}
+
+
+
+\section{File IO}
+
+
+
+\newlength{\dzColorBoxWidth}
+\newlength{\dzBackupBoxWidth}
+\newlength{\dzBackupTopSkip}
+\newlength{\dzBackupParSkip}
+\newlength{\dzBackupLineSkip}
+\newlength{\dzBackupBaselineSkip}
+\newcommand{\dzGetCleanString}[1]{
+% \IfSubStr{#1}{\#}{\StrSubstitute{#1}{\#}{ }}{#1}
+% sed -e 's/[^a-zA-Z0-9]/ /g' #1 > #1.meta
+% TODO
+}
+\newcommand{\dzGetColorBoxWidthFromTextString}[1]{
+  \setlength{\dzBackupTopSkip}{\the\topskip}
+  \setlength{\dzBackupParSkip}{\the\parskip}
+  \setlength{\dzBackupLineSkip}{\the\lineskip}
+  \setlength{\dzBackupBaselineSkip}{\the\baselineskip}
+  \setbox0=\hbox{#1}
+  %\topskip0pt\baselineskip0pt\parskip0pt\lineskip0pt\noindent\par\noindent
+  %\rule{\wd0}{.1pt}
+  %\topskip0pt\baselineskip0pt\parskip0pt\lineskip0pt\noindent\par\noindent
+  %\hbox{#1}
+  %\topskip0pt\baselineskip0pt\parskip0pt\lineskip0pt\noindent\par\noindent
+  %%\topskip0pt\baselineskip0pt\parskip0pt\lineskip0pt\noindent\par\noindent
+  %%lineskip1: \the\lineskip\ baselineskip: \the\baselineskip\ parskip: \the\parskip
+  %%\topskip0pt\baselineskip0pt\parskip0pt\lineskip0pt\noindent\par\noindent
+  \setlength{\dzBackupBoxWidth}{\dimexpr\wd0-22pt} % \usepackage{calc}
+  \ifnum \dimexpr\the\dzBackupBoxWidth-\the\dzColorBoxWidth\relax > 0 % 
+  \setlength{\dzColorBoxWidth}{\the\dzBackupBoxWidth} %
+  \fi
+  %%\topskip0pt\baselineskip0pt\parskip0pt\lineskip0pt\noindent\par\noindent
+  %%lineskip2: \the\lineskip\ baselineskip: \the\baselineskip\ parskip: \the\parskip
+  %%\topskip0pt\baselineskip0pt\parskip0pt\lineskip0pt\noindent\par\noindent
+  \setlength{\topskip}{\the\dzBackupTopSkip}
+  \setlength{\parskip}{\the\dzBackupParSkip}
+  \setlength{\lineskip}{\the\dzBackupLineSkip}
+  \setlength{\baselineskip}{\the\dzBackupBaselineSkip}
+}
+\newcommand{\dzGetColorBoxWidthFromTextFile}[1]{
+  \newread\file
+  \openin\file=#1
+  \read\file to\fileline
+  \dzGetColorBoxWidthFromTextString{\fileline}
+  \loop\unless\ifeof\file
+    \read\file to\fileline % Reads a line of the file into \fileline
+    \dzGetColorBoxWidthFromTextString{\fileline} % Do something with \fileline
+  \repeat
+  \closein\file
+}
+
+
+
+
+% \verbatiminput{code/rfile.sm}
+
+
+
+% lineskip: \the\lineskip\\
+% baselineskip: \the\baselineskip\\
+% baselinestretch: \baselinestretch\\
+% parskip: \the\parskip\\
+
+
+
+
+\fontsize{7}{7}
+\subsection{read table}
+\fontspec{Consolas}
+\fontsize{5}{5}
+\dzGetColorBoxWidthFromTextFile{code/rfile.sm.meta} % returns \dzColorBoxWidth
+\begin{tcolorbox}[colframe=dzBlueColor,boxrule=0.5pt,arc=6pt,left=6pt,right=0pt,top=6pt,bottom=0pt,boxsep=0pt,width=\the\dzColorBoxWidth]
+\verbatiminput{code/rfile.sm}
+\end{tcolorbox}
+
+
+
+
+\end{document}

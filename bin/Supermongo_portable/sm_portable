@@ -13,12 +13,26 @@ if [[ $(type sm 2>/dev/null | wc -l) -eq 0 ]]; then
     exit 255
 fi
 
+
+readlink_cmd=readlink
+if [[ $(uname -a) == *"Darwin"* ]]; then
+    if [[ $(type greadlink 2>/dev/null | wc -l) -gt 0 ]]; then
+        readlink_cmd=greadlink
+    fi
+fi
+
+
 CURRENTPATH=$(dirname "${BASH_SOURCE[0]}")
 SMMACROPATH=$(dirname "$CURRENTPATH")/Supermongo_macro
 echo "CURRENTPATH = $CURRENTPATH"
 echo "SMMACROPATH = $SMMACROPATH"
 
-SMPATH=$(dirname $(dirname $(readlink -f $(which sm))))
+#SMBIN=$($readlink_cmd -f $(which sm))
+#SMPATH=$(dirname $(dirname $SMBIN))/misc/sm/sm2_4_36 # /usr/local2/misc/sm/sm2_4_36/lib/sm/
+#if [[ ! -f "$SMPATH/lib/sm/fonts.bin" ]]; then
+#    SMPATH=""
+#fi
+SMPATH="/"
 SMDATE=$(date +%s.$(date +%N|cut -b 1,2,3,4)) # SMDATE=$(date +%Y%m%d.%H%M%S.%N.%Z)
 
 SMTEMP="/tmp"; if [[ x"$TMPDIR" != x ]]; then SMTEMP="$TMPDIR"; fi

@@ -1,0 +1,14 @@
+quit
+device x11
+set x = 0,100,0.1
+set y = sin(x)
+limits x y
+points x y
+connect x y
+xtcolours
+ctype seagreen
+points x y
+box
+quit
+load rfile.sm
+quit
