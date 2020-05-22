@@ -424,21 +424,21 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
     for (( i=0; i<${#SciImages[@]}; i++ )); do
         # 
         # print progress
-        #if [[ ${#SciImages[@]} -ge 10 ]]; then
-        #    if [[ $(awk "BEGIN {print (($i)%(int(${#SciImages[@]}/10)))}") -eq 0 ]]; then
-        #        printf "\r %-100s [%5.1f%%]" $(basename "${SciImages[i]}") $(awk "BEGIN {print (100.0*($i)/(${#SciImages[@]}))}")
-        #        #echo -n $(awk "BEGIN {print (100.0*($i)/(${#SciImages[@]}))}")"% "
-        #    fi
-        #    if [[ $(($i+1)) -eq ${#SciImages[@]} ]]; then
-        #        printf "\r %-100s [%5.1f%%]" $(basename "${SciImages[i]}") 100
-        #        printf "\r %-100s %20s"
-        #        printf "\r"
-        #        #echo -n "100%"
-        #    fi
-        #fi
+        if [[ ${#SciImages[@]} -ge 10 ]]; then
+            if [[ $(awk "BEGIN {print (($i)%(int(${#SciImages[@]}/10)))}") -eq 0 ]]; then
+                printf "\r %-100s [%5.1f%%]" $(basename "${SciImages[i]}") $(awk "BEGIN {print (100.0*($i)/(${#SciImages[@]}))}")
+                #echo -n $(awk "BEGIN {print (100.0*($i)/(${#SciImages[@]}))}")"% "
+            fi
+            if [[ $(($i+1)) -eq ${#SciImages[@]} ]]; then
+                printf "\r %-100s [%5.1f%%]" $(basename "${SciImages[i]}") 100
+                printf "\r %-100s %20s"
+                printf "\r"
+                #echo -n "100%"
+            fi
+        fi
         # 
         # print progress in another way
-        echo $(basename "${SciImages[i]}")" (${i}/${#SciImages[@]})"
+        #echo $(basename "${SciImages[i]}")" (${i}/${#SciImages[@]})"
         # 
         # check SciImage
         SciImage="${SciImages[i]}"
@@ -449,7 +449,7 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
         #<20170923># echo "\${#PbaImages[@]} = ${#PbaImages[@]}"
         # 
         # debug check point
-        echo "debug check point 1"
+        #echo "DEBUG: debug check point 1"
         # 
         # check PsfImage, generate one if not given
         if [[ ${#PsfImages[@]} -gt $i ]]; then
@@ -475,7 +475,7 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
         fi
         # 
         # debug check point
-        echo "debug check point 2"
+        #echo "DEBUG: debug check point 2"
         # 
         # check RmsImage. If not given, then generate an rms image according to "$RmsStats.txt" which is related to the "$SciImage" fits file. 
         if [[ ${#RmsImages[@]} -gt $i ]]; then
@@ -532,7 +532,7 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
         fi
         # 
         # debug check point
-        echo "debug check point 3"
+        #echo "DEBUG: debug check point 3"
         # 
         # check PbaImage. If not given, then try to find *.pb.fits according to $SciImage fits file name. If nothing found, then generate an empty fits image. 
         if [[ ${#PbaImages[@]} -gt $i ]]; then
@@ -574,7 +574,7 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
         fi
         # 
         # debug check point
-        echo "debug check point 4"
+        #echo "DEBUG: debug check point 4"
         # 
         # check SciImage and PsfImage name consistency (only when it is ALMA image)
         if echo "$SciImage" | grep -q "_SB" | grep -q "_GB" | grep -q "_MB" | grep -q "_sci" | grep -q ".spw"; then
@@ -591,17 +591,17 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
         fi
         # 
         # debug check point
-        echo "debug check point 5"
+        #echo "DEBUG: debug check point 5"
         # 
         # check PsfImage dimension, make sure the psf has positive sum and has a size of below 300 pixel. 
         PsfImage_fullpath="$PsfImage"
-        echo "gethead \"$PsfImage_fullpath\" NAXIS1"
-        echo "gethead \"$PsfImage_fullpath\" NAXIS2"
+        #echo "DEBUG: gethead \"$PsfImage_fullpath\" NAXIS1"
+        #echo "gethead \"$PsfImage_fullpath\" NAXIS2"
         PsfNAXIS1=$(gethead "$PsfImage_fullpath" NAXIS1)
         PsfNAXIS2=$(gethead "$PsfImage_fullpath" NAXIS2)
-        echo "sumpix \"$PsfImage_fullpath\""
+        #echo "DEBUG: sumpix \"$PsfImage_fullpath\""
         PsfImage_sumpix=$(sumpix "$PsfImage_fullpath")
-        echo "awk \"BEGIN {if(($PsfNAXIS1>300)||($PsfNAXIS2>300)||($PsfImage_sumpix<0)) print 1; else print 0;}\""
+        #echo "DEBUG: awk \"BEGIN {if(($PsfNAXIS1>300)||($PsfNAXIS2>300)||($PsfImage_sumpix<0)) print 1; else print 0;}\""
         if [[ $(awk "BEGIN {if(($PsfNAXIS1>300)||($PsfNAXIS2>300)||($PsfImage_sumpix<0)) print 1; else print 0;}") -eq 1 ]]; then
             PsfImage_cut_rect=$(echo "$PsfImage_fullpath" | sed -e "s/\.fits$/.cut.rect.txt/g")
             if [[ ! -f "$PsfImage_cut_rect" ]]; then
@@ -609,14 +609,14 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
                 CutBuffer=(100 100)
                 #<20170919># if [[ $(awk "BEGIN {if($PsfNAXIS1>300) print 1; else print 0;}") -eq 1 ]]; then CutBuffer[0]=$(awk "BEGIN {print int(($PsfNAXIS1-300)/2.0);}"); fi
                 #<20170919># if [[ $(awk "BEGIN {if($PsfNAXIS2>300) print 1; else print 0;}") -eq 1 ]]; then CutBuffer[1]=$(awk "BEGIN {print int(($PsfNAXIS2-300)/2.0);}"); fi
-                echo "awk \"BEGIN {if(($PsfNAXIS1>2*${CutBuffer[0]})&&($PsfNAXIS2>2*${CutBuffer[1]})) print 1; else print 0;}\""
+                #echo "DEBUG: awk \"BEGIN {if(($PsfNAXIS1>2*${CutBuffer[0]})&&($PsfNAXIS2>2*${CutBuffer[1]})) print 1; else print 0;}\""
                 while [[ $(awk "BEGIN {if(($PsfNAXIS1>2*${CutBuffer[0]})&&($PsfNAXIS2>2*${CutBuffer[1]})) print 1; else print 0;}") -eq 1 ]]; do
                     CutBuffer[0]=$((${CutBuffer[0]}+1))
                     CutBuffer[1]=$((${CutBuffer[1]}+1))
-                    echo "awk \"BEGIN {print int(($PsfNAXIS1-1.0)/2.0)-(${CutBuffer[0]})}\""
-                    echo "awk \"BEGIN {print int(($PsfNAXIS2-1.0)/2.0)-(${CutBuffer[1]})}\""
-                    echo "awk \"BEGIN {print int(($PsfNAXIS1-1.0)/2.0)+(${CutBuffer[0]})}\""
-                    echo "awk \"BEGIN {print int(($PsfNAXIS2-1.0)/2.0)+(${CutBuffer[1]})}\""
+                    #echo "DEBUG: awk \"BEGIN {print int(($PsfNAXIS1-1.0)/2.0)-(${CutBuffer[0]})}\""
+                    #echo "DEBUG: awk \"BEGIN {print int(($PsfNAXIS2-1.0)/2.0)-(${CutBuffer[1]})}\""
+                    #echo "DEBUG: awk \"BEGIN {print int(($PsfNAXIS1-1.0)/2.0)+(${CutBuffer[0]})}\""
+                    #echo "DEBUG: awk \"BEGIN {print int(($PsfNAXIS2-1.0)/2.0)+(${CutBuffer[1]})}\""
                     CutPos1X=$(awk "BEGIN {print int(($PsfNAXIS1-1.0)/2.0)-(${CutBuffer[0]})}") #<TODO># +1 accounts for the small shift of the ALMA psf fits image produced by Benjamin
                     CutPos1Y=$(awk "BEGIN {print int(($PsfNAXIS2-1.0)/2.0)-(${CutBuffer[1]})}") #<TODO># +1 accounts for the small shift of the ALMA psf fits image produced by Benjamin
                     CutPos2X=$(awk "BEGIN {print int(($PsfNAXIS1-1.0)/2.0)+(${CutBuffer[0]})}") #<TODO># +1 accounts for the small shift of the ALMA psf fits image produced by Benjamin
@@ -660,7 +660,7 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
         fi
         # 
         # debug check point
-        echo "debug check point 6"
+        #echo "DEBUG: debug check point 6"
         # 
         # check PsfImage sumpix
         PsfImage_sumpix=$(sumpix "$PsfImage_fullpath")
@@ -669,7 +669,7 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
         fi
         # 
         # debug check point
-        echo "debug check point 7"
+        #echo "DEBUG: debug check point 7"
         # 
         # check SciImage and RmsImage dimension, make sure they have a size of about 300 pixel (below 450 pixel). 
         if [[ ${#InputBoxSize[@]} -gt 0 ]]; then
@@ -681,7 +681,7 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
         fi
         # 
         # debug check point
-        echo "debug check point 8"
+        #echo "DEBUG: debug check point 8"
         # 
         # 
         SciImage_fullpath="$SciImage"
@@ -813,7 +813,7 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
         fi
         # 
         # debug check point
-        echo "debug check point 9"
+        #echo "DEBUG: debug check point 9"
     done
 fi
 # 
