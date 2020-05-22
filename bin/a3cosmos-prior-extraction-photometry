@@ -448,12 +448,15 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
         #<20170923># echo "\${#RmsImages[@]} = ${#RmsImages[@]}"
         #<20170923># echo "\${#PbaImages[@]} = ${#PbaImages[@]}"
         # 
+        # debug check point
+        echo "debug check point 1"
+        # 
         # check PsfImage, generate one if not given
         if [[ ${#PsfImages[@]} -gt $i ]]; then
             PsfImage="${PsfImages[i]}"
         else
             # create a PsfImage with extension .clean-beam.fits, by replacing the SciImage extension .image.fits
-            echo "echo \"$SciImage\" | sed -e 's/\.image\.fits$/.clean-beam/g'"
+            #echo "echo \"$SciImage\" | sed -e 's/\.image\.fits$/.clean-beam/g'"
             PsfImage=$(echo "$SciImage" | sed -e 's/\.image\.fits$/.clean-beam/g')
             # create a PsfImage with extension .clean-beam.fits, by replacing the SciImage extension .fits
             if [[ "$PsfImage" == *".fits" ]]; then
@@ -470,6 +473,9 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
             PsfImage="$PsfImage.fits"
             PsfImages+=("$PsfImage")
         fi
+        # 
+        # debug check point
+        echo "debug check point 2"
         # 
         # check RmsImage. If not given, then generate an rms image according to "$RmsStats.txt" which is related to the "$SciImage" fits file. 
         if [[ ${#RmsImages[@]} -gt $i ]]; then
@@ -525,6 +531,9 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
             RmsImages+=("$RmsImage")
         fi
         # 
+        # debug check point
+        echo "debug check point 3"
+        # 
         # check PbaImage. If not given, then try to find *.pb.fits according to $SciImage fits file name. If nothing found, then generate an empty fits image. 
         if [[ ${#PbaImages[@]} -gt $i ]]; then
             PbaImage="${PbaImages[i]}"
@@ -564,6 +573,9 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
             fi
         fi
         # 
+        # debug check point
+        echo "debug check point 4"
+        # 
         # check SciImage and PsfImage name consistency (only when it is ALMA image)
         if echo "$SciImage" | grep -q "_SB" | grep -q "_GB" | grep -q "_MB" | grep -q "_sci" | grep -q ".spw"; then
             SciImage_check=$(echo "$SciImage" | sed -e 's%\.image\.fits%%g' | sed -e 's%\.fits%%g')   #<TODO># file name
@@ -577,6 +589,9 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
                 echo ""; echo "Error! The input SciImage \"$SciImage\" and RmsImage \"$RmsImage\" do not match!"; exit 1
             fi
         fi
+        # 
+        # debug check point
+        echo "debug check point 5"
         # 
         # check PsfImage dimension, make sure the psf has positive sum and has a size of below 300 pixel. 
         PsfImage_fullpath="$PsfImage"
@@ -635,11 +650,17 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
             fi
         fi
         # 
+        # debug check point
+        echo "debug check point 6"
+        # 
         # check PsfImage sumpix
         PsfImage_sumpix=$(sumpix "$PsfImage_fullpath")
         if [[ "$PsfImage_sumpix" == "-"* ]]; then
             echo ""; echo "Error! The PSF image \"$PsfImage_fullpath\" has a negative total pixel value!"; exit 1
         fi
+        # 
+        # debug check point
+        echo "debug check point 7"
         # 
         # check SciImage and RmsImage dimension, make sure they have a size of about 300 pixel (below 450 pixel). 
         if [[ ${#InputBoxSize[@]} -gt 0 ]]; then
@@ -649,6 +670,11 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
             CutSizeM=450 #<TODO># 450
             CutSizeS=300 #<TODO># 300
         fi
+        # 
+        # debug check point
+        echo "debug check point 8"
+        # 
+        # 
         SciImage_fullpath="$SciImage"
         RmsImage_fullpath="$RmsImage"
         PbaImage_fullpath="$PbaImage"
@@ -776,6 +802,9 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
             echo "$PbaImage_fullpath" >> "$OutputDir/List_of_Input_Pba_Images.txt"
             echo "$PsfImage_fullpath" >> "$OutputDir/List_of_Input_Psf_Images.txt"
         fi
+        # 
+        # debug check point
+        echo "debug check point 9"
     done
 fi
 # 
