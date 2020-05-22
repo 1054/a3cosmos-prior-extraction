@@ -424,18 +424,21 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
     for (( i=0; i<${#SciImages[@]}; i++ )); do
         # 
         # print progress
-        if [[ ${#SciImages[@]} -ge 10 ]]; then
-            if [[ $(awk "BEGIN {print (($i)%(int(${#SciImages[@]}/10)))}") -eq 0 ]]; then
-                printf "\r %-100s [%5.1f%%]" $(basename "${SciImages[i]}") $(awk "BEGIN {print (100.0*($i)/(${#SciImages[@]}))}")
-                #echo -n $(awk "BEGIN {print (100.0*($i)/(${#SciImages[@]}))}")"% "
-            fi
-            if [[ $(($i+1)) -eq ${#SciImages[@]} ]]; then
-                printf "\r %-100s [%5.1f%%]" $(basename "${SciImages[i]}") 100
-                printf "\r %-100s %20s"
-                printf "\r"
-                #echo -n "100%"
-            fi
-        fi
+        #if [[ ${#SciImages[@]} -ge 10 ]]; then
+        #    if [[ $(awk "BEGIN {print (($i)%(int(${#SciImages[@]}/10)))}") -eq 0 ]]; then
+        #        printf "\r %-100s [%5.1f%%]" $(basename "${SciImages[i]}") $(awk "BEGIN {print (100.0*($i)/(${#SciImages[@]}))}")
+        #        #echo -n $(awk "BEGIN {print (100.0*($i)/(${#SciImages[@]}))}")"% "
+        #    fi
+        #    if [[ $(($i+1)) -eq ${#SciImages[@]} ]]; then
+        #        printf "\r %-100s [%5.1f%%]" $(basename "${SciImages[i]}") 100
+        #        printf "\r %-100s %20s"
+        #        printf "\r"
+        #        #echo -n "100%"
+        #    fi
+        #fi
+        # 
+        # print progress in another way
+        echo $(basename "${SciImages[i]}")" (${i}/${#SciImages[@]})"
         # 
         # check SciImage
         SciImage="${SciImages[i]}"
@@ -450,6 +453,7 @@ if [[ ! -f "$OutputDir/List_of_Input_Sci_Images.txt" || ! -f "$OutputDir/List_of
             PsfImage="${PsfImages[i]}"
         else
             # create a PsfImage with extension .clean-beam.fits, by replacing the SciImage extension .image.fits
+            echo "echo \"$SciImage\" | sed -e 's/\.image\.fits$/.clean-beam/g'"
             PsfImage=$(echo "$SciImage" | sed -e 's/\.image\.fits$/.clean-beam/g')
             # create a PsfImage with extension .clean-beam.fits, by replacing the SciImage extension .fits
             if [[ "$PsfImage" == *".fits" ]]; then
