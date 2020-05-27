@@ -1,0 +1,81 @@
+#!/bin/bash
+# 
+# Usage: ds9wcs fit789.fits
+if [ $# -eq 0 ] ; then
+    echo "Usage: "
+    echo "       ds9wcs fit789.fits"
+    echo 
+    exit
+    # check input
+    # echo $@
+    # echo $*
+    # SubFileList=($@)
+    # echo ${SubFileList[0]}
+    # echo ${SubFileList[1]}
+    # find files
+    # SubFileStr=$(ls $1)
+    # echo $SubFileStr
+    # echo ${SubFileStr[1]}
+    # call ds9
+    # ds9 -title xpads9 -port 0 -mecube -tile $* -mode crosshair -lock crosshair wcs -lock crop wcs -lock frame wcs -lock slice yes -lock bin yes -lock scale yes -lock colorbar yes -cube lock yes & 
+fi
+# 
+# 
+# pre-define title
+DS9WCS_TNUMB=1 
+DS9WCS_ISDUP=`ps aux | grep "ds9 -title ds9wcs_$DS9WCS_TNUMB" | wc -l | tr -d " "`
+while [[ $DS9WCS_ISDUP -gt 1 ]]; do
+    DS9WCS_TNUMB=`expr $DS9WCS_TNUMB + 1`
+    DS9WCS_ISDUP=`ps aux | grep "ds9 -title ds9wcs_$DS9WCS_TNUMB" | wc -l | tr -d " "`
+done
+DS9WCS_TITLE="ds9wcs_$DS9WCS_TNUMB"
+# 
+# 
+# pre-define tile
+DS9WCS_tile=(-tile mode column)
+# 
+# 
+# read user input
+DS9WCS_fits=()
+DS9WCS_args=()
+while [[ $# -ge 1 ]]; do
+    if [[ "$1" == "-title" ]]; then
+        shift
+        DS9WCS_TITLE="$1"
+    elif [[ "$1" == "-tile" ]]; then
+        DS9WCS_tile=()
+        DS9WCS_args+=(-tile)
+    elif [[ "$1" == *".fits" ]] || [[ "$1" == *".FITS" ]] || [[ "$1" == *".fits.gz" ]] || [[ "$1" == *".FITS.gz" ]]; then
+        DS9WCS_fits+=("$1")
+        echo "FITS: $1"
+    else
+        DS9WCS_args+=("$1")
+    fi
+    shift
+done
+# 
+# 
+ds9 -title $DS9WCS_TITLE -multiframe ${DS9WCS_tile[@]} -lock frame wcs \
+    -lock scale yes -lock colorbar yes -lock slice wcs \
+    -region showtext no \
+    "${DS9WCS_fits[@]}" \
+    ${DS9WCS_args[@]} \
+    -scale match &
+    # -lock scalelimits yes
+    # -scale match limits
+# 
+echo -n Initializing ds9 .
+# 
+echo -n .
+# 
+#DS9WCS_ISRUN=$(xpaget $DS9WCS_TITLE fits type 2>&1 >/dev/null)
+#while [[ "$DS9WCS_ISRUN" == "XPA\$ERROR no 'xpaget' access points"* ]]; do
+#    echo -n .
+#    DS9WCS_ISRUN=$(xpaget $DS9WCS_TITLE fits type 2>&1 >/dev/null)
+#                 # xpaget $DS9WCS_TITLE fits type #<DEBUG>#
+#    sleep 0.5
+#done
+#echo 
+
+
+

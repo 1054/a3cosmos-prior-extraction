@@ -1,0 +1,100 @@
+#!/bin/bash
+# 
+# Usage: ds9galfit fit789.fits
+# 
+if [ $# -eq 0 ] ; then
+    echo "Usage: "
+    echo "       ds9longurl fit789.fits"
+    echo 
+    exit
+fi
+# 
+# 
+DS9LONGURL_XPA_MODE="none"
+DS9LONGURL_XPA_SET=()
+DS9LONGURL_XPA_GET=()
+DS9LONGURL_INP_IMG=()
+DS9LONGURL_INP_REG=()
+while [[ $# -gt 0 ]]; do
+    TempStr=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+    if [[ "$TempStr" == "fits" ]]; then
+        DS9LONGURL_XPA_MODE="fits"
+    elif [[ "$TempStr" == "region"* ]]; then
+        DS9LONGURL_XPA_MODE="region"
+    elif [[ "$TempStr" == "xpaget" ]] || [[ "$TempStr" == "get" ]]; then
+        DS9LONGURL_XPA_MODE="xpaget"
+    elif [[ "$TempStr" == "xpaset" ]] || [[ "$TempStr" == "set" ]]; then
+        DS9LONGURL_XPA_MODE="xpaset"
+    else
+        case "$DS9LONGURL_XPA_MODE" in
+            "xpaget" ) DS9LONGURL_XPA_GET+=("$1");;
+            "xpaset" ) DS9LONGURL_XPA_SET+=("$1");;
+            "region" ) DS9LONGURL_INP_REG+=("$1");;
+                   * ) DS9LONGURL_INP_IMG+=("$1");;
+        esac
+    fi
+    shift
+done
+# 
+# 
+DS9LONGURL_TITLE="ds9longurl"
+if [[ $(xpaget $DS9LONGURL_TITLE 2>/dev/null | wc -l) -eq 0 ]]; then
+    bash -c "cd; ds9 -title $DS9LONGURL_TITLE -geometry 1300x600 -multiframe -tile mode column -lock frame image -lock scale yes -lock colorbar yes -region showtext no &"
+    sleep 1.0
+    # 
+    echo -n "Initializing ds9 ."
+    # 
+    echo -n "."
+    # 
+    while [[ $(xpaget $DS9LONGURL_TITLE 2>/dev/null | wc -l) -eq 0 ]]; do
+        echo -n "."
+        sleep 1.0
+    done
+    echo 
+fi
+# 
+# 
+if [[ ${#DS9LONGURL_INP_IMG[@]} -gt 0 ]]; then
+    for (( i=0; i<${#DS9LONGURL_INP_IMG[@]}; i++ )); do
+        if [[ $(xpaget $DS9LONGURL_TITLE frame has fits) == "yes" ]]; then
+            echo xpaset -p $DS9LONGURL_TITLE frame new
+            xpaset -p $DS9LONGURL_TITLE frame new
+        fi
+        echo xpaset -p $DS9LONGURL_TITLE multiframe "${DS9LONGURL_INP_IMG[i]}"
+        #xpaset -p $DS9LONGURL_TITLE multiframe "${DS9LONGURL_INP_IMG[i]}"
+        cat "${DS9LONGURL_INP_IMG[i]}" | xpaset $DS9LONGURL_TITLE multiframe
+    done
+fi
+# 
+# 
+if [[ ${#DS9LONGURL_INP_REG[@]} -gt 0 ]]; then
+    for (( i=0; i<${#DS9LONGURL_INP_REG[@]}; i++ )); do
+        echo xpaset -p $DS9LONGURL_TITLE regions load ${DS9LONGURL_INP_REG[i]}
+        #xpaset -p $DS9LONGURL_TITLE regions load ${DS9LONGURL_INP_REG[i]}
+        cat "${DS9LONGURL_INP_REG[i]}" | xpaset $DS9LONGURL_TITLE regions
+    done
+fi
+# 
+# 
+if [[ ${#DS9LONGURL_XPA_GET[@]} -gt 0 ]]; then
+    echo xpaget $DS9LONGURL_TITLE ${DS9LONGURL_XPA_GET[@]}
+    xpaget $DS9LONGURL_TITLE ${DS9LONGURL_XPA_GET[@]}
+fi
+# 
+# 
+if [[ ${#DS9LONGURL_XPA_SET[@]} -gt 0 ]]; then
+    echo xpaset -p $DS9LONGURL_TITLE ${DS9LONGURL_XPA_SET[@]}
+    xpaset -p $DS9LONGURL_TITLE ${DS9LONGURL_XPA_SET[@]}
+fi
+
+
+
+
+
+
+
+
+
+
+
+

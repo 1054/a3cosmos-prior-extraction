@@ -1,0 +1,401 @@
+#!/bin/bash
+# 
+# Usage: ds9galfit fit789.fits
+if [ $# -eq 0 ] ; then
+    echo "Usage: "
+    echo "       ds9galfit fit789.fits"
+    echo 
+    exit
+    # check input
+    # echo $@
+    # echo $*
+    # SubFileList=($@)
+    # echo ${SubFileList[0]}
+    # echo ${SubFileList[1]}
+    # find files
+    # SubFileStr=$(ls $1)
+    # echo $SubFileStr
+    # echo ${SubFileStr[1]}
+    # call ds9
+    # ds9 -title xpads9 -port 0 -mecube -tile $* -mode crosshair -lock crosshair wcs -lock crop wcs -lock frame wcs -lock slice yes -lock bin yes -lock scale yes -lock colorbar yes -cube lock yes & 
+fi
+# 
+# 
+DS9GALFIT_TITLE=""
+DS9GALFIT_FILEP=()
+DS9GALFIT_COMMP=()
+DS9GALFIT_SCALES=()
+DS9GALFIT_SCALEMODE=()
+DS9GALFIT_ZOOMTO=()
+DS9GALFIT_SAVEIMAGE=()
+DS9GALFIT_HAS_TITLE=0
+DS9GALFIT_HAS_SCALE=0
+DS9GALFIT_HAS_CMAP=0
+while [[ $# -gt 0 ]]; do
+    TempStr=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+    if [[ "$TempStr" == *"-title" ]]; then
+        DS9GALFIT_HAS_TITLE=1
+    fi
+    if [[ "$TempStr" == *"-scale" ]]; then
+        DS9GALFIT_HAS_SCALE=1
+    fi
+    if [[ "$TempStr" == *"-cmap" ]]; then
+        DS9GALFIT_HAS_CMAP=1
+    fi
+    if [[ "$TempStr" == *"-title" ]]; then
+        if [[ $# -gt 1 ]]; then
+            shift
+            DS9GALFIT_TITLE="$1"
+        fi
+        shift
+        continue
+    fi
+    if [[ "$TempStr" == *"-saveimage" ]]; then
+        if [[ $# -gt 2 ]]; then
+            shift
+            DS9GALFIT_SAVEIMAGE+=("$1")
+            shift
+            DS9GALFIT_SAVEIMAGE+=("$1")
+        fi
+        shift
+        continue
+    fi
+    if [[ "$TempStr" == *"-zoom" ]]; then
+        if [[ $# -gt 2 ]]; then
+            if [[ x"$2" == x"to" ]]; then
+                shift
+                shift
+                DS9GALFIT_ZOOMTO+=("$1")
+                shift
+                continue
+            fi
+        fi
+    fi
+    if [[ "$TempStr" == *"-scale" ]]; then
+        if [[ $# -gt 2 ]]; then
+            if [[ x"$2" == x"mode" ]]; then
+                shift
+                shift
+                DS9GALFIT_SCALEMODE+=("$1")
+                shift
+                continue
+            fi
+        fi
+    fi
+    if [[ "$TempStr" == *".fits" ]]; then
+        DS9GALFIT_FILEP+=("$1") #<TODO># should we limit to only one input fits? For now we assume there is only one input, and we can only handle one input.
+    fi
+    DS9GALFIT_COMMP+=("$1")
+    shift
+done
+# 
+# 
+if [[ "$DS9GALFIT_TITLE"x == ""x ]]; then
+    # first define title
+    DS9GALFIT_TNUMB=1
+    DS9GALFIT_ISDUP=`ps aux | grep "ds9 -title ds9galfit_$DS9GALFIT_TNUMB" | wc -l | tr -d " "`
+    while [[ $DS9GALFIT_ISDUP -gt 1 ]]; do
+        DS9GALFIT_TNUMB=`expr $DS9GALFIT_TNUMB + 1`
+        DS9GALFIT_ISDUP=`ps aux | grep "ds9 -title ds9galfit_$DS9GALFIT_TNUMB" | wc -l | tr -d " "`
+    done
+    DS9GALFIT_TITLE="ds9galfit_$DS9GALFIT_TNUMB"
+fi
+# 
+# 
+echo ds9 -title $DS9GALFIT_TITLE -geometry 1300x600 -multiframe -tile mode column -lock frame image -lock scale yes -lock colorbar yes -region showtext no ${DS9GALFIT_COMMP[@]}
+     ds9 -title $DS9GALFIT_TITLE -geometry 1300x600 -multiframe -tile mode column -lock frame image -lock scale yes -lock colorbar yes -region showtext no ${DS9GALFIT_COMMP[@]} &
+# 
+# 
+#DS9GALFIT_FILEP=$(echo " $* " | sed -E 's#.* +([a-z.]*fits) +.*#\1#g')
+#if [[ x"$DS9GALFIT_FILEP" == x ]]; then 
+#    echo Error! Please give fits file!
+#    exit
+#fi
+#echo $DS9GALFIT_FILEP
+#exit
+# 
+# check fits image
+if [[ ! -f "$DS9GALFIT_FILEP" ]]; then
+    echo ""
+    echo "Error! $DS9GALFIT_FILEP not found! Please check the fits file!"
+    echo ""
+    exit 1
+fi
+# 
+# check CrabFitsHeader
+DS9GALFIT_CHECK=$(CrabFitsHeader 2>&1 >/dev/null)
+if [[ "$DS9GALFIT_CHECK" == *"command not found" ]]; then
+    echo ""
+    echo "Error! CrabFitsHeader not found! Please contact dzliu!"
+    echo ""
+    exit 1
+else 
+    CrabFitsHeader $DS9GALFIT_FILEP > ".CrabFitsHeader.txt"
+fi
+# 
+# check CrabTableReadInfo
+DS9GALFIT_CHECK=$(CrabTableReadInfo 2>&1 >/dev/null)
+if [[ "$DS9GALFIT_CHECK" == *"command not found" ]]; then
+    echo ""
+    echo "Error! CrabTableReadInfo not found! Please contact dzliu!"
+    echo ""
+    exit 1
+fi
+# 
+# check CrabFitsImageStatistics
+DS9GALFIT_CHECK=$(CrabPhotImageStatistics 2>&1 >/dev/null)
+if [[ "$DS9GALFIT_CHECK" == *"command not found" ]]; then
+    echo ""
+    echo "Error! CrabPhotImageStatistics not found! Please contact dzliu!"
+    echo ""
+    exit 1
+else 
+    CrabPhotImageStatistics $DS9GALFIT_FILEP -ext 2 > ".CrabPhotImageStatistics.txt"
+    DS9GALFIT_SCALES=($(cat ".CrabPhotImageStatistics.txt" | sed -e 's/^ *//g' | grep -v "^#" | tr -s ' ' | cut -d ' ' -f 8,9))
+fi
+
+
+
+
+
+
+
+
+# 
+echo -n Initializing ds9 .
+# 
+echo -n .
+# 
+DS9GALFIT_ISRUN=$(xpaget $DS9GALFIT_TITLE fits type 2>&1 >/dev/null)
+while [[ "$DS9GALFIT_ISRUN" == "XPA\$ERROR no 'xpaget' access points"* ]]; do
+    echo -n .
+    DS9GALFIT_ISRUN=$(xpaget $DS9GALFIT_TITLE fits type 2>&1 >/dev/null)
+                 # xpaget $DS9GALFIT_TITLE fits type #<DEBUG>#
+    sleep 0.5
+done
+echo 
+# 
+# echo $(xpaget $DS9GALFIT_TITLE fits type)
+# 
+#DS9GALFIT_REGFP=".$DS9GALFIT_TITLE.reg"
+#echo "# Region file format: DS9 version 4.1" > $DS9GALFIT_REGFP
+#echo "global color=yellow width=1 select=1 highlite=0 dash=1 fixed=0 edit=1 move=0 delete=1 include=1 source=1" >> $DS9GALFIT_REGFP
+#echo "image" >> $DS9GALFIT_REGFP
+
+GALFITRECT=`CrabTableReadInfo ".CrabFitsHeader.txt" "FITSECT" "/" | sed -e "s/[][' ]//g"`
+GALFITRECTX0=0
+GALFITRECTY0=0
+echo "GALFITRECT = $GALFITRECT"
+if [[ "$GALFITRECT" != "" ]]; then
+    GALFITRECTX0=`echo $GALFITRECT | sed -e 's/,/:/g' | cut -d ':' -f 1`
+    GALFITRECTY0=`echo $GALFITRECT | sed -e 's/,/:/g' | cut -d ':' -f 3`
+fi
+
+
+
+# 
+# Delete first blank frame, then
+# wwitch to source model image
+# 
+
+xpaset -p $DS9GALFIT_TITLE frame 1
+
+xpaset -p $DS9GALFIT_TITLE frame delete
+
+xpaset -p $DS9GALFIT_TITLE frame 3
+
+
+
+if [[ 1 == 1 ]]; then
+    # display text labels
+    NAXIS1=$(xpaget $DS9GALFIT_TITLE fits width)
+    NAXIS2=$(xpaget $DS9GALFIT_TITLE fits height)
+    CENX=$(awk "BEGIN {print ($NAXIS1+1)/2.0;}")
+    TOPY=$(awk "BEGIN {print ($NAXIS2+0.075*($NAXIS2));}")
+    xpaset -p $DS9GALFIT_TITLE zoom to fit
+    xpaset -p $DS9GALFIT_TITLE zoom 0.75
+    xpaset -p $DS9GALFIT_TITLE frame first
+    echo "image; text $CENX $TOPY # text={Input} font={helvetica 18 bold roman}" | xpaset $DS9GALFIT_TITLE regions
+    xpaset -p $DS9GALFIT_TITLE frame next
+    echo "image; text $CENX $TOPY # text={Model} font={helvetica 18 bold roman}" | xpaset $DS9GALFIT_TITLE regions
+    xpaset -p $DS9GALFIT_TITLE frame next
+    echo "image; text $CENX $TOPY # text={Residual} font={helvetica 18 bold roman}" | xpaset $DS9GALFIT_TITLE regions
+    
+    xpaset -p $DS9GALFIT_TITLE frame first
+    xpaset -p $DS9GALFIT_TITLE frame next
+fi
+
+
+
+# 
+# Set scale limits
+# 
+
+if [[ $DS9GALFIT_HAS_CMAP -eq 0 ]]; then
+    xpaset -p $DS9GALFIT_TITLE cmap aips0
+fi
+
+if [[ $DS9GALFIT_HAS_SCALE -eq 0 ]]; then
+    if [[ ${#DS9GALFIT_SCALES[@]} -eq 2 ]]; then
+        xpaset -p $DS9GALFIT_TITLE scale limits ${DS9GALFIT_SCALES[0]} $(awk "BEGIN { print (${DS9GALFIT_SCALES[1]})*5.0 }")
+    else
+        xpaset -p $DS9GALFIT_TITLE scale mode 99.8
+        xpaset -p $DS9GALFIT_TITLE scale limits $(xpaget $DS9GALFIT_TITLE scale limits)
+    fi
+fi
+
+
+
+# 
+# Prepare ds9 region file
+# 
+
+echo "# " > .ds9galfit.ds9.reg
+
+DS9GALFIT_PARAM="dzliu do no use" # $(echo "$DS9GALFIT_FILEP" | sed -e 's/\.fits$/.param/g')
+
+if [[ -f "$DS9GALFIT_PARAM" ]]; then
+    FITNOTE=($(cat "$DS9GALFIT_PARAM" | grep -v "^#" | sed -e 's/^ *//g' | tr -s ' ' | cut -d ' ' -f 31))
+    FITNUMB=${#FITNOTE[@]}
+else
+    FITNOTE=()
+    FITNUMB=$(cat ".CrabFitsHeader.txt" | grep "^COMP_" | grep -v -i "sky" | wc -l | sed -e 's/ //g')
+fi
+
+echo "Found $FITNUMB objects in the fits header"
+
+for (( i=1; i<=$FITNUMB; i++ )); do
+    TC=`  CrabTableReadInfo ".CrabFitsHeader.txt" "COMP_"$i "/" | sed -e "s/[][' ]//g"`
+    if [[ "$TC" == "gauss"* ]]; then
+        XC=`  CrabTableReadInfo ".CrabFitsHeader.txt" $i"_XC"   "/" | sed -e s/[\]\[\']//g | sed -e 's/[ ][+]//g'| sed -e s/[*]//g`
+        YC=`  CrabTableReadInfo ".CrabFitsHeader.txt" $i"_YC"   "/" | sed -e s/[\]\[\']//g | sed -e 's/[ ][+]//g'| sed -e s/[*]//g`
+        MAG=` CrabTableReadInfo ".CrabFitsHeader.txt" $i"_MAG"  "/" | sed -e s/[\']//g     | sed -e 's/[ ][+]//g' | sed -e s/[*]//g`
+        FWHM=`CrabTableReadInfo ".CrabFitsHeader.txt" $i"_FWHM" "/" | sed -e s/[\]\[\']//g | sed -e 's/[ ][+]//g' | sed -e s/[*]//g`
+        ELLI=`CrabTableReadInfo ".CrabFitsHeader.txt" $i"_AR"   "/" | sed -e s/[\]\[\']//g | sed -e 's/[ ][+]//g' | sed -e s/[*]//g`
+        PA=`  CrabTableReadInfo ".CrabFitsHeader.txt" $i"_PA"   "/" | sed -e s/[\]\[\']//g | sed -e 's/[ ][+]//g' | sed -e s/[*]//g`
+    elif [[ "$TC" == "sersic"* ]]; then
+        XC=`  CrabTableReadInfo ".CrabFitsHeader.txt" $i"_XC"   "/" | sed -e s/[\]\[\']//g | sed -e 's/[ ][+]//g'| sed -e s/[*]//g`
+        YC=`  CrabTableReadInfo ".CrabFitsHeader.txt" $i"_YC"   "/" | sed -e s/[\]\[\']//g | sed -e 's/[ ][+]//g'| sed -e s/[*]//g`
+        MAG=` CrabTableReadInfo ".CrabFitsHeader.txt" $i"_MAG"  "/" | sed -e s/[\']//g     | sed -e 's/[ ][+]//g' | sed -e s/[*]//g`
+        FWHM=`CrabTableReadInfo ".CrabFitsHeader.txt" $i"_RE"   "/" | sed -e s/[\]\[\']//g | sed -e 's/[ ][+]//g' | sed -e s/[*]//g`
+        ELLI=`CrabTableReadInfo ".CrabFitsHeader.txt" $i"_AR"   "/" | sed -e s/[\]\[\']//g | sed -e 's/[ ][+]//g' | sed -e s/[*]//g`
+        PA=`  CrabTableReadInfo ".CrabFitsHeader.txt" $i"_PA"   "/" | sed -e s/[\]\[\']//g | sed -e 's/[ ][+]//g' | sed -e s/[*]//g`
+    elif [[ "$TC" == "psf" ]]; then
+        XC=`  CrabTableReadInfo ".CrabFitsHeader.txt" $i"_XC"   "/" | sed -e s/[\]\[\']//g | sed -e 's/[ ][+]//g'| sed -e s/[*]//g`
+        YC=`  CrabTableReadInfo ".CrabFitsHeader.txt" $i"_YC"   "/" | sed -e s/[\]\[\']//g | sed -e 's/[ ][+]//g'| sed -e s/[*]//g`
+        MAG=` CrabTableReadInfo ".CrabFitsHeader.txt" $i"_MAG"  "/" | sed -e s/[\']//g     | sed -e 's/[ ][+]//g' | sed -e s/[*]//g`
+        FWHM=""
+        ELLI=""
+        PA=""
+    else
+        continue
+    fi
+    
+    #echo "COMP = $TC"
+    #echo "MAG = $MAG"
+    #echo "FWHM = $FWHM"
+    #echo "ELLI = $ELLI"
+    #echo "PA = $PA"
+    
+    FITMAG=$(echo $MAG | grep -v "\[" | grep -v "\]" | wc -l) # whether the magnitude are fitted or fixed
+    
+    PIXSC=$(CrabTableReadInfo ".CrabFitsHeader.txt" "CDELT2" | cut -d ' ' -f 1)
+    if [[ x"$PIXSC" == x ]]; then
+        PIXSC=$(CrabTableReadInfo ".CrabFitsHeader.txt" "CD2_2" | cut -d ' ' -f 1)
+    fi
+    if [[ x"$PIXSC" == x ]]; then
+        PIXSC=2.5
+    else
+        PIXSC=$(awk "BEGIN {print sqrt(($PIXSC)*($PIXSC))*3600.0;}")
+    fi
+    
+    PIXZOOM=2
+    
+    if [[ x"$FWHM" == x ]]; then 
+        # point source, shown with a 0.5 pixel radius
+        MAJ=0.5 # $(awk "BEGIN {print (0.5/PIXSC);}")
+        FITMAJ=0
+        LINEWIDTH=1
+    else
+        MAJ=$(awk "BEGIN {print (($FWHM)/2.0)*$PIXZOOM}") #<TODO># multiply by a factor of 2.5 for viewing purpose
+        FITMAJ=$(echo $FWHM | grep -v "\[" | grep -v "\]" | wc -l)
+        LINEWIDTH=2
+    fi
+    
+    if [[ x"$ELLI" == x ]]; then 
+        MIN="$MAJ"
+        FITMIN=0
+        LINEWIDTH=1
+    else
+        MIN=$(awk "BEGIN {print (($FWHM)*($ELLI)/2.0)*$PIXZOOM}") #<TODO># multiply by a factor of 2.5 for viewing purpose
+        FITMIN=$(echo $ELLI | grep -v "\[" | grep -v "\]" | wc -l)
+        LINEWIDTH=2
+    fi
+    
+    if [[ x"$PA" == x ]]; then 
+        PA="0.0"
+    else
+        PA=$(awk "BEGIN {print ($PA)+90.0}")
+        FITPA=$(echo $PA | grep -v "\[" | grep -v "\]" | wc -l)
+    fi
+    
+    if [[ $(($i-1)) -lt ${#FITNOTE[@]} ]]; then
+        FITOBJ="${FITNOTE[$(($i-1))]}"
+    else
+        FITOBJ="OBJ$i"
+    fi
+    
+    #echo "$TC" "$GALFITRECTX0" "$GALFITRECTY0" "$XC" "$YC"
+    XC=$(awk "BEGIN {print ($XC-($GALFITRECTX0)+1);}")
+    YC=$(awk "BEGIN {print ($YC-($GALFITRECTY0)+1);}")
+    #echo "$TC" "$GALFITRECTX0" "$GALFITRECTY0" "$XC" "$YC"
+    #echo "$TC" "$GALFITRECTX0" "$GALFITRECTY0" "$XC" "$YC"
+    if [[ "$TC" == "psf" || "$TC" == "sersic"  || "$TC" == "gaussian" ]]; then
+        if [[ FITMAG -gt 0 ]]; then
+            echo "image; ellipse($XC,$YC,$MAJ,$MIN,$PA) # text={$FITOBJ} width=$LINEWIDTH" | xpaset $DS9GALFIT_TITLE regions
+            echo "image; ellipse($XC,$YC,$MAJ,$MIN,$PA) # text={$FITOBJ} width=$LINEWIDTH" >> ".ds9galfit.ds9.reg"
+            echo "image; ellipse($XC,$YC,$MAJ,$MIN,$PA) # text={$FITOBJ} width=$LINEWIDTH" 
+        else
+            #<added><20150504><dzliu># FITMAG=0 FITMAG=1
+            echo "image; ellipse($XC,$YC,$MAJ,$MIN,$PA) # text={$FITOBJ} width=$LINEWIDTH color=orange dash=1" | xpaset $DS9GALFIT_TITLE regions
+            echo "image; ellipse($XC,$YC,$MAJ,$MIN,$PA) # text={$FITOBJ} width=$LINEWIDTH color=orange dash=1" >> .ds9galfit.ds9.reg
+            echo "image; ellipse($XC,$YC,$MAJ,$MIN,$PA) # text={$FITOBJ} width=$LINEWIDTH color=orange dash=1" 
+        fi
+    else
+        break
+    fi
+done
+
+
+
+if [[ ${#DS9GALFIT_ZOOMTO[@]} -gt 0 ]]; then
+    echo xpaset -p $DS9GALFIT_TITLE zoom to "${DS9GALFIT_ZOOMTO[0]}"
+    xpaset -p $DS9GALFIT_TITLE zoom to "${DS9GALFIT_ZOOMTO[0]}"
+fi
+
+
+if [[ ${#DS9GALFIT_SCALEMODE[@]} -gt 0 ]]; then
+    echo xpaset -p $DS9GALFIT_TITLE scale mode "${DS9GALFIT_SCALEMODE[0]}"
+    xpaset -p $DS9GALFIT_TITLE scale mode "${DS9GALFIT_SCALEMODE[0]}"
+    xpaset -p $DS9GALFIT_TITLE scale limits $(xpaget $DS9GALFIT_TITLE scale limits) # rematch all frames
+fi
+
+
+if [[ ${#DS9GALFIT_SAVEIMAGE[@]} -gt 0 ]]; then
+    for (( i = 0; i < ${#DS9GALFIT_SAVEIMAGE[@]}; i+=2 )); do
+        echo xpaset -p $DS9GALFIT_TITLE saveimage "${DS9GALFIT_SAVEIMAGE[i+0]}" "${DS9GALFIT_SAVEIMAGE[i+1]}"
+        xpaset -p $DS9GALFIT_TITLE saveimage "${DS9GALFIT_SAVEIMAGE[i+0]}" "${DS9GALFIT_SAVEIMAGE[i+1]}"
+    done
+fi
+
+
+
+
+
+
+
+
+
+
+
+
