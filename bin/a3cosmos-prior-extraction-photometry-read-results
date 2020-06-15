@@ -5,7 +5,7 @@
 # 
 # Check input argument
 # 
-if [[ $# -lt 2 ]]; then
+if [[ $# -lt 1 ]]; then
     echo "Usage: "
     echo "    a3cosmos-prior-extraction-photometry-read-results \"Prior_Extraction_with_Master_Catalog_v20171208\""
     echo "Output: "
